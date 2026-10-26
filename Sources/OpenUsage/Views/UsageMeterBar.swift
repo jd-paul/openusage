@@ -3,9 +3,8 @@ import SwiftUI
 /// The capsule meter shared by the dashboard lines and the share card rows. The fill is a flat system
 /// color carrying the pace verdict (blue = well within limits, orange = projected to land inside the
 /// last 10%, red = projected to run out; `Theme.severityColor` / `MeterState.severity`). Empty and
-/// colorless without data. A thin tick marks the even-pace line on orange and red bars, and on blue
-/// when "always show pacing" is on; it rides in an overlay so it pokes out top and bottom without
-/// changing the bar's height.
+/// colorless without data. A thin tick marks the even-pace line on orange and red bars; it rides in
+/// an overlay so it pokes out top and bottom without changing the bar's height.
 struct UsageMeterBar: View {
     let data: WidgetData
     let state: WidgetData.MeterState

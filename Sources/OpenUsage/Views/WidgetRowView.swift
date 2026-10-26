@@ -84,8 +84,8 @@ struct WidgetRowView: View {
     /// `MeterState`. Spent: a flame + "Limit reached",
     /// the terminal state that outranks any pace projection. Running out: a flame + projected
     /// run-out time, read as "Limit in 3h 45m" ⟷ "Limit today at 11:49 PM" (following the global
-    /// countdown/exact mode). Close to limit: a quiet "~3% spare" — the cushion projected at reset. Healthy / level / no-data:
-    /// nothing unless "always show pacing" surfaces projection on blue. Only the flame carries
+    /// countdown/exact mode). Close to limit: a quiet "~3% spare" — the cushion projected at reset.
+    /// Healthy / level / no-data: nothing. Only the
     /// flame carries the severity color — tint on glass is reserved for the symbol while copy
     /// stays secondary like the row's other supporting text; the bar below carries the color.
     /// Hovering shows the pace projection at reset. The warning gets the space; the title truncates.
@@ -100,8 +100,7 @@ struct WidgetRowView: View {
     }
 
     /// The single escalating warning slot, switching exhaustively over the state so the copy can
-    /// never contradict the bar. The flame cases share one builder; the orange and (always-show-pacing)
-    /// blue cases are plain text.
+    /// never contradict the bar. The flame cases share one builder; the orange case is plain text.
     @ViewBuilder
     private func warning(_ state: WidgetData.MeterState) -> some View {
         switch state {
@@ -121,19 +120,6 @@ struct WidgetRowView: View {
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
                 .hoverTooltip(state.tooltip)
-        case .healthy where data.alwaysShowPacing:
-            // "Always show pacing" surfaces the projection on the otherwise-silent on-track row: the
-            // same quiet secondary note as the orange case, but the cushion ("~33% left at reset")
-            // rather than the spare. No flame (blue isn't a warning) and no hover tooltip — the copy
-            // already *is* the projection the orange case hides in its tooltip.
-            if let projection = state.tooltip {
-                Spacer(minLength: 8)
-                Text(projection)
-                    .font(supportingFont)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
         case .noData, .healthy, .level:
             EmptyView()
         }

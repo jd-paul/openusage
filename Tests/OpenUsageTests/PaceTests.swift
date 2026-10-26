@@ -62,15 +62,13 @@ final class PaceTests: XCTestCase {
         used: Double,
         elapsed: Double = 0.5,
         period: TimeInterval? = nil,
-        displayMode: WidgetDisplayMode = .used,
-        alwaysShowPacing: Bool = false
+        displayMode: WidgetDisplayMode = .used
     ) -> WidgetData {
         let period = period ?? week
         var data = WidgetData(title: "Weekly", icon: .providerMark("codex"), kind: .percent,
                               used: used, limit: 100, displayMode: displayMode)
         data.resetsAt = resetsAt(elapsed: elapsed, period: period)
         data.periodDurationMs = Int(period * 1000)
-        data.alwaysShowPacing = alwaysShowPacing
         return data
     }
 
@@ -204,50 +202,41 @@ final class PaceTests: XCTestCase {
         XCTAssertNil(Pace.evaluate(used: 1, limit: 100, resetsAt: reset, periodDuration: session, now: now))
     }
 
-    // MARK: Always Show Pacing (opt-in tick + healthy copy on blue)
+    // MARK: Even-pace tick (orange and red rows only)
 
-    func testAlwaysShowPacingAddsEvenPaceTickToHealthyBar() {
-        XCTAssertEqual(tick(pacedData(used: 30, elapsed: 0.4, alwaysShowPacing: true)) ?? -1,
-                       0.4, accuracy: 0.001)
-        XCTAssertEqual(tick(pacedData(used: 30, elapsed: 0.4, displayMode: .remaining,
-                                     alwaysShowPacing: true)) ?? -1,
-                       0.6, accuracy: 0.001)
+    func testHealthyBarShowsNoTick() {
+        XCTAssertNil(tick(pacedData(used: 30, elapsed: 0.4)))
+        XCTAssertNil(tick(pacedData(used: 30, elapsed: 0.4, displayMode: .remaining)))
     }
 
     func testAmberTickIsAlwaysEvenPaceLine() {
         XCTAssertEqual(tick(pacedData(used: 46, elapsed: 0.5)) ?? -1, 0.5, accuracy: 0.001)
-        XCTAssertEqual(tick(pacedData(used: 46, elapsed: 0.5, alwaysShowPacing: true)) ?? -1,
-                       0.5, accuracy: 0.001)
-        XCTAssertEqual(spare(pacedData(used: 46, elapsed: 0.5, alwaysShowPacing: true)), "~8% spare")
+        XCTAssertEqual(spare(pacedData(used: 46, elapsed: 0.5)), "~8% spare")
     }
 
     func testEvenPaceTickTracksDisplayMode() {
-        XCTAssertEqual(tick(pacedData(used: 76, elapsed: 0.8, alwaysShowPacing: true)) ?? -1,
-                       0.8, accuracy: 0.001)
-        XCTAssertEqual(tick(pacedData(used: 76, elapsed: 0.8, displayMode: .remaining,
-                                      alwaysShowPacing: true)) ?? -1,
+        XCTAssertEqual(tick(pacedData(used: 90, elapsed: 0.8)) ?? -1, 0.8, accuracy: 0.001)
+        XCTAssertEqual(tick(pacedData(used: 90, elapsed: 0.8, displayMode: .remaining)) ?? -1,
                        0.2, accuracy: 0.001)
     }
 
-    func testRedBarShowsEvenPaceTickWithAlwaysShowPacingOn() {
-        XCTAssertEqual(tick(pacedData(used: 60, elapsed: 0.5, alwaysShowPacing: true)) ?? -1,
-                       0.5, accuracy: 0.001)
-        XCTAssertNil(tick(pacedData(used: 100, elapsed: 0.5, alwaysShowPacing: true)))
+    func testRedBarShowsEvenPaceTickUntilSpent() {
+        XCTAssertEqual(tick(pacedData(used: 60, elapsed: 0.5)) ?? -1, 0.5, accuracy: 0.001)
+        XCTAssertNil(tick(pacedData(used: 100, elapsed: 0.5)))
     }
 
-    func testAlwaysShowPacingStaysSilentOnUntouchedMeter() {
-        // Regression: an unstarted window (0 used, e.g. a fresh Cursor billing cycle) used to show
-        // "~100% left at reset" plus an even-pace tick when Always Show Pacing was on.
-        let data = pacedData(used: 0, elapsed: 0.03, alwaysShowPacing: true)
+    func testUntouchedMeterStaysSilent() {
+        // An unstarted window (0 used, e.g. a fresh Cursor billing cycle) shows neither a projection
+        // nor an even-pace tick.
+        let data = pacedData(used: 0, elapsed: 0.03)
         XCTAssertEqual(data.meterState(now: now), .level(.normal))
         XCTAssertNil(data.meterState(now: now).tooltip)
         XCTAssertNil(tick(data))
     }
 
-    func testAlwaysShowPacingLeavesRowsWithoutResetWindowPlain() {
-        var data = WidgetData(title: "Credits", icon: .providerMark("codex"), kind: .dollars,
+    func testRowsWithoutResetWindowStayPlain() {
+        let data = WidgetData(title: "Credits", icon: .providerMark("codex"), kind: .dollars,
                               used: 12, limit: 20)
-        data.alwaysShowPacing = true
         XCTAssertNil(tick(data))
         XCTAssertNil(data.meterState(now: now).tooltip)
     }

@@ -61,7 +61,6 @@ final class ResetDisplayTests: XCTestCase {
         XCTAssertFalse(data.hasResetLabel(now: now))
         XCTAssertEqual(data.resetTooltip(now: now), WidgetData.freshSessionTooltip)
 
-        data.alwaysShowPacing = true
         let state = data.meterState(now: now)
         XCTAssertEqual(state, .level(.normal))
         XCTAssertNil(state.tooltip)

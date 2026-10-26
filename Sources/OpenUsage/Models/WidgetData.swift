@@ -19,10 +19,6 @@ struct WidgetData: Hashable {
     var displayMode: WidgetDisplayMode = .used
     /// Global relative/absolute reset display, stamped by `WidgetDataStore` (like `displayMode`).
     var resetDisplayMode: ResetDisplayMode = .relative
-    /// Global "always show pacing" opt-in, stamped by `WidgetDataStore` (like `displayMode`). When on,
-    /// the blue/healthy row also shows the even-pace tick and its projection copy. Orange and red rows
-    /// always show the tick when a reset window exists; this toggle only adds it on blue.
-    var alwaysShowPacing: Bool = false
     var resetsAt: Date?
     /// Zero or more future expiry instants surfaced in the row's hover tooltip (Codex rate-limit-reset
     /// credits — one entry per still-available credit). Empty for every other row. Kept as raw `Date`s so
@@ -122,9 +118,8 @@ struct WidgetData: Hashable {
         /// shows "~0% spare".) Orange, a "~N% spare" note. `projectedFraction` backs the tooltip's
         /// "% used at reset" copy.
         case closeToLimit(spare: String, projectedFraction: Double)
-        /// On course to finish with ≥10% to spare. Blue. By default it carries no decoration; when
-        /// "always show pacing" is on it surfaces the projection copy ("~N% left at reset").
-        /// `projectedFraction` backs the tooltip's "% left at reset" cushion copy.
+        /// On course to finish with ≥10% to spare. Blue, with no decoration. `projectedFraction`
+        /// backs the tooltip's "% left at reset" cushion copy.
         case healthy(projectedFraction: Double)
         /// No reset window to pace against: color from absolute level bands on the share used, no copy.
         case level(MeterSeverity)
@@ -399,7 +394,7 @@ extension WidgetData {
     ///
     /// Every band keys off the share *used*, never the displayed fraction, so the color and copy
     /// don't flip with the Used/Left toggle. The even-pace tick (`paceTick(for:)`) is independent:
-    /// orange and red always show it when a reset window exists; blue only with "always show pacing".
+    /// orange and red show it when a reset window exists; blue never does.
     func meterState(now: Date = Date()) -> MeterState {
         guard hasData, let limit, limit > 0 else { return hasData ? .level(.normal) : .noData }
         if roundedAtDisplayPrecision(limit - used) <= 0 { return .spent }
@@ -451,12 +446,11 @@ extension WidgetData {
 
     /// Even-pace tick position on the bar (0...1), or `nil` when hidden. Always the elapsed fraction
     /// of the reset window, framed like the fill (Used view → share used at an even burn; Left view →
-    /// share remaining). Orange and red pace states always show it; blue `healthy` only when
-    /// `alwaysShowPacing` is on. Spent, no-data, and rows without a reset window never show a tick.
+    /// share remaining). Only the orange and red pace states show it: healthy, spent, no-data, and rows
+    /// without a reset window never show a tick.
     func paceTick(for state: MeterState, now: Date = Date()) -> Double? {
         switch state {
-        case .spent, .noData, .level: return nil
-        case .healthy: guard alwaysShowPacing else { return nil }
+        case .spent, .noData, .level, .healthy: return nil
         case .closeToLimit, .runningOut: break
         }
         guard let ctx = paceContext else { return nil }

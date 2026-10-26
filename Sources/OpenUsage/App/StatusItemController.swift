@@ -236,7 +236,7 @@ final class StatusItemController: NSObject {
                 self?.applyTransparency()
             }
         }
-        let shouldAnimate = hasAppliedTransparency && !ReduceAnimationsSetting.isEnabled
+        let shouldAnimate = hasAppliedTransparency && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         hasAppliedTransparency = true
         backdrop.setMode(party ? .translucent : .opaque, animated: shouldAnimate)
     }

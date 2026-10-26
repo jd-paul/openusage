@@ -53,18 +53,10 @@ extension View {
 }
 
 private struct ReduceAnimationsModifier: ViewModifier {
-    @AppStorage(ReduceAnimationsSetting.key) private var appPreference = ReduceAnimationsSetting.fallback
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
-    private var shouldReduceAnimations: Bool {
-        ReduceAnimationsSetting.resolve(
-            appPreference: appPreference,
-            systemReduceMotion: systemReduceMotion
-        )
-    }
-
     func body(content: Content) -> some View {
-        content.animationReduction(shouldReduceAnimations)
+        content.animationReduction(systemReduceMotion)
     }
 }
 

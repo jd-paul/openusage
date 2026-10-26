@@ -4,17 +4,6 @@ import SwiftUI
 
 @MainActor
 final class ReduceAnimationsSettingTests: XCTestCase {
-    func testEitherPreferenceReducesAnimations() {
-        for (app, system, expected) in [(false, false, false), (true, false, true), (false, true, true)] {
-            XCTAssertEqual(ReduceAnimationsSetting.resolve(appPreference: app, systemReduceMotion: system), expected)
-        }
-    }
-
-    func testPersistenceKeyAndFallbackStayStable() {
-        XCTAssertEqual(ReduceAnimationsSetting.key, "reduceAnimations")
-        XCTAssertFalse(ReduceAnimationsSetting.fallback)
-    }
-
     func testRootTransactionOnlyDisablesAnimationsWhenReduced() {
         for reduced in [false, true] {
             var transaction = Transaction(animation: .linear(duration: 1))
