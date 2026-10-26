@@ -1,8 +1,8 @@
 import XCTest
 @testable import OpenUsage
 
-/// Guards the in-memory write-behind mirror: reads must reflect writes, a second store must not drop
-/// the first, and `persistPending` is what moves the mirror to disk (a fresh instance reads from disk).
+/// Guards the in-memory mirror: reads must reflect writes, a second store must not drop the first, and
+/// every store reaches disk (a fresh instance reads it back).
 final class ProviderSnapshotCacheTests: XCTestCase {
     private func makeDefaults() -> (UserDefaults, String) {
         let suite = "providerSnapshotCache.test.\(UUID().uuidString)"
@@ -35,7 +35,7 @@ final class ProviderSnapshotCacheTests: XCTestCase {
                        .progress(label: "Session", used: 20, limit: 100, format: .percent))
     }
 
-    func testStorePersistsOnlyOnPersistPending() {
+    func testEveryStoreReachesDisk() {
         let (defaults, suite) = makeDefaults()
         defer { defaults.removePersistentDomain(forName: suite) }
         let now = Date()
@@ -44,13 +44,8 @@ final class ProviderSnapshotCacheTests: XCTestCase {
         cache.store(snapshot("alpha", used: 10, now: now))
         cache.store(snapshot("beta", used: 20, now: now))
 
-        XCTAssertEqual(cache.loadSnapshots(providerIDs: ["alpha", "beta"]).count, 2)
-        let beforeFlush = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", ttl: 9_999, now: { now })
-        XCTAssertTrue(beforeFlush.loadSnapshots(providerIDs: ["alpha", "beta"]).isEmpty)
-
-        cache.persistPending()
-        let afterFlush = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", ttl: 9_999, now: { now })
-        XCTAssertEqual(afterFlush.loadSnapshots(providerIDs: ["alpha", "beta"]).count, 2)
+        let reloaded = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", ttl: 9_999, now: { now })
+        XCTAssertEqual(reloaded.loadSnapshots(providerIDs: ["alpha", "beta"]).count, 2)
     }
 
     /// A snapshot persisted by a *previous* session and reloaded on launch must not
@@ -64,7 +59,6 @@ final class ProviderSnapshotCacheTests: XCTestCase {
         // Session 1 writes a snapshot 1s ago — comfortably inside the 9_999s TTL.
         let session1 = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", ttl: 9_999, now: { now })
         session1.store(snapshot("alpha", used: 42, now: now.addingTimeInterval(-1)))
-        session1.persistPending()
 
         // Session 2 (fresh instance = relaunch) reloads it from disk.
         let relaunched = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", ttl: 9_999, now: { now })

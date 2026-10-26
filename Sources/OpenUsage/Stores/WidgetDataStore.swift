@@ -159,7 +159,7 @@ final class WidgetDataStore {
     /// Everything stays MainActor-isolated; the overlap happens at the network awaits inside each
     /// provider, and the per-provider in-flight guard in `refresh` still prevents duplicate fetches.
     /// `force` bypasses the snapshot cache (the manual "refresh now" path); the periodic loop keeps
-    /// honoring it. The cache is persisted once at the end of the pass, not once per account.
+    /// honoring it.
     func refreshAll(force: Bool = false) async {
         // `Task {}` from MainActor context inherits the isolation (a task-group child can't capture
         // the non-Sendable store), so: fire one task per provider, then await them all.
@@ -167,14 +167,13 @@ final class WidgetDataStore {
         let start = monotonicNow()
         AppLog.info(.refresh, "batch start (\(providerIDs.count) providers, force=\(force))")
         let tasks = providerIDs.map { providerID in
-            Task { await self.refreshWithoutPersisting(providerID: providerID, force: force) }
+            Task { await self.refresh(providerID: providerID, force: force) }
         }
         var outcomes: [RefreshOutcome] = []
         outcomes.reserveCapacity(tasks.count)
         for task in tasks {
             outcomes.append(await task.value)
         }
-        cache.persistPending()
         // Stamp the end of the pass so the footer countdown targets the next scheduled refresh
         // (this time + one refresh interval), mirroring the periodic loop that sleeps one interval
         // after each pass.
@@ -241,21 +240,9 @@ final class WidgetDataStore {
     /// (unknown / already in flight) so a wake-burst's suppression is visible in the logs.
     enum RefreshOutcome: Sendable { case refreshed, failed, cacheHit, skipped, backedOff }
 
-    /// Refresh one account and persist what it fetched.
+    /// Refresh one account; a fetched snapshot is cached as it lands.
     @discardableResult
     func refresh(providerID: String, force: Bool = false) async -> RefreshOutcome {
-        let outcome = await refreshWithoutPersisting(providerID: providerID, force: force)
-        cache.persistPending()
-        return outcome
-    }
-
-    /// Writes the snapshots fetched since the last persist to disk; the app calls it on quit so a
-    /// refresh pass cut short by termination keeps what it already fetched.
-    func persistPendingSnapshots() {
-        cache.persistPending()
-    }
-
-    private func refreshWithoutPersisting(providerID: String, force: Bool) async -> RefreshOutcome {
         if !force, let cached = cache.snapshot(providerID: providerID) {
             // Skip the no-op write: `@Observable` doesn't compare values, so unconditionally
             // re-assigning an unchanged snapshot would re-render the menu-bar label every pass.

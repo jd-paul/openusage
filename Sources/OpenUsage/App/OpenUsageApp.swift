@@ -51,10 +51,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         updater.start()
     }
 
-    /// Flush pending snapshot writes and queued telemetry on quit. The SDK's lifecycle autocapture is
-    /// off (the app emits its own daily rollups), so it won't auto-flush on termination.
+    /// Flush queued telemetry on quit. The SDK's lifecycle autocapture is off (the app emits its own
+    /// daily rollups), so it won't auto-flush on termination.
     public func applicationWillTerminate(_ notification: Notification) {
-        container?.dataStore.persistPendingSnapshots()
         container?.telemetry.flush()
     }
 }

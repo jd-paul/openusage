@@ -62,8 +62,8 @@ in what order; `WidgetDataStore` turns snapshots into `WidgetData` for the views
 `AppContainer.startRefreshing` runs `WidgetDataStore.refreshAll` at launch and every
 `RefreshSetting.interval` (5 minutes), then `evaluateNotifications`, then `TelemetryRecorder.tick`.
 `refresh(providerID:)` honours the on-disk `ProviderSnapshotCache`, a one-minute failure backoff,
-and a two-minute deadline per account, and reports each real outcome through `onRefreshOutcome`. The
-cache is written once at the end of a pass (`persistPending`) and again on quit.
+and a two-minute deadline per account, and reports each real outcome through `onRefreshOutcome`. Each
+fetched snapshot is written to the cache as it lands.
 
 ## Views
 
