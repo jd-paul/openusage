@@ -5,7 +5,6 @@ import AppKit
 /// AppKit.
 @MainActor
 final class PanelHeightController {
-    static let panelWidth: CGFloat = 320
     static let defaultHeight: CGFloat = 800
 
     private let panel: MenuBarPanel
@@ -16,6 +15,10 @@ final class PanelHeightController {
     private var anchorTopLeft: NSPoint?
     private var morphSettleTask: Task<Void, Never>?
     private(set) var isMorphing = false
+    /// The last height the SwiftUI content asked for, so an attached sheet can raise the panel and the
+    /// panel can settle back to its content once the sheet ends.
+    private var contentHeight: CGFloat?
+    private var sheetObservers: [NSObjectProtocol] = []
 
     init(
         panel: MenuBarPanel,
@@ -36,6 +39,20 @@ final class PanelHeightController {
         MenuBarPopover.clampHeight = { [weak self] rawHeight in
             self?.clampedHeight(rawHeight) ?? rawHeight
         }
+        let center = NotificationCenter.default
+        sheetObservers = [NSWindow.willBeginSheetNotification, NSWindow.didEndSheetNotification].map { name in
+            center.addObserver(forName: name, object: panel, queue: .main) { [weak self] _ in
+                // `attachedSheet` is updated after these notifications, so fit on the next turn.
+                Task { @MainActor in self?.fitAttachedSheet() }
+            }
+        }
+        sheetObservers.append(center.addObserver(forName: NSWindow.didResizeNotification, object: nil, queue: .main) { [weak self] note in
+            let windowID = (note.object as AnyObject?).map(ObjectIdentifier.init)
+            MainActor.assumeIsolated {
+                guard let self, let sheet = self.panel.attachedSheet, windowID == ObjectIdentifier(sheet) else { return }
+                self.fitAttachedSheet()
+            }
+        })
     }
 
     /// Clears the previous session, captures the display, and opens at the remembered guess. This must
@@ -50,7 +67,7 @@ final class PanelHeightController {
         anchorScreen = screen
         let topLeft = PanelGeometry.clampedTopLeft(
             below: buttonRect,
-            width: Self.panelWidth,
+            width: PanelMetrics.width,
             visibleFrame: screen?.visibleFrame
         )
         anchorTopLeft = topLeft
@@ -58,7 +75,7 @@ final class PanelHeightController {
         let remembered = loadHeight(for: currentScreen()) ?? Self.defaultHeight
         let height = clampedHeight(remembered)
         panel.setFrame(
-            PanelGeometry.frame(topLeft: topLeft, width: Self.panelWidth, height: height),
+            PanelGeometry.frame(topLeft: topLeft, width: PanelMetrics.width, height: height),
             display: false
         )
         panel.invalidateShadow()
@@ -74,9 +91,14 @@ final class PanelHeightController {
     func finishClosing() {
         anchorTopLeft = nil
         anchorScreen = nil
+        contentHeight = nil
         morphSettleTask?.cancel()
         isMorphing = false
         PanelHeightBridge.invalidate()
+    }
+
+    private func fitAttachedSheet() {
+        applyMorphHeight(contentHeight ?? panel.frame.height)
     }
 
     private func applyMorphHeight(_ rawHeight: CGFloat) {
@@ -85,10 +107,11 @@ final class PanelHeightController {
             AppLog.error(.statusItem, "Morph height while visible but no anchor; frame not applied")
             return
         }
-        let height = clampedHeight(rawHeight)
+        contentHeight = rawHeight
+        let height = clampedHeight(PanelGeometry.height(content: rawHeight, attachedSheet: panel.attachedSheet?.frame.height))
         guard abs(panel.frame.height - height) > 1 else { return }
         panel.setFrame(
-            PanelGeometry.frame(topLeft: anchorTopLeft, width: Self.panelWidth, height: height),
+            PanelGeometry.frame(topLeft: anchorTopLeft, width: PanelMetrics.width, height: height),
             display: false
         )
         isMorphing = true
@@ -131,7 +154,7 @@ final class PanelHeightController {
     private static func heightKey(for screen: PopoverScreen) -> String {
         switch screen {
         case .dashboard: "openusage.panel.height.dashboard"
-        case .customize: "openusage.panel.height.customize"
+        case .accounts: "openusage.panel.height.accounts"
         case .settings: "openusage.panel.height.settings"
         }
     }
@@ -158,6 +181,17 @@ enum PanelGeometry {
         let roomBelowAnchor = topLeft.y - visibleFrame.minY - screenMargin
         let aestheticCap = floor(visibleFrame.height * 0.85)
         return max(1, min(roomBelowAnchor, aestheticCap))
+    }
+
+    /// Extra height an attached sheet needs. AppKit centers a sheet vertically in this title-less
+    /// panel, so this leaves 10pt above and below it, matching its inset from the panel's sides.
+    static let sheetMargin: CGFloat = 20
+
+    /// The panel's height for its content, raised while a sheet is attached so the sheet (which hangs
+    /// from the panel's top edge) never runs past the panel's bottom edge.
+    static func height(content: CGFloat, attachedSheet: CGFloat?) -> CGFloat {
+        guard let attachedSheet else { return content }
+        return max(content, attachedSheet + sheetMargin)
     }
 
     static func clampedHeight(_ rawHeight: CGFloat, maximum: CGFloat) -> CGFloat {

@@ -1,20 +1,20 @@
 import SwiftUI
 
-/// Hover detail for a rate-limit-resets row (Codex reset credits, Claude reset grants): a vertical
+/// Hover detail for a Rate Limit Resets row (Codex reset credits, Claude reset grants): a vertical
 /// timeline of each still-available reset, one node per credit, ordered soonest-expiry first. Each
-/// node is a single line — a numbered, severity-colored dot (the number IS the reset number; blue > 7 days, yellow within a week, red
-/// within 48 hours — the same `expirySeverity` bands as the row's status dot), the exact expiry time,
-/// and the countdown to it on the trailing edge. Replaces the old `HoverTooltip` list. When no credits
-/// are available it shows a centered empty state. Mirrors `ModelUsageDetail` / `UsageTrendDetail`'s
-/// calm, presented via `.popover` — but deliberately without their title header (an owner call: the
-/// timeline is self-explanatory and the header cost a full row of the small popover).
+/// node is a single line — a numbered, severity-colored dot (the number IS the reset number; blue > 7
+/// days, orange within a week, red within 48 hours — the same `expirySeverity` bands as the row's status
+/// dot), the exact expiry time, and the countdown to it on the trailing edge. When no credits are
+/// available it shows a centered empty state. Presented via `.popover` deliberately without a title
+/// header (an owner call: the timeline is self-explanatory and the header cost a full row of the small
+/// popover).
 ///
-/// When a `claim` closure is supplied, each node also
-/// becomes claimable: hovering a node reveals a "Use" affordance, clicking it expands that node in place into an inline confirm, and
-/// confirming runs the claim and shows the outcome. `claim` is `nil` for any non-claimable row, which
-/// renders exactly the read-only timeline. Each credit's claim carries an idempotency key (a UUID minted
-/// the first time that credit enters confirm and reused for any retry), so a retried claim can never
-/// double-spend — the server answers `already_redeemed`, which counts as success.
+/// When a `claim` closure is supplied, each node also becomes claimable: hovering a node reveals a
+/// "Use" affordance, clicking it expands that node in place into an inline confirm, and confirming runs
+/// the claim and shows the outcome. `claim` is `nil` for any non-claimable row, which renders exactly
+/// the read-only timeline. Each credit's claim carries an idempotency key (a UUID minted the first time
+/// that credit enters confirm and reused for any retry), so a retried claim can never double-spend — the
+/// server answers `already_redeemed` / `already_used`, which counts as success.
 struct RateLimitResetsDetail: View {
     /// The row's "N available" count. Only used to disambiguate an empty `expiries` list: 0 → genuinely
     /// no credits (empty state); > 0 → credits we have but whose expiry times weren't fetched.
@@ -31,8 +31,6 @@ struct RateLimitResetsDetail: View {
     var claim: ((_ expiry: Date, _ redeemRequestID: String) async -> ResetClaimOutcome)?
     /// The confirm card's explanation line; `nil` keeps the generic one.
     var confirmDetail: String?
-
-    @AppStorage(DensitySetting.key) private var density = DensitySetting.regular
 
     /// Which credits this popover has already claimed (keyed by expiry instant), so a claimed node drops
     /// out of the timeline when the post-claim refresh hasn't landed yet. Fresh `expiries` replace it.
@@ -128,7 +126,7 @@ struct RateLimitResetsDetail: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             Text("You have no rate limit resets")
-                .font(.system(size: density.supportingPointSize))
+                .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -146,7 +144,7 @@ struct RateLimitResetsDetail: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             Text("\(count) available")
-                .font(.system(size: density.supportingPointSize))
+                .font(.callout)
                 .foregroundStyle(.primary)
             Text("Expiry times unavailable")
                 .font(.system(size: 11))
@@ -208,17 +206,11 @@ struct RateLimitResetsDetail: View {
 
     private func numberedDot(_ entry: Entry) -> some View {
         ZStack {
-            Circle().fill(Theme.meterFill(entry.severity)).frame(width: 18, height: 18)
+            Circle().fill(Theme.severityColor(entry.severity)).frame(width: 18, height: 18)
             Text("\(entry.number)")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Self.numberColor(entry.severity))
+                .foregroundStyle(.white)
         }
-    }
-
-    /// The number sits on a saturated system fill, so it takes the fill's paired foreground: dark on the
-    /// bright yellow, white on the blue and red.
-    private static func numberColor(_ severity: WidgetData.MeterSeverity) -> Color {
-        severity == .warning ? .black : .white
     }
 
     /// One timeline node's content (no dot — that lives on the rail): the read-only/claimable line, or,
@@ -246,7 +238,7 @@ struct RateLimitResetsDetail: View {
     /// Fixed height for a resting/claimable node so swapping the trailing countdown for the "Use"
     /// button on hover can't change the row's height (which made the rows jump). The confirm node is
     /// deliberately taller — that's a click away, not a hover.
-    private var nodeHeight: CGFloat { density.supportingPointSize + 18 }
+    private let nodeHeight: CGFloat = 30
     /// Inner padding of the confirm card, shared with `dotCenterY` so the rail dot lines up with the
     /// card's first line.
     private let confirmCardPadding: CGFloat = 10
@@ -254,7 +246,7 @@ struct RateLimitResetsDetail: View {
     private func row(_ entry: Entry) -> some View {
         HStack(spacing: 8) {
             Text(entry.time)
-                .font(.system(size: density.supportingPointSize))
+                .font(.callout)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -286,7 +278,7 @@ struct RateLimitResetsDetail: View {
                     .transition(.opacity)
             } else if let countdown = entry.countdown {
                 Text(countdown)
-                    .font(.system(size: density.supportingPointSize))
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .fixedSize(horizontal: true, vertical: false)
@@ -302,7 +294,7 @@ struct RateLimitResetsDetail: View {
     private func confirmRow(_ entry: Entry) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Use this reset?")
-                .font(.system(size: density.supportingPointSize, weight: .medium))
+                .font(.callout.weight(.medium))
                 .foregroundStyle(.primary)
             Text(confirmDetail ?? "Immediately reset your usage limits. This can't be undone.")
                 .font(.system(size: 11))
@@ -333,7 +325,7 @@ struct RateLimitResetsDetail: View {
     private func claimingRow() -> some View {
         HStack(spacing: 8) {
             Text("Resetting your usage…")
-                .font(.system(size: density.supportingPointSize))
+                .font(.callout)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
             MotionAwareProgressView(controlSize: .small)
@@ -342,7 +334,7 @@ struct RateLimitResetsDetail: View {
     }
 
     /// The result banner: a leading icon and a short line, tinted by outcome (green success, blue info,
-    /// amber/red for the unavailable and failure cases).
+    /// orange/red for the unavailable and failure cases).
     private func bannerView(_ banner: Banner) -> some View {
         HStack(spacing: 8) {
             Image(systemName: banner.icon)
@@ -350,7 +342,7 @@ struct RateLimitResetsDetail: View {
                 .foregroundStyle(banner.tint)
                 .accessibilityHidden(true)
             Text(banner.text)
-                .font(.system(size: density.supportingPointSize, weight: .medium))
+                .font(.callout.weight(.medium))
                 .foregroundStyle(banner.tint)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -411,21 +403,30 @@ struct RateLimitResetsDetail: View {
         case .success:
             if !refreshed { claimedExpiries.insert(date) }
             nothingToReset = true
-            banner = .init(text: "Reset claimed. Enjoy!", icon: "checkmark.circle.fill", tint: .green)
         case .nothingToReset:
             nothingToReset = true
-            banner = .init(text: "Your usage doesn't need a reset yet", icon: "info.circle.fill", tint: .accentColor)
         case .noCredit:
             if !refreshed { claimedExpiries.insert(date) }
-            banner = .init(text: "That reset is no longer available", icon: "exclamationmark.triangle.fill", tint: .orange)
+        case .unconfirmed, .unavailableNow, .failed:
+            break
+        }
+        banner = Self.banner(for: outcome)
+    }
+
+    /// The result banner for a claim's outcome: `ResetClaimOutcome.message` with its glyph and tint.
+    static func banner(for outcome: ResetClaimOutcome, now: Date = Date()) -> Banner {
+        let text = outcome.message(now: now)
+        switch outcome {
+        case .success:
+            return Banner(text: text, icon: "checkmark.circle.fill", tint: .green)
+        case .nothingToReset:
+            return Banner(text: text, icon: "info.circle.fill", tint: Theme.severityColor(.normal))
         case .unconfirmed:
-            banner = .init(text: "Your reset may still be going through. Check again in a minute.", icon: "clock.fill", tint: .accentColor)
-        case .unavailableNow(let until):
-            let wait = until.flatMap { Formatters.whenLabel(at: $0, mode: .relative) }
-                .map { $0 == Formatters.imminent ? " Try again soon." : " Try again in \($0)." } ?? ""
-            banner = .init(text: "Resets can't be used right now.\(wait)", icon: "exclamationmark.triangle.fill", tint: .orange)
+            return Banner(text: text, icon: "clock.fill", tint: Theme.severityColor(.normal))
+        case .noCredit, .unavailableNow:
+            return Banner(text: text, icon: "exclamationmark.triangle.fill", tint: Theme.severityColor(.warning))
         case .failed:
-            banner = .init(text: "Couldn't reset usage. Please try again.", icon: "xmark.circle.fill", tint: .red)
+            return Banner(text: text, icon: "xmark.circle.fill", tint: Theme.severityColor(.critical))
         }
     }
 
@@ -434,70 +435,5 @@ struct RateLimitResetsDetail: View {
         let text: String
         let icon: String
         let tint: Color
-    }
-
-    /// What the body renders, resolved once from the count and expiry list so the "empty vs. count-only
-    /// vs. timeline" choice is unit-testable and can't drift between the view and its tests.
-    enum Content: Equatable {
-        case timeline([Entry])
-        case unknownExpiries(count: Int)
-        case empty
-    }
-
-    /// Empty `expiries` is ambiguous: a genuinely empty balance (`count == 0`) shows the empty state,
-    /// but a positive `count` with no expiries means the dedicated expiry fetch was unavailable and the
-    /// row fell back to the usage-body count — show that count rather than "no resets".
-    static func content(count: Int, expiries: [Date], now: Date = Date()) -> Content {
-        let entries = entries(from: expiries, now: now)
-        if !entries.isEmpty { return .timeline(entries) }
-        if count > 0 { return .unknownExpiries(count: count) }
-        return .empty
-    }
-
-    /// One timeline node's display strings, derived from a credit's expiry instant. Pure and static so
-    /// the phrasing is unit-testable without a view.
-    struct Entry: Identifiable, Equatable {
-        let id: Int          // 0-based row index (soonest first)
-        let number: Int      // 1-based reset number, shown inside the dot
-        let date: Date       // the credit's expiry instant — identity for the claim flow
-        let key: Key         // view identity: the expiry plus its ordinal among equal expiries
-        let severity: WidgetData.MeterSeverity
-        let time: String       // exact expiry, e.g. "Jul 12 at 5:30 PM"; "Expiring soon" when imminent
-        let countdown: String? // "12d 18h"; nil when imminent (no useful countdown to show)
-
-        struct Key: Hashable {
-            let date: Date
-            let ordinal: Int
-        }
-
-        var accessibilityLabel: String {
-            "Reset \(number), \(time)" + (countdown.map { ", expires in \($0)" } ?? "")
-        }
-    }
-
-    /// Build the timeline entries from raw expiry instants: sort soonest-first, number from 1, and pair
-    /// each exact expiry time with its countdown. A past-due or ≤5-minute expiry can't print a useful
-    /// exact time or countdown, so it reads "Expiring soon" with no trailing countdown. Imminence keys
-    /// off the *relative* window — `Formatters.whenLabel(.relative)` collapses to `soon` at ≤5 minutes,
-    /// while `.absolute` only collapses once past-due — so both formats agree instead of the exact time
-    /// printing a wall-clock while the countdown reads "soon".
-    static func entries(from expiries: [Date], now: Date = Date()) -> [Entry] {
-        var seen: [Date: Int] = [:]
-        return expiries.sorted().enumerated().map { index, date in
-            let ordinal = seen[date, default: 0]
-            seen[date] = ordinal + 1
-            let relative = Formatters.whenLabel(at: date, mode: .relative, now: now)
-            let absolute = Formatters.whenLabel(at: date, mode: .absolute, now: now)
-            let imminent = (relative == nil || relative == Formatters.imminent)
-            return Entry(
-                id: index,
-                number: index + 1,
-                date: date,
-                key: Entry.Key(date: date, ordinal: ordinal),
-                severity: WidgetData.expirySeverity(secondsRemaining: date.timeIntervalSince(now)),
-                time: (imminent || absolute == nil) ? "Expiring soon" : absolute!,
-                countdown: imminent ? nil : relative
-            )
-        }
     }
 }

@@ -5,11 +5,6 @@ import Foundation
 /// A metric with a `limit` has a beginning and an end, so it renders as a capsule meter row.
 /// Without a `limit` it's an unbounded amount → a single right-aligned text line.
 struct WidgetData: Hashable {
-    /// Hover note for locally-estimated spend tiles (Codex/Claude/Grok Today / Yesterday / Last 30
-    /// Days), whose dollars are imputed from token counts rather than billed.
-    static let localEstimateNote = "Estimated locally, so it may be off"
-    /// Hover note for Cursor spend tiles, whose spend comes from Cursor's usage-history export.
-    static let cursorUsageHistoryNote = "From your Cursor usage history."
     /// Headline shown on a placed tile with no real backing metric (em dash, U+2014).
     static let noDataHeadline = "—"
     /// Subtitle shown on a placed tile with no real backing metric. Copy is intentionally exact.
@@ -26,7 +21,7 @@ struct WidgetData: Hashable {
     /// Global relative/absolute reset display, stamped by `WidgetDataStore` (like `displayMode`).
     var resetDisplayMode: ResetDisplayMode = .relative
     /// Global "always show pacing" opt-in, stamped by `WidgetDataStore` (like `displayMode`). When on,
-    /// the blue/healthy row also shows the even-pace tick and its projection copy. Yellow and red rows
+    /// the blue/healthy row also shows the even-pace tick and its projection copy. Orange and red rows
     /// always show the tick when a reset window exists; this toggle only adds it on blue.
     var alwaysShowPacing: Bool = false
     var resetsAt: Date?
@@ -39,25 +34,12 @@ struct WidgetData: Hashable {
     /// state when none are available) and lights up like the spend rows — so it stays reachable even
     /// at "0 available", where `expiriesAt` is empty. Off for every other row.
     var showsResetExpiries: Bool = false
-    /// Names of models this period's spend used that have no known price. Their usage is excluded
-    /// unless a fallback estimate is enabled; either way the missing-price warning stays visible.
-    /// Drives the label warning triangle and its hover list. Empty for every other row.
-    var unknownModels: [String] = []
-    /// Period-scoped model spend/tokens for the Today / Yesterday / Last 30 Days hover popover. Nil for
-    /// non-spend rows and for periods where the provider has no model-level data.
-    var modelBreakdown: ModelUsageBreakdown?
     var periodDurationMs: Int?
     var valueTextOverride: String?
     var subtitleOverride: String?
     var limitNoun: String?     // word after a dollar limit, e.g. "$100 limit" (defaults to "limit")
-    /// Fixed trailing word for an unbounded row, e.g. "left" for an extra balance or "spent" for a
-    /// spend estimate. When set it replaces the global left/used mode word.
+    /// Fixed trailing word for an unbounded row, e.g. "left" for an extra balance.
     var unboundedValueWord: String?
-    /// Optional source/disclaimer note for locally-estimated tiles. Rendered on the value-side hover,
-    /// not beside the left label, so labels stay inert.
-    var infoNote: String?
-    /// Optional source note for value rows such as Cursor spend history.
-    var valueTooltipNote: String?
     /// False when no real provider metric backs this tile. The view then shows a "No data" state
     /// instead of the descriptor's placeholder template numbers. True for real data and direct fixtures.
     var hasData: Bool = true
@@ -67,12 +49,6 @@ struct WidgetData: Hashable {
     /// Which of `values` this widget renders — cost-only, tokens-only, or the combined `.all`. Set by
     /// the descriptor factory, so one provider row can back several tiles and the mapper stays oblivious.
     var selection: ValueSelection = .all
-    /// True only for the Today / Yesterday / Last 30 Days spend tiles, where the row's values accumulate
-    /// over a time window so an all-zero reading means "nothing was used." Balance/availability rows
-    /// (Codex Rate Limit Resets, an exhausted Extra Usage credit) read zero when *depleted*, not idle, so
-    /// they leave this false and never get the "No usage in this period" note. Set by the spend-tile
-    /// factory; rides the descriptor sample through `WidgetDataStore.resolve`.
-    var isUsagePeriod: Bool = false
     /// A tray-only unit word appended after this tile's menu-bar value for an unbounded count (e.g. Codex
     /// Rate Limit Resets → "2 resets"). Set by the descriptor, so renaming the tile can't silently drop
     /// the suffix — replaces matching on the tile's title. `nil` for tiles that show the bare value.
@@ -98,18 +74,7 @@ struct WidgetData: Hashable {
         /// 0 (#1160) — the reset date is what tells the two apart.
         case missingResetDate
     }
-    /// Per-day points for a Usage Trend row (empty for every other tile). Set true `isChart` flags the
-    /// row so the view draws the sparkline instead of the value layout; `chartNote` is the source line
-    /// shown on hover (e.g. "From your Claude usage history (estimated)").
-    var isChart: Bool = false
-    var chartPoints: [MetricChartPoint] = []
-    var chartNote: String?
-
     var isBounded: Bool { limit != nil }
-
-    var hasModelBreakdown: Bool {
-        hasData && isUsagePeriod && !(modelBreakdown?.models.isEmpty ?? true)
-    }
 
     /// `values` projected through `selection` — exactly what this tile shows.
     var selectedValues: [MetricValue] { selection.apply(to: values) }
@@ -157,12 +122,12 @@ struct WidgetData: Hashable {
         /// edge where the run-out lands essentially at the reset, and whenever the projected cushion
         /// rounds to 0%
         /// (≤ limit, so there's no run-out time) — in both cases the flame shows alone rather than a
-        /// misleading "0s" or a "~0% spare" amber bar. `projectedFraction` (projected end-of-period
+        /// misleading "0s" or a "~0% spare" orange bar. `projectedFraction` (projected end-of-period
         /// usage ÷ limit) backs the tooltip's overage / "lands at the limit" copy.
         case runningOut(eta: String?, projectedFraction: Double)
         /// Projected to land inside the last 10% — cutting it close — but still with a cushion of at
-        /// least 1%. (A cushion that rounds to 0% promotes to `runningOut` instead, so amber never
-        /// shows "~0% spare".) Amber, a "~N% spare" note. `projectedFraction` backs the tooltip's
+        /// least 1%. (A cushion that rounds to 0% promotes to `runningOut` instead, so orange never
+        /// shows "~0% spare".) Orange, a "~N% spare" note. `projectedFraction` backs the tooltip's
         /// "% used at reset" copy.
         case closeToLimit(spare: String, projectedFraction: Double)
         /// On course to finish with ≥10% to spare. Blue. By default it carries no decoration; when
@@ -185,7 +150,7 @@ struct WidgetData: Hashable {
 
         /// Hover-tooltip detail shared by the bar, the spare note, and the flame: a short numeric
         /// projection of where pace lands at reset, adding the one figure the row doesn't already
-        /// show. Blue → the projected cushion ("~35% left at reset"); amber → projected usage
+        /// show. Blue → the projected cushion ("~35% left at reset"); orange → projected usage
         /// ("~92% used at reset"), the complement of the visible "~N% spare"; red → the overage
         /// ("~12% over limit at reset"), or "~100% used at reset" when projected to land right at
         /// the limit (the promoted-onTrack case, ≤ limit, so there's no overage). `nil` where there's
@@ -342,12 +307,12 @@ struct WidgetData: Hashable {
         return "\(valueText) \(word)"
     }
 
-    /// Color bands for reset-credit expiries: blue normally, amber under a week, red under 48 hours.
+    /// Color bands for reset-credit expiries: blue normally, orange under a week, red under 48 hours.
     /// A past-due expiry remains critical until the next refresh drops it from the available list.
     static let expiryWarningWindow: TimeInterval = 7 * 24 * 60 * 60
     static let expiryCriticalWindow: TimeInterval = 48 * 60 * 60
 
-    /// Severity band for a single expiry `timeRemaining` seconds out: red under 48h, amber under a
+    /// Severity band for a single expiry `timeRemaining` seconds out: red under 48h, orange under a
     /// week, blue beyond. Shared by the row's status dot (soonest expiry) and the resets popover's
     /// per-credit dots, so one credit can never read a different color in the two places.
     static func expirySeverity(secondsRemaining: TimeInterval) -> MeterSeverity {
@@ -393,67 +358,24 @@ struct WidgetData: Hashable {
         return ([header] + entries).joined(separator: "\n")
     }
 
-    /// True when this period used at least one model without known pricing, even if its cost was
-    /// estimated with a fallback. Drives the spend tile's label warning triangle.
-    var hasUnknownModels: Bool {
-        hasData && !unknownModels.isEmpty
-    }
-
-    /// Hover copy for the unknown-model warning triangle: a header naming the problem, then each unpriced
-    /// model on its own line. Singular/plural header to read naturally. `nil` when every model has
-    /// known pricing, so the triangle and its tooltip stay off.
-    var unknownModelTooltip: String? {
-        guard hasUnknownModels else { return nil }
-        let header = unknownModels.count == 1 ? "Unknown model found" : "Unknown models found"
-        return ([header] + unknownModels.map { "- \($0)" }).joined(separator: "\n")
-    }
-
-    /// Secondary line under an unbounded row's detail (e.g. "on-device estimate"); nil with no real data.
+    /// Secondary line under an unbounded row's detail.
     var unboundedSubtitle: String? {
         guard hasData else { return nil }
         return subtitleOverride
     }
 
-    /// Full, un-abbreviated values for the row's hover tooltip — the exact numbers the compact row
-    /// shortens (e.g. "$2,059.07 · 1,506,025,363"). `nil` when nothing is abbreviated and there is no
-    /// source note, so a row like "2" or "$30.88 · 772 credits" gets no redundant tooltip.
+    /// Full, un-abbreviated values for the row's hover tooltip when the compact value shortens them.
     var unboundedTooltip: String? {
         guard hasData else { return nil }
         let selected = selectedValues
-        guard selected.contains(where: { abs($0.number) >= 1000 }) || unboundedTooltipNote != nil else { return nil }
+        guard selected.contains(where: { abs($0.number) >= 1000 }) else { return nil }
         return selected.map { MetricFormatter.string(for: $0, style: .full) }.joined(separator: " · ")
     }
 
-    /// Hover text for an unbounded row's **value** (and the expiry-warning icon): the per-credit expiry
-    /// breakdown on a reset-credit row, else the exact figures the compact value shortens plus any
-    /// source note. `nil` for a small, already-full, non-zero row with no note.
+    /// Hover text for an unbounded row's value when the compact value abbreviates it.
     var unboundedValueTooltip: String? {
-        // The reset-credit row's per-credit expiry breakdown takes precedence (it's the whole point of
-        // hovering "2 available"); its tiny count never has a figures tooltip anyway.
         if let expiry = expiryTooltip { return expiry }
-        if isZeroUsage && isUsagePeriod {
-            return (["No usage in this period"] + [unboundedTooltipNote].compactMap { $0 }).joined(separator: "\n")
-        }
-        if let figures = unboundedTooltip {
-            return ([figures] + [unboundedTooltipNote].compactMap { $0 }).joined(separator: "\n")
-        }
-        // The "no usage" note only fits a spend period (Today / Yesterday / Last 30 Days), where a zero
-        // genuinely means nothing was used. A balance row that reads 0 (Codex Rate Limit Resets, an
-        // exhausted Extra Usage credit) is depleted, not idle, so it gets no note.
-        return nil
-    }
-
-    private var unboundedTooltipNote: String? {
-        infoNote ?? valueTooltipNote
-    }
-
-    /// True for a zero-usage period — has data, but every selected value is zero (a row reading
-    /// "$0.00 · 0 tokens"). Distinct from "no data" and from small non-zero usage, so the row can show
-    /// a "no usage" note rather than a figures reveal.
-    var isZeroUsage: Bool {
-        guard hasData else { return false }
-        let selected = selectedValues
-        return !selected.isEmpty && selected.allSatisfy { $0.number == 0 }
+        return unboundedTooltip
     }
 
     var resetLabel: String? {
@@ -461,10 +383,11 @@ struct WidgetData: Hashable {
         return Formatters.resetRelativeLabel(until: resetsAt)
     }
 
-    /// Bounded/fallback formatting, delegated to the shared formatter so the popover and tray always
-    /// agree. Unbounded `.values` rows format their values directly (`unboundedDetail`).
+    /// Bounded/fallback formatting in the popover row's compact style, so a meter's value always fits
+    /// the dashboard's value column at full size. Unbounded `.values` rows format their values directly
+    /// (`unboundedDetail`).
     private func format(_ value: Double) -> String {
-        MetricFormatter.number(value, kind: kind, style: .full)
+        MetricFormatter.number(value, kind: kind, style: .row)
     }
 }
 
@@ -480,22 +403,22 @@ extension WidgetData {
         return (limit, resetsAt, TimeInterval(periodDurationMs) / 1000)
     }
 
-    /// The meter's full visual state for `now` — the single source the row's color, amber tick,
+    /// The meter's full visual state for `now` — the single source the row's color, orange tick,
     /// and warning copy all read from, so they can't drift apart. Precedence, highest first:
     ///
     /// 1. **No data** → gray, empty.
     /// 2. **Spent** → red + "Limit reached", whenever the remainder rounds to zero at the
     ///    headline's precision (a visibly empty bar always reads spent, pace aside).
     /// 3. **Live pace verdict** (a reset window): blue `healthy` while ≥10% is projected to spare,
-    ///    amber `closeToLimit` (with the spare copy) when projected inside the last 10% *with a
+    ///    orange `closeToLimit` (with the spare copy) when projected inside the last 10% *with a
     ///    cushion of at least 1%*, red `runningOut` when projected to blow past the limit before reset
     ///    (with the run-out time) or to land right at it (cushion rounds to 0% → flame alone, no time).
-    /// 4. **Absolute level bands** (no window to project against): yellow once 80% of the limit is
+    /// 4. **Absolute level bands** (no window to project against): orange once 80% of the limit is
     ///    used, red once 10% or less is left, rounded to the whole percent the headline shows.
     ///
     /// Every band keys off the share *used*, never the displayed fraction, so the color and copy
     /// don't flip with the Used/Left toggle. The even-pace tick (`paceTick(for:)`) is independent:
-    /// yellow and red always show it when a reset window exists; blue only with "always show pacing".
+    /// orange and red always show it when a reset window exists; blue only with "always show pacing".
     func meterState(now: Date = Date()) -> MeterState {
         guard hasData, let limit, limit > 0 else { return hasData ? .level(.normal) : .noData }
         if roundedAtDisplayPrecision(limit - used) <= 0 { return .spent }
@@ -536,7 +459,7 @@ extension WidgetData {
     }
 
     /// Color from the share used when there's no trustworthy pace projection (no reset window, or a
-    /// projection deliberately distrusted near-empty): yellow at 80% used, red at 90%, blue below.
+    /// projection deliberately distrusted near-empty): orange at 80% used, red at 90%, blue below.
     /// Carries no projection copy or tick — a plain level reading.
     private func absoluteLevelState(used: Double, limit: Double) -> MeterState {
         let percentUsed = (min(max(used / limit, 0), 1) * 100).rounded()
@@ -547,7 +470,7 @@ extension WidgetData {
 
     /// Even-pace tick position on the bar (0...1), or `nil` when hidden. Always the elapsed fraction
     /// of the reset window, framed like the fill (Used view → share used at an even burn; Left view →
-    /// share remaining). Yellow and red pace states always show it; blue `healthy` only when
+    /// share remaining). Orange and red pace states always show it; blue `healthy` only when
     /// `alwaysShowPacing` is on. Spent, no-data, and rows without a reset window never show a tick.
     func paceTick(for state: MeterState, now: Date = Date()) -> Double? {
         switch state {
@@ -598,8 +521,8 @@ extension WidgetData {
         }
     }
 
-    /// True when the bounded primary row's trailing text is a concrete reset countdown (so the row makes
-    /// it the clickable toggle). False for limit/suffix context, fresh session windows, or no reset date.
+    /// True when the bounded primary row's trailing text is a concrete reset countdown. False for
+    /// limit/suffix context, fresh session windows, or no reset date.
     func hasResetLabel(now: Date = Date()) -> Bool {
         hasData && subtitleOverride == nil && resetsAt != nil && !isFreshSessionWindow(now: now)
     }
@@ -618,26 +541,10 @@ extension WidgetData {
             ? Formatters.resetRelativeLabel(until: resetsAt, now: now)
             : Formatters.resetAbsoluteLabel(at: resetsAt, now: now)
     }
-
-    /// True when the bounded headline is a flippable Used/Left reading (so the row makes it the
-    /// clickable meter-style toggle). False for unbounded rows, overridden values, and no-data rows.
-    var hasMeterStyleToggle: Bool {
-        hasData && isBounded && valueTextOverride == nil
-    }
-
-    /// Hover tooltip for the bounded headline: the *opposite* meter style from what's shown
-    /// (e.g. headline "95% left" → tooltip "5% used"), mirroring `resetTooltip`'s flip pattern.
-    var meterStyleTooltip: String? {
-        guard hasMeterStyleToggle, let limit else { return nil }
-        let opposite = displayMode == .remaining ? used : max(0, limit - used)
-        let word = (displayMode == .remaining ? WidgetDisplayMode.used : .remaining).label.lowercased()
-        return "\((valuePrefix ?? "") + format(opposite)) \(word)"
-    }
 }
 
 extension WidgetData {
-    /// The neighbor-aware condensing rule, in one place: within a single run of rows (a run never spans
-    /// the expand caret — callers segment at that boundary and scan each segment separately), the offsets
+    /// The neighbor-aware condensing rule, in one place: within a list of rows, the offsets
     /// of text-only rows that sit directly under another text-only row. A text-only row has no meter fill
     /// (`!isBounded`); a run of them (Today / Yesterday / Last 30 Days) pulls up into one cluster. The
     /// dashboard maps these offsets back to descriptor IDs; the share-card export maps them to flat indices.

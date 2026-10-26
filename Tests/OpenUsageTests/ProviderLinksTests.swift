@@ -1,86 +1,52 @@
 import XCTest
 @testable import OpenUsage
 
-/// `Provider.visibleLinks` is the boundary that keeps a malformed link entry from shipping a dead or
-/// no-op button on the card. It mirrors the legacy Tauri `visibleLinks` filter: trim, require a
-/// non-empty label and URL, and accept `http(s)` schemes only.
 final class ProviderLinksTests: XCTestCase {
-    private func provider(_ links: [ProviderLink]) -> Provider {
-        Provider(id: "test", displayName: "Test", icon: .providerMark("test"), links: links)
-    }
-
-    func testNoLinksYieldsEmptyVisibleLinks() {
-        XCTAssertTrue(provider([]).visibleLinks.isEmpty)
-    }
-
-    func testKeepsValidHttpsAndHttp() {
-        let links = [
-            ProviderLink(label: "Status", url: "https://status.example.com/"),
-            ProviderLink(label: "HTTP", url: "http://example.com/dashboard")
-        ]
-        XCTAssertEqual(provider(links).visibleLinks, links)
-    }
-
-    func testRejectsEmptyOrWhitespaceOnlyFields() {
-        let invalidLinks = [
-            ProviderLink(label: "", url: "https://example.com/"),
-            ProviderLink(label: "No URL", url: ""),
-            ProviderLink(label: "   ", url: "https://example.com/"),
-            ProviderLink(label: "Spaces", url: "   ")
-        ]
-        for link in invalidLinks {
-            XCTAssertTrue(provider([link]).visibleLinks.isEmpty, "\(link)")
-        }
-    }
-
-    func testTrimsLabelAndUrl() {
-        XCTAssertEqual(
-            provider([.init(label: "  Status  ", url: "  https://status.example.com/  ")]).visibleLinks,
-            [ProviderLink(label: "Status", url: "https://status.example.com/")]
-        )
-    }
-
-    func testRejectsNonHttpSchemes() {
-        let links = [
-            ProviderLink(label: "FTP", url: "ftp://example.com/"),
-            ProviderLink(label: "JS", url: "javascript:alert(1)"),
-            ProviderLink(label: "Mail", url: "mailto:a@b.com"),
-            ProviderLink(label: "No scheme", url: "example.com"),
-            ProviderLink(label: "Kept", url: "https://example.com/")
-        ]
-        XCTAssertEqual(provider(links).visibleLinks.map(\.label), ["Kept"])
-    }
-
-    func testMixedSetKeepsOnlyValid() {
-        let links = [
-            ProviderLink(label: "Status", url: "https://status.anthropic.com/"),
-            ProviderLink(label: "", url: "https://console.anthropic.com/"),
-            ProviderLink(label: "Bad", url: "ftp://nope"),
-            ProviderLink(label: "Console", url: "https://console.anthropic.com/")
-        ]
-        XCTAssertEqual(provider(links).visibleLinks.map(\.label), ["Status", "Console"])
-    }
-
-    /// Every installed provider ships at most two quick links with standard labels.
     @MainActor
-    func testInstalledProvidersRespectQuickLinkCap() {
-        let allowed = Set(["Status", "Dashboard", "API Keys", "Usage", "Activity", "Credits"])
-        let suiteName = "ProviderLinksTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let providers = ProviderCatalog.make(defaults: defaults)
-        for runtime in providers {
-            let links = runtime.provider.visibleLinks
-            XCTAssertLessThanOrEqual(
-                links.count, 2,
-                "\(runtime.provider.displayName) has \(links.count) quick links"
-            )
-            for link in links {
-                XCTAssertTrue(
-                    allowed.contains(link.label),
-                    "\(runtime.provider.displayName) link label '\(link.label)' is non-standard"
-                )
+    func testAccountProvidersCarryTheirQuickLinks() {
+        let runtime = AccountProviderRuntime(account: Account(kind: .claude, label: "AM 1"), vault: InMemoryCredentialVault())
+        XCTAssertEqual(runtime.provider.visibleLinks.map(\.label), ["Status Page", "Usage Dashboard"])
+    }
+
+    func testEveryLinkIsAnHTTPSURL() {
+        for kind in ProviderKind.allCases {
+            for link in kind.links {
+                XCTAssertEqual(URL(string: link.url)?.scheme, "https", "\(kind) \(link.label)")
             }
         }
+    }
+
+    /// Every API-key provider's sheet links to the page where the key is created, on its own site.
+    func testEveryAPIKeyProviderLinksToItsKeyPage() {
+        let keyPages = ProviderKind.allCases.compactMap { kind -> (ProviderKind, URL)? in
+            guard case .apiKey(let keyPage) = kind.authMethod else { return nil }
+            return (kind, keyPage)
+        }
+        XCTAssertEqual(keyPages.map(\.0), [.ollama, .opencodeGo, .openrouter, .zai])
+        XCTAssertEqual(keyPages.map(\.1.absoluteString), [
+            "https://ollama.com/settings/keys",
+            "https://opencode.ai/console",
+            "https://openrouter.ai/settings/management-keys",
+            "https://z.ai/manage-apikey/apikey-list",
+        ])
+    }
+
+    /// The right-click menu offers only Status Page and Usage Dashboard; key pages live on the Add
+    /// Account API-key step, never in the menu.
+    func testQuickLinksAreOnlyStatusAndUsageAndNeverAKeyPage() {
+        for kind in ProviderKind.allCases {
+            let labels = kind.links.map(\.label)
+            XCTAssertTrue(["Status Page", "Usage Dashboard"].starts(with: labels) || labels == ["Usage Dashboard"], "\(kind): \(labels)")
+            guard case .apiKey(let keyPage) = kind.authMethod, kind != .opencodeGo else { continue }
+            XCTAssertFalse(kind.links.contains { $0.url == keyPage.absoluteString }, "\(kind) links its key page")
+        }
+        // OpenCode has no key deep link: its Console is both the usage page and where keys are made.
+        XCTAssertEqual(ProviderKind.opencodeGo.links.map(\.label), ["Status Page", "Usage Dashboard"])
+    }
+
+    /// opencode.ai/auth became OpenCode's OAuth authorize page, which shows an error when opened
+    /// directly; the Go docs send subscribers to the Console for their usage.
+    func testOpenCodeUsageDashboardIsTheConsole() {
+        XCTAssertEqual(ProviderKind.opencodeGo.links.last?.url, "https://opencode.ai/console")
     }
 }

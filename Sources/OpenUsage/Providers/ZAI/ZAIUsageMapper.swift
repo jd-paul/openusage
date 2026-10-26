@@ -92,12 +92,12 @@ enum ZAIUsageMapper {
         return lines
     }
 
-    /// `productName` from the first valid subscription entry (e.g. "GLM Coding Max").
+    /// `productName` from the first valid subscription entry, Z.ai's own plan name (e.g. "GLM Coding Max").
     static func planName(from body: Data) -> String? {
         guard let root = ProviderParse.jsonObject(body),
               let list = root["data"] as? [[String: Any]],
               let first = list.first,
-              let name = (first["productName"] as? String)?.nilIfEmpty
+              let name = (first["productName"] as? String)?.trimmingCharacters(in: .whitespaces).nilIfEmpty
         else {
             return nil
         }

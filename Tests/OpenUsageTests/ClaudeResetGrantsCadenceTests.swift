@@ -1,15 +1,13 @@
 import XCTest
 @testable import OpenUsage
 
-/// Issue #1355: the reset-grants request is the one Anthropic throttles when polled, so the regular
-/// refresh reads plain usage and the Rate Limit Resets row is checked at most once an hour per login.
+/// The reset-grants request is the one Anthropic throttles when polled, so a regular refresh reads plain
+/// usage and the Rate Limit Resets row is checked at most once an hour per account.
 @MainActor
 final class ClaudeResetGrantsCadenceTests: XCTestCase {
-    private static let start = OpenUsageISO8601.date(from: "2026-10-09T12:00:00.000Z")!
-    private static let credentials =
-        #"{"claudeAiOauth":{"accessToken":"token-a","refreshToken":"refresh-a","expiresAt":4102444800000,"subscriptionType":"max","scopes":["user:profile"]}}"#
+    private nonisolated static let start = OpenUsageISO8601.date(from: "2026-10-09T12:00:00.000Z")!
 
-    func testRegularRefreshReadsPlainUsageAndChecksResetGrantsHourly() async {
+    func testRegularRefreshReadsPlainUsageAndChecksResetGrantsHourly() async throws {
         let clock = TestClock(Self.start)
         let http = RoutingHTTPClient { request in
             switch request.url.path {
@@ -19,20 +17,20 @@ final class ClaudeResetGrantsCadenceTests: XCTestCase {
                 return HTTPResponse(statusCode: 404, headers: [:], body: Data())
             }
         }
-        let provider = makeProvider(http: http, clock: clock)
+        let runtime = try makeRuntime(http: http, clock: clock)
 
-        let first = await provider.refresh()
+        let first = await runtime.refresh()
         clock.set(Self.start.addingTimeInterval(5 * 60))
-        let second = await provider.refresh()
+        let second = await runtime.refresh()
         clock.set(Self.start.addingTimeInterval(61 * 60))
-        _ = await provider.refresh()
+        _ = await runtime.refresh()
 
         XCTAssertEqual(usageQueries(http), [nil, "cedar_ember=1&skip_spend=1", nil, nil, "cedar_ember=1&skip_spend=1"])
         XCTAssertEqual(resetsAvailable(first.lines), 1)
         XCTAssertEqual(resetsAvailable(second.lines), 1)
     }
 
-    func testFailedResetGrantsCheckKeepsBarsAndWaitsAnHour() async {
+    func testFailedResetGrantsCheckKeepsBarsAndWaitsAnHour() async throws {
         let clock = TestClock(Self.start)
         let http = RoutingHTTPClient { request in
             switch request.url.path {
@@ -44,20 +42,20 @@ final class ClaudeResetGrantsCadenceTests: XCTestCase {
                 return HTTPResponse(statusCode: 404, headers: [:], body: Data())
             }
         }
-        let provider = makeProvider(http: http, clock: clock)
+        let runtime = try makeRuntime(http: http, clock: clock)
 
-        let first = await provider.refresh()
+        let first = await runtime.refresh()
         clock.set(Self.start.addingTimeInterval(5 * 60))
-        let second = await provider.refresh()
+        let second = await runtime.refresh()
 
         XCTAssertNil(first.warning)
-        XCTAssertNotNil(first.lines.first { $0.label == "Session" })
+        XCTAssertNotNil(first.line(label: "Session"))
         XCTAssertNil(resetsAvailable(first.lines))
-        XCTAssertNotNil(second.lines.first { $0.label == "Session" })
+        XCTAssertNotNil(second.line(label: "Session"))
         XCTAssertEqual(usageQueries(http), [nil, "cedar_ember=1&skip_spend=1", nil])
     }
 
-    func testHeldResetGrantDropsOnceItsDeadlinePasses() async {
+    func testHeldResetGrantDropsOnceItsDeadlinePasses() async throws {
         let clock = TestClock(Self.start)
         let deadline = Self.start.addingTimeInterval(10 * 60)
         let http = RoutingHTTPClient { request in
@@ -68,21 +66,18 @@ final class ClaudeResetGrantsCadenceTests: XCTestCase {
                 return HTTPResponse(statusCode: 404, headers: [:], body: Data())
             }
         }
-        let provider = makeProvider(http: http, clock: clock)
+        let runtime = try makeRuntime(http: http, clock: clock)
 
-        let first = await provider.refresh()
+        let first = await runtime.refresh()
         clock.set(Self.start.addingTimeInterval(15 * 60))
-        let second = await provider.refresh()
+        let second = await runtime.refresh()
 
         XCTAssertEqual(resetsAvailable(first.lines), 1)
         XCTAssertEqual(resetsAvailable(second.lines), 0)
     }
 
-    func testTokenRotationKeepsLastGoodGrantsWhenHourlyCheckFails() async {
+    func testTokenRotationKeepsLastGoodGrantsWhenHourlyCheckFails() async throws {
         let clock = TestClock(Self.start)
-        let expiresAt = Int(Self.start.addingTimeInterval(30 * 60).timeIntervalSince1970 * 1000)
-        let files = FakeFiles(["/tmp/claude/.credentials.json": Self.credentials
-            .replacingOccurrences(of: "4102444800000", with: String(expiresAt))])
         let http = RoutingHTTPClient { request in
             switch request.url.path {
             case "/v1/oauth/token":
@@ -97,100 +92,64 @@ final class ClaudeResetGrantsCadenceTests: XCTestCase {
                 return HTTPResponse(statusCode: 404, headers: [:], body: Data())
             }
         }
-        let provider = makeProvider(http: http, clock: clock, files: files)
+        let runtime = try makeRuntime(http: http, clock: clock, expiresAt: Self.start.addingTimeInterval(30 * 60))
 
-        let first = await provider.refresh()
+        let first = await runtime.refresh()
         clock.set(Self.start.addingTimeInterval(61 * 60))
-        let rotated = await provider.refresh()
+        let rotated = await runtime.refresh()
         clock.set(Self.start.addingTimeInterval(62 * 60))
-        let held = await provider.refresh()
+        let held = await runtime.refresh()
 
         XCTAssertEqual(resetsAvailable(first.lines), 1)
         XCTAssertEqual(resetsAvailable(rotated.lines), 1)
         XCTAssertEqual(resetsAvailable(held.lines), 1)
-        XCTAssertEqual(http.requests.filter { $0.isClaudeResetGrantsCheck }.count, 2)
+        XCTAssertEqual(http.requests.filter(\.isClaudeResetGrantsCheck).count, 2)
+        XCTAssertEqual(http.requests.filter { $0.url.path == "/v1/oauth/token" }.count, 1)
     }
 
-    func testLoginReplacementDuringGrantsReloadsUsageAndDoesNotCacheOldGrants() async {
-        for statusCode in [200, 429] {
-            let clock = TestClock(Self.start)
-            let files = FakeFiles(["/tmp/claude/.credentials.json": Self.credentials])
-            let replacement = Self.credentials.replacingOccurrences(of: "token-a", with: "token-b")
-                .replacingOccurrences(of: "refresh-a", with: "refresh-b")
-            let http = RoutingHTTPClient { request in
-                guard request.url.path == "/api/oauth/usage" else {
-                    return HTTPResponse(statusCode: 404, headers: [:], body: Data())
-                }
-                let originalLogin = request.headers["Authorization"] == "Bearer token-a"
-                if request.url.query == nil { return Self.usage(used: originalLogin ? 42 : 77) }
-                if originalLogin {
-                    files.files["/tmp/claude/.credentials.json"] = replacement
-                    return statusCode == 200 ? Self.grants(resetsLeft: 1)
-                        : HTTPResponse(statusCode: statusCode, headers: [:], body: Data())
-                }
-                return Self.grants(resetsLeft: 2)
-            }
-            let provider = makeProvider(http: http, clock: clock, files: files)
-
-            let replaced = await provider.refresh()
-            let held = await provider.refresh()
-
-            XCTAssertNil(replaced.warning)
-            guard case .progress(_, let used, _, _, _, _, _) = replaced.line(label: "Session") else {
-                return XCTFail("Expected replacement login's live usage")
-            }
-            XCTAssertEqual(used, 77)
-            XCTAssertEqual(resetsAvailable(replaced.lines), 2)
-            XCTAssertEqual(resetsAvailable(held.lines), 2)
-            XCTAssertEqual(http.requests.filter { $0.isClaudeResetGrantsCheck }.count, 2)
-        }
-    }
-
-    func testLoginReplacementDuringProfileReloadsUsageBeforePublishing() async {
+    func testEachAccountKeepsItsOwnHourlyCheck() async throws {
         let clock = TestClock(Self.start)
-        let files = FakeFiles(["/tmp/claude/.credentials.json": Self.credentials])
-        let replacement = Self.credentials.replacingOccurrences(of: "token-a", with: "token-b")
-            .replacingOccurrences(of: "refresh-a", with: "refresh-b")
         let http = RoutingHTTPClient { request in
-            let originalLogin = request.headers["Authorization"] == "Bearer token-a"
             switch request.url.path {
             case "/api/oauth/usage":
-                return request.url.query == nil ? Self.usage(used: originalLogin ? 42 : 77)
-                    : Self.grants(resetsLeft: originalLogin ? 1 : 2)
-            case "/api/oauth/profile":
-                if originalLogin { files.files["/tmp/claude/.credentials.json"] = replacement }
-                return HTTPResponse(statusCode: 200, headers: [:], body: Data("{}".utf8))
+                guard request.url.query != nil else { return Self.usage() }
+                return Self.grants(resetsLeft: request.headers["Authorization"] == "Bearer token-a" ? 1 : 2)
             default:
                 return HTTPResponse(statusCode: 404, headers: [:], body: Data())
             }
         }
-        let provider = makeProvider(http: http, clock: clock, files: files)
+        let work = try makeRuntime(http: http, clock: clock)
+        let personal = try makeRuntime(http: http, clock: clock, accessToken: "token-p")
 
-        let snapshot = await provider.refresh()
+        let workFirst = await work.refresh()
+        let personalFirst = await personal.refresh()
+        clock.set(Self.start.addingTimeInterval(5 * 60))
+        _ = await work.refresh()
+        _ = await personal.refresh()
 
-        guard case .progress(_, let used, _, _, _, _, _) = snapshot.line(label: "Session") else {
-            return XCTFail("Expected replacement login's live usage")
-        }
-        XCTAssertEqual(used, 77)
-        XCTAssertEqual(resetsAvailable(snapshot.lines), 2)
+        XCTAssertEqual(resetsAvailable(workFirst.lines), 1)
+        XCTAssertEqual(resetsAvailable(personalFirst.lines), 2)
+        XCTAssertEqual(
+            http.requests.filter(\.isClaudeResetGrantsCheck).map { $0.headers["Authorization"] },
+            ["Bearer token-a", "Bearer token-p"]
+        )
     }
 
     // MARK: - Helpers
 
-    private func makeProvider(http: RoutingHTTPClient, clock: TestClock, files: FakeFiles? = nil) -> ClaudeProvider {
-        let authStore = ClaudeAuthStore(
-            environment: FakeEnvironment(["CLAUDE_CONFIG_DIR": "/tmp/claude"]),
-            files: files ?? FakeFiles(["/tmp/claude/.credentials.json": Self.credentials]),
-            keychain: FakeKeychain(),
-            now: { clock.now }
+    private func makeRuntime(
+        http: RoutingHTTPClient,
+        clock: TestClock,
+        accessToken: String = "token-a",
+        expiresAt: Date? = nil
+    ) throws -> AccountProviderRuntime {
+        let account = Account(kind: .claude, label: "Work")
+        let vault = InMemoryCredentialVault()
+        try vault.save(
+            .oauth(OAuthTokens(accessToken: accessToken, refreshToken: "refresh-a", expiresAt: expiresAt)),
+            for: account.id
         )
-        return ClaudeProvider(
-            authStore: authStore,
-            usageClient: ClaudeUsageClient(httpClient: http),
-            logUsageScanner: ClaudeLogFixture.scanner(home: nil),
-            now: { clock.now },
-            pricing: { TestPricing.bundled }
-        )
+        return AccountProviderRuntime(account: account, vault: vault, http: http, now: { clock.now })
     }
 
     private func usageQueries(_ http: RoutingHTTPClient) -> [String?] {
@@ -198,16 +157,16 @@ final class ClaudeResetGrantsCadenceTests: XCTestCase {
     }
 
     private func resetsAvailable(_ lines: [MetricLine]) -> Double? {
-        guard case .values(_, let values, _, _, _, _) = lines.first(where: { $0.label == "Rate Limit Resets" }) else {
+        guard case .values(_, let values, _, _) = lines.first(where: { $0.label == "Rate Limit Resets" }) else {
             return nil
         }
         return values.first?.number
     }
 
-    private nonisolated static func usage(used: Int = 42) -> HTTPResponse {
+    private nonisolated static func usage() -> HTTPResponse {
         HTTPResponse(
             statusCode: 200, headers: [:],
-            body: Data(#"{"five_hour":{"utilization":\#(used),"resets_at":"2099-01-01T00:00:00.000Z"},"cedar_ember":null}"#.utf8)
+            body: Data(#"{"five_hour":{"utilization":42,"resets_at":"2099-01-01T00:00:00.000Z"},"cedar_ember":null}"#.utf8)
         )
     }
 

@@ -68,33 +68,6 @@ final class ResetDisplayTests: XCTestCase {
         XCTAssertNil(data.paceTick(for: state, now: now))
     }
 
-    @MainActor
-    func testSessionWindowSignalIsWiredOnExactlyTheShippingSessionDescriptors() {
-        // The tests around this hand-set `sessionStartSignal`, so they pin the mechanism but not the
-        // wiring. This one pins the wiring: the descriptor opt-in replaced a model-level widget-ID set,
-        // so a provider dropping (or spuriously gaining) the signal — or flipping which signal it uses —
-        // must fail here, not ship silently. Claude and OpenCode must stay on `.missingResetDate`: both
-        // report whole-percent utilization, which reads 0 for an in-flight window under 1%, so
-        // `.zeroUsage` would regress #1160 on either.
-        let providers: [ProviderRuntime] = [
-            ClaudeProvider(), CodexProvider(), CursorProvider(),
-            AntigravityProvider(), CopilotProvider(), DevinProvider(),
-            GrokProvider(), OpenRouterProvider(), ZAIProvider(), OpenCodeProvider()
-        ]
-        let descriptors = providers.flatMap(\.widgetDescriptors)
-        let signals = Dictionary(uniqueKeysWithValues: descriptors
-            .compactMap { d in d.sample.sessionStartSignal.map { (d.id, $0) } })
-        XCTAssertEqual(signals, ["claude.session": .missingResetDate,
-                                 "antigravity.geminiPro": .zeroUsage,
-                                 "antigravity.claude": .zeroUsage,
-                                 "opencode.session": .missingResetDate])
-
-        // Same wiring pin for the menu-bar tray suffix (it replaced a title-string match).
-        let suffixed = descriptors.filter { $0.sample.traySuffix != nil }
-        XCTAssertEqual(suffixed.map(\.id), ["claude.rateLimitResets", "codex.rateLimitResets"])
-        XCTAssertEqual(suffixed.first?.sample.traySuffix, "resets")
-    }
-
     func testMissingResetDateSignalKeepsCountdownForSubOnePercentSession() {
         // #1160: Claude reports utilization in whole percents, so an in-flight session under 1% reads
         // used == 0 — but its reset date exists precisely because the window started. The row must show
@@ -162,7 +135,7 @@ final class ResetDisplayTests: XCTestCase {
     }
 
     func testExpirySeverityTracksSoonestExpiry() {
-        // The reset-credit dot reflects the soonest expiry: blue normally, yellow under 7 days, red under
+        // The reset-credit dot reflects the soonest expiry: blue normally, orange under 7 days, red under
         // 48 hours.
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         var data = WidgetData(title: "Rate Limit Resets", icon: .providerMark("codex"),
@@ -176,7 +149,7 @@ final class ResetDisplayTests: XCTestCase {
         ]
         XCTAssertEqual(data.expirySeverity(now: now), .critical)
 
-        // Under 7 days but outside 48 hours -> yellow.
+        // Under 7 days but outside 48 hours -> orange.
         data.expiriesAt = [now.addingTimeInterval(WidgetData.expiryCriticalWindow + 3600)]
         XCTAssertEqual(data.expirySeverity(now: now), .warning)
 
@@ -198,9 +171,27 @@ final class ResetDisplayTests: XCTestCase {
         XCTAssertNil(data.expiryTooltip)
     }
 
+    @MainActor
+    func testResetsRowIsWiredOnlyOnClaudeAndCodexAccounts() {
+        let runtimes = ProviderKind.allCases.map {
+            AccountProviderRuntime(account: Account(kind: $0, label: "Work"), vault: InMemoryCredentialVault())
+        }
+        let resetsRows = runtimes.flatMap { runtime in
+            runtime.widgetDescriptors.filter { $0.sample.showsResetExpiries || $0.sample.traySuffix != nil }
+        }
+
+        XCTAssertEqual(resetsRows.map(\.id), runtimes.filter { [.claude, .codex].contains($0.account.kind) }
+            .map { "\($0.account.cardID).rateLimitResets" })
+        for row in resetsRows {
+            XCTAssertEqual(row.sample.title, "Rate Limit Resets")
+            XCTAssertEqual(row.sample.traySuffix, "resets")
+            XCTAssertTrue(row.sample.showsResetExpiries)
+        }
+    }
+
     func testResetsPopoverEntriesAreSoonestFirstAndNumbered() {
-        // The popover timeline sorts the credits soonest-first, numbers them from 1, and pairs each
-        // exact expiry time with its countdown. Per-credit dot color reuses the row's severity bands.
+        // The popover timeline sorts the resets soonest-first, numbers them from 1, and pairs each exact
+        // expiry time with its countdown. Per-reset dot color reuses the row's severity bands.
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let entries = RateLimitResetsDetail.entries(
             from: [
@@ -230,28 +221,18 @@ final class ResetDisplayTests: XCTestCase {
         }
     }
 
-    func testResetsPopoverEmptyWhenNoCredits() {
+    func testResetsPopoverEmptyWhenNoResets() {
         XCTAssertTrue(RateLimitResetsDetail.entries(from: [], now: Date()).isEmpty)
-    }
-
-    func testCompactDurationAlwaysShowsHoursAtDayScale() {
-        // Day-scale durations always show two units so a whole-day-ish span never reads as a flat "Xd"
-        // that hides the sub-day remainder. Sub-day durations are unchanged.
-        XCTAssertEqual(Formatters.compactDuration(4 * 24 * 3600 + 52 * 60), "4d 0h") // 4d 52m -> "4d 0h"
-        XCTAssertEqual(Formatters.compactDuration(7 * 24 * 3600), "7d 0h")            // exact week
-        XCTAssertEqual(Formatters.compactDuration(9 * 24 * 3600 + 21 * 3600), "9d 21h")
-        XCTAssertEqual(Formatters.compactDuration(5 * 3600), "5h")                    // sub-day unchanged
-        XCTAssertEqual(Formatters.compactDuration(52 * 60), "52m")
     }
 
     func testResetsPopoverContentResolvesEmptyCountOnlyAndTimeline() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
 
-        // Zero credits -> the genuine empty state.
+        // Zero resets -> the genuine empty state.
         XCTAssertEqual(RateLimitResetsDetail.content(count: 0, expiries: [], now: now), .empty)
 
-        // Credits present but no expiry list (dedicated fetch unavailable -> usage-body count fallback):
-        // must NOT read "no resets"; it states the count instead.
+        // Resets present but no expiry list (the dedicated fetch failed, so the row fell back to the
+        // usage-body count): must NOT read "no resets"; it states the count instead.
         XCTAssertEqual(
             RateLimitResetsDetail.content(count: 3, expiries: [], now: now),
             .unknownExpiries(count: 3)
@@ -263,6 +244,16 @@ final class ResetDisplayTests: XCTestCase {
             return XCTFail("expected timeline")
         }
         XCTAssertEqual(entries.count, 1)
+    }
+
+    func testCompactDurationAlwaysShowsHoursAtDayScale() {
+        // Day-scale durations always show two units so a whole-day-ish span never reads as a flat "Xd"
+        // that hides the sub-day remainder. Sub-day durations are unchanged.
+        XCTAssertEqual(Formatters.compactDuration(4 * 24 * 3600 + 52 * 60), "4d 0h") // 4d 52m -> "4d 0h"
+        XCTAssertEqual(Formatters.compactDuration(7 * 24 * 3600), "7d 0h")            // exact week
+        XCTAssertEqual(Formatters.compactDuration(9 * 24 * 3600 + 21 * 3600), "9d 21h")
+        XCTAssertEqual(Formatters.compactDuration(5 * 3600), "5h")                    // sub-day unchanged
+        XCTAssertEqual(Formatters.compactDuration(52 * 60), "52m")
     }
 
     func testDeadlineLabelSharesFormatAcrossPrefixesAndModes() {

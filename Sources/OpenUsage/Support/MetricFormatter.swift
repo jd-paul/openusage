@@ -9,7 +9,8 @@ import Foundation
 enum MetricFormatter {
     /// Three surfaces, three needs:
     /// - `.tray` — the menu-bar strip: shortest. Whole dollars under $1,000, abbreviated above; counts abbreviated.
-    /// - `.row` — the popover row: abbreviated like the tray, but money keeps cents / two decimals ("$2.06K", "$40.76").
+    /// - `.row` — the popover row: abbreviated like the tray, and money keeps its cents unless it's whole
+    ///   dollars ("$2.1K", "$40.76", "$500").
     /// - `.full` — tooltips and bounded headlines: every digit, grouped ("$2,059.07", "56,904,995").
     enum Style {
         case tray
@@ -40,8 +41,11 @@ enum MetricFormatter {
             case .tray:
                 // Shortest below $1k: whole dollars ("$130").
                 return "$" + value.formatted(.number.precision(.fractionLength(0)).locale(locale))
-            case .row, .full:
-                // Full cents below $1k; the row's token-count neighbor stays readable.
+            case .row:
+                // Cents below $1k, dropped when they're zero so a whole amount reads "$500".
+                let whole = (value * 100).rounded().truncatingRemainder(dividingBy: 100) == 0
+                return Formatters.currency(value, fractionDigits: whole ? 0 : 2)
+            case .full:
                 return Formatters.currency(value, fractionDigits: 2)
             }
         case .count:
@@ -69,62 +73,4 @@ enum MetricFormatter {
         number(value, kind: .dollars, style: style) + "/MTok"
     }
 
-    /// The Total Spend ring's two-line center: a short primary on top and a quiet unit underneath so
-    /// Cost/MTok doesn't cram `/MTok` into the hole. Shared by the live card and the share PNG.
-    struct TotalSpendRingCenter: Equatable {
-        let primary: String
-        let unit: String
-    }
-
-    static func totalSpendRingCenter(_ value: Double, metric: TotalSpendMetric) -> TotalSpendRingCenter {
-        switch metric {
-        case .cost:
-            // Keep the `$` — unit line still says "dollars" for clarity in the hole.
-            return TotalSpendRingCenter(primary: number(value, kind: .dollars, style: .tray), unit: "dollars")
-        case .tokens:
-            return tokenRingCenter(value)
-        case .costPerMtok:
-            // `$1.37` with two decimals under 1k; abbreviated above. Unit line is `MTok`.
-            return TotalSpendRingCenter(primary: costPerMtokRingPrimary(value), unit: "MTok")
-        }
-    }
-
-    /// Dollar-rate figure for the Cost/MTok hole — `$` plus two decimals under 1k, abbreviated above.
-    private static func costPerMtokRingPrimary(_ value: Double) -> String {
-        if abs(value) >= 1000 {
-            return "$" + value.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)).locale(locale))
-        }
-        return Formatters.currency(value, fractionDigits: 2)
-    }
-
-    /// Token totals put the magnitude word on the second line (`461.8` / `million`) so the hole
-    /// stays short even when the total runs past a billion.
-    private static func tokenRingCenter(_ value: Double) -> TotalSpendRingCenter {
-        let magnitude = abs(value)
-        if magnitude >= 1_000_000_000 {
-            let scaled = value / 1_000_000_000
-            return TotalSpendRingCenter(
-                primary: scaled.formatted(.number.precision(.fractionLength(0...1)).locale(locale)),
-                unit: "billion"
-            )
-        }
-        if magnitude >= 1_000_000 {
-            let scaled = value / 1_000_000
-            return TotalSpendRingCenter(
-                primary: scaled.formatted(.number.precision(.fractionLength(0...1)).locale(locale)),
-                unit: "million"
-            )
-        }
-        if magnitude >= 1_000 {
-            let scaled = value / 1_000
-            return TotalSpendRingCenter(
-                primary: scaled.formatted(.number.precision(.fractionLength(0...1)).locale(locale)),
-                unit: "thousand"
-            )
-        }
-        return TotalSpendRingCenter(
-            primary: value.formatted(.number.precision(.fractionLength(0...1)).locale(locale)),
-            unit: "tokens"
-        )
-    }
 }

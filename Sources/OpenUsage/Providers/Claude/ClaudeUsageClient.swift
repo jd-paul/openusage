@@ -100,7 +100,7 @@ struct ClaudeUsageClient: Sendable {
     /// for a reset to offer. `cedar_ember=1` opts in to Anthropic's one-off usage-limit reset grants (the
     /// Rate Limit Resets row), which the plain read returns as `null`; `skip_spend=1` drops the spend
     /// figures this request doesn't need. Anthropic rate-limits this variant hard when it's polled, so the
-    /// provider asks at most once an hour. Anthropic also decides grant eligibility by client surface: a
+    /// runtime asks at most once an hour. Anthropic also decides grant eligibility by client surface: a
     /// User-Agent it doesn't recognize as Claude Code comes back `eligible: false,
     /// ineligible_reason: "surface"` with no grants.
     func fetchResetGrants(accessToken: String, config: ClaudeOAuthConfig) async throws -> HTTPResponse {
@@ -123,7 +123,8 @@ struct ClaudeUsageClient: Sendable {
     }
 
     /// `POST /api/organizations/{org}/reset_rate_limits`, the request Claude Code sends to spend one reset
-    /// grant. `request_id` makes a retry idempotent. See docs/research/claude-reset-grant-claim.md.
+    /// grant. `request_id` makes a retry idempotent: Anthropic answers a repeated id with `already_used`
+    /// instead of spending a second reset.
     func claimResetGrant(
         accessToken: String, organizationUUID: String, grantID: String, requestID: String, config: ClaudeOAuthConfig
     ) async throws -> HTTPResponse {

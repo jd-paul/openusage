@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Customize metric row shape, shared by the live row in `CustomizeProviderDetailView` and the
+/// The Accounts detail's metric row shape, shared by the live row in `AccountDetailView` and the
 /// lifted drag preview in `ReorderLiftPreview`. The layout is **grip · label · star · toggle** — the
 /// drag grip leads (left), the name follows, and the star + on/off toggle trail on the right. This
 /// mirrors the provider row's "drag left, toggle right" arrangement. Defining the grip slot once is
@@ -15,8 +15,6 @@ struct CustomizeMetricRow<Handle: View, Trailing: View>: View {
     let handle: (AnyView) -> Handle
     @ViewBuilder var trailing: Trailing
 
-    @AppStorage(DensitySetting.key) private var density = DensitySetting.regular
-
     var body: some View {
         HStack(spacing: 10) {
             handle(AnyView(ReorderGrip()))
@@ -26,7 +24,7 @@ struct CustomizeMetricRow<Handle: View, Trailing: View>: View {
             trailing
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, density.controlRowPadding)
+        .padding(.vertical, PanelMetrics.controlRowPadding)
     }
 }
 
@@ -55,5 +53,15 @@ struct CustomizeStarPlaceholder: View {
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.quaternary)
             .frame(width: 18, height: 18)
+    }
+}
+
+struct ReorderGrip: View {
+    var body: some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.tertiary)
+            .frame(width: 16, height: 22)
+            .contentShape(Rectangle())
     }
 }

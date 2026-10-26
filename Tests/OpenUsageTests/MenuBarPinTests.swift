@@ -2,29 +2,27 @@ import XCTest
 @testable import OpenUsage
 
 /// Covers the menu-bar pin model on `LayoutStore`: the ≤2-per-provider rendering cap, denial
-/// reasons/notices, order derivation from the Customize order,
-/// disabled-provider handling, and persistence across relaunch.
+/// reasons/notices, order derivation from the Customize order, and persistence across relaunch.
 @MainActor
 final class MenuBarPinTests: XCTestCase {
     func testNoPinsByDefault() {
         let store = makeStore("default")
         XCTAssertTrue(store.pinnedMetricIDs.isEmpty)
         XCTAssertTrue(store.pinnedGroups.isEmpty)
-        XCTAssertEqual(store.menuBarStyle, .text)
     }
 
     func testPinUnpinPersistsAcrossReload() {
         let defaults = makeDefaults("persist")
-        let store = LayoutStore(registry: makeRegistry(), defaults: defaults, storageKey: "layout")
+        let store = makeStore(defaults: defaults)
 
         store.setPinned(true, for: "a.m1")
         XCTAssertTrue(store.isPinned("a.m1"))
 
-        let reloaded = LayoutStore(registry: makeRegistry(), defaults: defaults, storageKey: "layout")
+        let reloaded = makeStore(defaults: defaults)
         XCTAssertTrue(reloaded.isPinned("a.m1"))
 
         reloaded.setPinned(false, for: "a.m1")
-        let reloadedAgain = LayoutStore(registry: makeRegistry(), defaults: defaults, storageKey: "layout")
+        let reloadedAgain = makeStore(defaults: defaults)
         XCTAssertFalse(reloadedAgain.isPinned("a.m1"))
     }
 
@@ -86,40 +84,19 @@ final class MenuBarPinTests: XCTestCase {
         XCTAssertEqual(store.pinnedGroups.map(\.provider.id), ["a", "b"])
     }
 
-    func testDisabledProviderPinsExcludedFromGroupsButKept() {
-        let store = LayoutStore(
-            registry: makeRegistry(),
-            defaults: makeDefaults("disabled"),
-            storageKey: "layout",
-            isProviderEnabled: { $0 != "a" }
-        )
+    func testAllProviderPinsAppearInGroups() {
+        let store = makeStore(defaults: makeDefaults("disabled"))
         store.setPinned(true, for: "a.m1")
         store.setPinned(true, for: "b.m1")
 
-        XCTAssertEqual(store.pinnedGroups.map(\.provider.id), ["b"])
-        XCTAssertTrue(store.isPinned("a.m1"))  // membership preserved while hidden
-    }
-
-    func testResetToDefaultClearsPins() {
-        let store = makeStore("reset")
-        store.setPinned(true, for: "a.m1")
-        store.resetToDefault()
-        XCTAssertTrue(store.pinnedMetricIDs.isEmpty)
-    }
-
-    func testMenuBarStylePersists() {
-        let defaults = makeDefaults("style")
-        let store = LayoutStore(registry: makeRegistry(), defaults: defaults, storageKey: "layout")
-        store.menuBarStyle = .bars
-
-        let reloaded = LayoutStore(registry: makeRegistry(), defaults: defaults, storageKey: "layout")
-        XCTAssertEqual(reloaded.menuBarStyle, .bars)
+        XCTAssertEqual(store.pinnedGroups.map(\.provider.id), ["a", "b"])
+        XCTAssertTrue(store.isPinned("a.m1"))
     }
 
     func testInvalidPinnedIDsDroppedOnLoad() {
         let defaults = makeDefaults("invalid")
         defaults.set(["a.m1", "ghost.metric"], forKey: "layout.menuBarPins")
-        let store = LayoutStore(registry: makeRegistry(), defaults: defaults, storageKey: "layout")
+        let store = makeStore(defaults: defaults)
 
         XCTAssertTrue(store.isPinned("a.m1"))
         XCTAssertFalse(store.isPinned("ghost.metric"))
@@ -128,7 +105,14 @@ final class MenuBarPinTests: XCTestCase {
     // MARK: - Fixtures
 
     private func makeStore(_ name: String) -> LayoutStore {
-        LayoutStore(registry: makeRegistry(), defaults: makeDefaults(name), storageKey: "layout")
+        makeStore(defaults: makeDefaults(name))
+    }
+
+    /// Every metric starts shown, since only a shown metric can keep a star.
+    private func makeStore(defaults: UserDefaults) -> LayoutStore {
+        let registry = makeRegistry()
+        return LayoutStore(registry: registry, defaults: defaults, storageKey: "layout",
+                           defaultMetricIDs: registry.descriptors.map(\.id))
     }
 
     /// Two providers, each with three percent metrics, are sufficient to exercise provider-local caps.

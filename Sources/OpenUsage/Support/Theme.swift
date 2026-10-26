@@ -15,28 +15,39 @@ enum Theme {
     /// Hierarchical secondary tint for the provider marks.
     static let iconGray = AnyShapeStyle(.secondary)
 
-    /// Meter fill for a severity band — the macOS system palette (the battery-style traffic light),
-    /// never hand-tuned hexes, so the bars track light/dark and accessibility settings like every
-    /// other system meter. Full strength: on the opaque surface there's no glass to temper against.
-    static func meterFill(_ severity: WidgetData.MeterSeverity) -> AnyShapeStyle {
-        AnyShapeStyle(meterColor(severity))
-    }
-
-    private static func meterColor(_ severity: WidgetData.MeterSeverity) -> Color {
+    /// The one severity palette: blue, orange, red. Every severity-coloured element (meter fills, pace
+    /// flames, the ↺ tag, reset dots, claim banners) takes its colour from here, so a severity reads
+    /// the same everywhere. `nil` is normal. System colours, never `.accentColor` (it follows the
+    /// user's accent setting) or hand-tuned values, so they track light/dark and Increase Contrast.
+    static func severityColor(_ severity: WidgetData.MeterSeverity?) -> Color {
         switch severity {
-        case .normal: return Color(nsColor: .systemBlue)
-        case .warning: return Color(nsColor: .systemYellow)
+        case .normal, nil: return Color(nsColor: .systemBlue)
+        case .warning: return Color(nsColor: .systemOrange)
         case .critical: return Color(nsColor: .systemRed)
         }
     }
 
     /// Inline notice/alert tint (refresh warning triangle, pin-limit notice, settings errors) — the
-    /// system orange at full strength, matching the meter fills.
-    static let notice = AnyShapeStyle(Color(nsColor: .systemOrange))
+    /// palette's warning orange.
+    static let notice = AnyShapeStyle(severityColor(.warning))
 
     /// Inline success tint (the "screenshot copied to clipboard" confirmation) — the system green at
     /// full strength, the positive counterpart to `notice`'s orange.
     static let positive = AnyShapeStyle(Color(nsColor: .systemGreen))
+
+    // MARK: - Spacing
+
+    /// The one spacing scale. Every gap and padding in `PanelMetrics` and `DashboardBox` is a step on
+    /// it, so the panel has one rhythm and no density levels.
+    enum Spacing {
+        static let xxs: CGFloat = 2
+        static let xs: CGFloat = 4
+        static let s: CGFloat = 6
+        static let m: CGFloat = 8
+        static let l: CGFloat = 10
+        static let xl: CGFloat = 12
+        static let xxl: CGFloat = 14
+    }
 
     // MARK: - Surfaces
 

@@ -1,8 +1,8 @@
 import Foundation
 
-/// Drives a hover-revealed popover (the usage-trend chart on sparkline rows, the model breakdown on
-/// spend rows): opens after a short dwell while the inline row is hovered, and closes once the cursor
-/// has left BOTH the row and the popover (a brief grace lets the cursor travel between them). An
+/// Drives a hover-revealed popover (the ↺ tag's resets timeline): opens after a short dwell while the
+/// tag is hovered, and closes once the cursor has left BOTH the tag and the popover (a brief grace lets
+/// the cursor travel between them). An
 /// `@Observable` reference type so a SwiftUI `View` can hold it in `@State` and bind `isPresented` to
 /// the popover — value-type closure capture can't track this state reliably.
 @MainActor
@@ -68,6 +68,13 @@ final class HoverPopoverState {
         guard pinned != active else { return }
         pinned = active
         if active { hideTask?.cancel(); hideTask = nil } else { scheduleHide() }
+    }
+
+    /// Open the popover now (a click on its trigger), skipping the hover dwell.
+    func present() {
+        showTask?.cancel(); showTask = nil
+        hideTask?.cancel(); hideTask = nil
+        isPresented = true
     }
 
     /// Force the popover shut (popover/dashboard teardown), so it can't orphan on screen.

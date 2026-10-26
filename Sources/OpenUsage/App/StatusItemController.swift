@@ -13,8 +13,41 @@ import SwiftUI
 /// app, so keyboard input (Esc/Return navigation, the Settings shortcut recorder) works on the first
 /// try. (The pattern keyboard-first menu-bar apps use; cross-checked via GitHits.)
 final class MenuBarPanel: NSPanel {
+    /// Corner radius of the panel surface; tuned to read like a system menu-bar popover.
+    static let cornerRadius: CGFloat = 13
+
+    /// A clear, borderless panel whose frame view is clipped to the rounded shape. The clip lives on
+    /// the frame view, not the content view: AppKit inserts a sheet's dimming view as the content
+    /// view's sibling, so only the frame view's mask keeps it inside the rounded corners.
+    init(contentRect: NSRect) {
+        super.init(
+            contentRect: contentRect,
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        isOpaque = false
+        backgroundColor = .clear
+        guard let frameView = contentView?.superview else { return }
+        frameView.wantsLayer = true
+        frameView.layer?.cornerRadius = Self.cornerRadius
+        frameView.layer?.cornerCurve = .continuous
+        frameView.layer?.masksToBounds = true
+    }
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// A click on the panel while it isn't key (the app deactivated, or a menu or popover took key)
+    /// makes it key first. Otherwise AppKit spends the click on making the panel key and the view under
+    /// the pointer never sees it, so a double-click on a name reads as one click and opens no rename.
+    override func sendEvent(_ event: NSEvent) {
+        if !isKeyWindow, attachedSheet == nil,
+           [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type) {
+            makeKey()
+        }
+        super.sendEvent(event)
+    }
 }
 
 /// Owns the menu-bar status item and the panel that shows the dashboard.
@@ -42,13 +75,11 @@ final class StatusItemController: NSObject {
     private let hostingController: NSHostingController<AnyView>
     /// The panel's backdrop: an opaque tray by default, swapped to a behind-window vibrancy view when
     /// the transparency style is non-opaque. Built once and toggled, so it can't race the style observer.
-    private let backdrop = PopoverBackdropView(cornerRadius: StatusItemController.cornerRadius)
+    private let backdrop = PopoverBackdropView(cornerRadius: MenuBarPanel.cornerRadius)
     /// Token for the appearance-change observer; held to follow the documented removal pattern.
     private var appearanceObserver: NSObjectProtocol?
-    /// Corner radius of the panel surface; tuned to read like a system menu-bar popover.
-    private static let cornerRadius: CGFloat = 13
 
-    init(container: AppContainer, updater: UpdaterController) {
+    init(container: AppContainer) {
         self.container = container
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem = statusItem
@@ -69,25 +100,19 @@ final class StatusItemController: NSObject {
                     .environment(container.layout)
                     .environment(container.dataStore)
                     .environment(container.transparency)
-                    .environment(updater)
-                    .environment(\.resetClaims, container.resetClaims)
+                    .environment(container.renaming)
             )
         )
         // The host view fills the panel. SwiftUI measures each screen and drives the panel height;
         // content scrolls only when that height reaches the available-screen limit.
         self.hostingController = hosting
 
-        let panel = MenuBarPanel(
-            contentRect: NSRect(
-                x: 0,
-                y: 0,
-                width: PanelHeightController.panelWidth,
-                height: PanelHeightController.defaultHeight
-            ),
-            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
+        let panel = MenuBarPanel(contentRect: NSRect(
+            x: 0,
+            y: 0,
+            width: PanelMetrics.width,
+            height: PanelHeightController.defaultHeight
+        ))
         self.panel = panel
         self.heightController = PanelHeightController(panel: panel) { container.layout.screen }
 
@@ -134,8 +159,6 @@ final class StatusItemController: NSObject {
         panel.hidesOnDeactivate = false
         panel.hasShadow = true
         panel.isMovable = false
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
         panel.animationBehavior = .none
         panel.isReleasedWhenClosed = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -151,17 +174,15 @@ final class StatusItemController: NSObject {
         // swaps in for Increase Transparency / the secret-code egg. It fills the whole window, so a
         // screen-switch resize can't reveal a transparent strip, and any region SwiftUI leaves unpainted
         // shows the backdrop, not a raw hole. Its opaque tray is `Theme.trayNSColor` (tracks light/dark
-        // and the forced appearance override) matching the SwiftUI tray (`DashboardView.PopoverSurface`),
-        // rounded via `cornerRadius`. `panel.appearance` (tracked by `appearanceObserver`) pins the mode.
+        // and the forced appearance override) matching the SwiftUI tray (`DashboardView.PopoverSurface`).
+        // `MenuBarPanel` clips everything to its rounded frame. `panel.appearance` (tracked by
+        // `appearanceObserver`) pins the mode.
         let host = hostingController.view
         host.translatesAutoresizingMaskIntoConstraints = false
         host.wantsLayer = true
         // Redraw the SwiftUI content on every step of a height change instead of stretching the layer's
         // cached contents (the default `.onSetNeedsDisplay`), which keeps cards steady during a morph.
         host.layerContentsRedrawPolicy = .duringViewResize
-        host.layer?.cornerRadius = Self.cornerRadius
-        host.layer?.cornerCurve = .continuous
-        host.layer?.masksToBounds = true
 
         container.addSubview(backdrop)
         container.addSubview(host, positioned: .above, relativeTo: backdrop)
@@ -334,7 +355,7 @@ final class StatusItemController: NSObject {
     private func hidePanel() {
         // The popover's SwiftUI tree survives `orderOut`, so a tooltip the cursor was resting on gets
         // no hover-exit and would orphan on screen — clear it here, the one chokepoint every close hits.
-        // The Usage Trend hover popover is on the same survives-orderOut footing, so dismiss it too.
+        // Dismiss any auxiliary popover that would otherwise survive closing this panel.
         HoverTooltips.dismissAll()
         HoverPopoverState.dismissAll()
         ReducedMotionPopoverController.dismissAll()

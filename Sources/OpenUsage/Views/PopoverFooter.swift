@@ -12,7 +12,7 @@ struct PopoverFooter: View {
     @ViewBuilder
     var body: some View {
         Group {
-            if screen == .customize {
+            if screen == .accounts {
                 EmptyView()
             } else {
                 HStack(alignment: .center, spacing: 8) {
@@ -50,7 +50,7 @@ struct PopoverFooter: View {
 
     private var footerIdentity: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("OpenUsage \(AppInfo.version)")
+            Text("OpenUsage Light \(AppInfo.version)")
             if let notice = layout.pinLimitNotice {
                 Text(notice)
                     .foregroundStyle(Theme.notice)

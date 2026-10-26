@@ -1,18 +1,18 @@
 import XCTest
 @testable import OpenUsage
 
-/// The Claude "Rate Limit Resets" row, read from the usage body's `cedar_ember` block (Anthropic's one-off
-/// usage-limit reset grants). Read-only for now: no claim flow.
+/// The Claude "Rate Limit Resets" row, read from the reset-grants response's `cedar_ember` block
+/// (Anthropic's one-off usage-limit reset grants).
 final class ClaudeResetGrantsTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_790_000_000) // 2026-09-21
 
-    private func resetsLine(_ json: String) throws -> MetricLine? {
-        let response = HTTPResponse(statusCode: 200, headers: [:], body: Data(json.utf8))
-        return try ClaudeUsageMapper.mapResetGrantsResponse(response, now: now)
+    private func resetsLine(_ json: String, status: Int = 200) throws -> MetricLine? {
+        let response = HTTPResponse(statusCode: status, headers: [:], body: Data(json.utf8))
+        return try ClaudeUsageMapper.mapResetGrantStatus(response)?.line(now: now)
     }
 
     private func countAndExpiries(_ line: MetricLine?) -> (Double?, [Date])? {
-        guard case .values(_, let values, _, let expiries, _, _) = line else { return nil }
+        guard case .values(_, let values, _, let expiries) = line else { return nil }
         return (values.first?.number, expiries)
     }
 
@@ -61,22 +61,32 @@ final class ClaudeResetGrantsTests: XCTestCase {
         XCTAssertNil(try resetsLine(#"{"five_hour":{"utilization":3}}"#))
     }
 
+    func testRejectedOrUnreadableCheckThrows() {
+        XCTAssertThrowsError(try resetsLine("", status: 401)) { error in
+            XCTAssertEqual(error as? ClaudeAuthError, .tokenExpired)
+        }
+        XCTAssertThrowsError(try resetsLine("", status: 429)) { error in
+            XCTAssertEqual(error as? ClaudeUsageError, .requestFailed(429))
+        }
+        XCTAssertThrowsError(try resetsLine("not json")) { error in
+            XCTAssertEqual(error as? ClaudeUsageError, .invalidResponse)
+        }
+    }
+
     func testResetGrantsRequestMatchesClaudeCode() {
         let url = ClaudeUsageClient.resetGrantsURL(URL(string: "https://api.anthropic.com/api/oauth/usage")!)
         XCTAssertEqual(url.absoluteString, "https://api.anthropic.com/api/oauth/usage?cedar_ember=1&skip_spend=1")
     }
 
     func testResetGrantsRequestIdentifiesAsClaudeCode() async throws {
-        // Anthropic gates reset grants by client surface: an unrecognized User-Agent (we used to send
-        // `claude-code/2.1.69`) comes back `eligible: false, ineligible_reason: "surface"` with no grants.
+        // Anthropic gates reset grants by client surface: an unrecognized User-Agent comes back
+        // `eligible: false, ineligible_reason: "surface"` with no grants.
         let http = FakeHTTPClient(response: HTTPResponse(statusCode: 200, headers: [:], body: Data("{}".utf8)))
-        let config = ClaudeOAuthConfig(
-            usageURL: URL(string: "https://api.anthropic.com/api/oauth/usage")!,
-            refreshURL: URL(string: "https://platform.claude.com/v1/oauth/token")!,
-            clientID: "client"
-        )
-        _ = try await ClaudeUsageClient(httpClient: http).fetchResetGrants(accessToken: "token", config: config)
-        let userAgent = try XCTUnwrap(http.requests.first?.headers["User-Agent"])
+        _ = try await ClaudeUsageClient(httpClient: http)
+            .fetchResetGrants(accessToken: "token", config: AccountProviderRuntime.claudeConfig)
+        let request = try XCTUnwrap(http.requests.first)
+        XCTAssertEqual(request.headers["Authorization"], "Bearer token")
+        let userAgent = try XCTUnwrap(request.headers["User-Agent"])
         XCTAssertTrue(userAgent.hasPrefix("claude-cli/"), userAgent)
         XCTAssertTrue(userAgent.hasSuffix("(external, cli)"), userAgent)
     }

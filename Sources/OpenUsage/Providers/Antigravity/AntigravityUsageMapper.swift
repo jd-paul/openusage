@@ -316,6 +316,7 @@ enum AntigravityUsageMapper {
 
     /// Normalize a raw plan/tier string to a short label. LS returns "Google AI Pro" (strip the prefix,
     /// keep the tail); Cloud Code returns "Gemini Code Assist in Google One AI Pro" (pull the tier word).
+    /// Any other name, such as the free tier's "Antigravity Starter Quota", is Google's own and passes through.
     static func formatPlan(_ raw: String?) -> String? {
         guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return nil }
         if let range = trimmed.range(of: "Google AI "), range.lowerBound == trimmed.startIndex {
