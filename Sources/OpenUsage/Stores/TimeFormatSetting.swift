@@ -1,7 +1,7 @@
 import Foundation
 
 /// How wall-clock times read (the absolute reset labels): the system's 12/24-hour convention, or
-/// an explicit override — matching the original app's Auto/12h/24h setting.
+/// an explicit override.
 enum TimeFormatSetting: String, Hashable, Sendable, CaseIterable, UserDefaultsBacked {
     case auto
     case twelveHour = "12h"

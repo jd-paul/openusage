@@ -7,8 +7,7 @@ struct CursorMappedUsage: Equatable, Sendable {
 
 /// The handful of facts the three plan-usage decisions read off Cursor's untyped `usage` payload —
 /// the map guards, the request-based fallback, and the generic fallback. Decoded once here so those
-/// predicates can't drift apart (they steer one flow and previously spelled the same checks out
-/// independently across two files).
+/// predicates can't drift apart.
 struct CursorPlanUsageFacts {
     /// `usage.enabled` is only "off" when explicitly `false`; absent reads as enabled.
     let isEnabled: Bool

@@ -5,7 +5,7 @@ import SwiftUI
 /// metrics and units). Lives in the test target only — the app builds its registry from the
 /// live `ProviderRuntime`s.
 enum MockData {
-    // MARK: - Providers (brand colors copied from OpenUsage plugin.json)
+    // MARK: - Providers
     static let claude = Provider(id: "claude", displayName: "Claude", icon: "claude")
     static let codex = Provider(id: "codex", displayName: "Codex", icon: "codex")
     static let cursor = Provider(id: "cursor", displayName: "Cursor", icon: "cursor")

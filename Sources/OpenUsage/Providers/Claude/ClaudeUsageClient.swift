@@ -15,7 +15,7 @@ struct ClaudeRefreshResponse: Decodable, Hashable, Sendable {
 /// The `/api/oauth/profile` payload. Carries the account/organization identity used for multi-account
 /// verification plus the organization's *current* plan (`organization_type`, `rate_limit_tier`). The
 /// stored login only has the plan Claude Code stamped at sign-in, so this is the source that reflects
-/// an upgrade (issue #1258).
+/// an upgrade.
 struct ClaudeAccountProfile: Decodable, Hashable, Sendable {
     struct Account: Decodable, Hashable, Sendable {
         var uuid: String

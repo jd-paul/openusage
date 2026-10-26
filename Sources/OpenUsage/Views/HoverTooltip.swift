@@ -10,7 +10,7 @@ import SwiftUI
 /// scroll view), so it can't float freely the way a tooltip must. The panel sits one level above the
 /// status-item popover (which is `.popUpMenu`): `orderFrontRegardless()` only orders the panel to the
 /// front of its own level, so at the same level a later click that re-fronts the popover would bury the
-/// tooltip behind it (issue #696) — a strictly higher level keeps it above regardless of front-ordering.
+/// tooltip behind it — a strictly higher level keeps it above regardless of front-ordering.
 /// It never becomes key and never activates the app (shown via `orderFrontRegardless()`), which is the
 /// documented carve-out that keeps it from dismissing the transient popover; `ignoresMouseEvents` makes
 /// it click-through so it can't steal the hover that spawned it. The popover closing doesn't move the
@@ -198,21 +198,19 @@ private final class TooltipPresenter {
     /// Müller-Tomfelde dwell study at 350-600ms) and sits on the Doherty threshold (~400ms), the line
     /// between feeling responsive and feeling slow. The longer 500-700ms defaults in Radix (700),
     /// Base UI (600), and Windows (500) are tempting for a dense list of targets like these rows, but
-    /// every one of them pairs its long first-reveal delay with an instant reshow for neighbours, and
-    /// that reshow grouping is precisely the quick mode we removed because it caused the sweep cascade.
-    /// Without reshow, every hover (including a deliberate row-by-row read) pays this delay in full, so
-    /// the value belongs at the responsive end of the intent window, not the long end. 300ms sits at the
-    /// floor of that window and fires a little too readily on a slow drag across rows. If deliberate
-    /// neighbour-to-neighbour reading ever feels laggy, raise this to 500ms before reintroducing any
-    /// reshow shortcut, since a tuned reshow risks reopening the original complaint.
+    /// every one of them pairs its long first-reveal delay with an instant reshow for neighbours, and a
+    /// reshow cascades on a sweep across rows. Without reshow, every hover (including a deliberate
+    /// row-by-row read) pays this delay in full, so the value belongs at the responsive end of the intent
+    /// window, not the long end. 300ms sits at the floor of that window and fires a little too readily
+    /// on a slow drag across rows.
     private let revealDelay: Duration = .milliseconds(400)
 
     /// Space between the bubble and the anchor: the panel's bottom edge sits this far above the
     /// hovered item's top edge (or below its bottom edge when flipped).
     private let anchorGap: CGFloat = 10
 
-    /// Bubble width past which a tooltip wraps onto multiple lines instead of stretching ever wider
-    /// (#696). Sits comfortably under the 320pt popover so a wrapped tooltip never reads as a second panel.
+    /// Bubble width past which a tooltip wraps onto multiple lines instead of stretching ever wider.
+    /// Sits comfortably under the 320pt popover so a wrapped tooltip never reads as a second panel.
     private let maxTooltipWidth: CGFloat = 280
 
     private let host = NSHostingView(rootView: AnyView(EmptyView()))
@@ -231,7 +229,7 @@ private final class TooltipPresenter {
         // host can't grow the panel out from under us.
         panel.isFloatingPanel = true
         // One level above the status-item popover (also `.popUpMenu`): `orderFrontRegardless` only fronts
-        // within a level, so matching it let a popover click bury the tooltip behind it (#696). A strictly
+        // within a level, so matching it let a popover click bury the tooltip behind it. A strictly
         // higher level keeps it above. Still click-through + non-activating, and cleared on popover-close,
         // so it can't steal the hover, dismiss the transient popover, or orphan above a closed one.
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue + 1)
@@ -342,7 +340,7 @@ private final class TooltipPresenter {
 
     /// Lays the bubble out at its natural single-line size, then — only when that would run wider than
     /// `maxTooltipWidth` — re-lays it wrapped, so a long tooltip breaks onto multiple lines instead of
-    /// stretching off-screen (#696) while short ones keep their snug single-line size. Wrapped text is
+    /// stretching off-screen while short ones keep their snug single-line size. Wrapped text is
     /// laid out at the narrowest width that still fits the same number of lines as the max-width layout
     /// (found by binary search on the measured height): lines come out roughly equal length and a lone
     /// orphan word can't hang on the last line — the closest SwiftUI gets to CSS `text-wrap: pretty`

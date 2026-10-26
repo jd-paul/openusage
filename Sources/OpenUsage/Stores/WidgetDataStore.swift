@@ -214,9 +214,8 @@ final class WidgetDataStore {
         // Gather this pass's enabled, bounded, visible metrics — unbounded rows and charts have no pace
         // story (their meterState never fires), so they're skipped here rather than occupying state.
         // Order is the layout order; the evaluator prunes state for anything not passed this pass.
-        // Deliberate delta from the pre-extraction loop: the pass decides from this snapshot, taken
-        // before the first delivery `await`, where the old inline loop re-read `data(for:)` between
-        // deliveries — a mid-pass refresh no longer changes later metrics' inputs within one pass.
+        // The pass decides from this snapshot, taken before the first delivery `await`, so a mid-pass
+        // refresh can't change later metrics' inputs within one pass.
         let metrics = (layoutOrderedDescriptors?() ?? registry.descriptors)
             .compactMap { descriptor -> QuotaNotificationEvaluator.Metric? in
                 let data = data(for: descriptor)
@@ -404,7 +403,7 @@ final class WidgetDataStore {
     /// has aged past `stalenessThreshold`; `nil` while the data is still current (the common case), so the
     /// header stays clean until staleness is real. The label is short on purpose — a long plan name plus a
     /// full "Updated 3h ago" string would overflow the header — so the precise age rides in the tooltip.
-    /// This is the visible counterpart to the silent fossilized-cache problem (#582): a failing-refresh
+    /// This is the visible counterpart to the silent fossilized-cache problem: a failing-refresh
     /// loop keeps the last good plan/limits on screen, and without this nothing told the user that data was
     /// stale. Reads the store's injected clock, which tests pin to a fixed value.
     func stalenessHint(for providerID: String) -> StalenessHint? {

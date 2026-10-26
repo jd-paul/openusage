@@ -269,7 +269,7 @@ final class WidgetDataStoreTests: XCTestCase {
     }
 
     func testRateLimitResetsTileShowsCountInTrayAndPopover() async {
-        // Regression (#641): the menu-bar tile and the popover row resolve from one raw number, so a
+        // The menu-bar tile and the popover row resolve from one raw number, so a
         // pinned tile can't read "0" while the popover reads "1". The popover keeps Codex's "available"
         // wording, while the tighter tray reads "resets".
         let provider = Provider(id: "codex", displayName: "Codex", icon: "codex")
@@ -425,7 +425,7 @@ final class WidgetDataStoreTests: XCTestCase {
     }
 
     func testUncappedExtraUsageRendersCompactAndUnbounded() async {
-        // Regression (#658): Claude's `claude.extra` is a `boundedDollars` descriptor (a meter when the
+        // Claude's `claude.extra` is a `boundedDollars` descriptor (a meter when the
         // provider reports a monthly cap), but an uncapped spend arrives as a `.values` line. It must
         // resolve to an unbounded tile — the sample's placeholder limit dropped — and read in the same
         // compact shorthand as the spend tiles ("$1.2K spent"), not full currency, in both row and tray.

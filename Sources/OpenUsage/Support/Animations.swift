@@ -5,7 +5,7 @@ enum Motion {
     static let spring = Animation.spring(response: 0.42, dampingFraction: 0.80)
     static let modeSwitch = Animation.easeInOut(duration: 0.18)
 
-    /// The single transaction policy behind Reduce Animations. `disablesAnimations` prevents inner
+    /// The single transaction policy behind Reduce Motion. `disablesAnimations` prevents inner
     /// `.animation` modifiers from restoring motion after this root policy clears an explicit animation.
     static func applyReduction(to transaction: inout Transaction, enabled: Bool) {
         guard enabled else { return }
@@ -26,9 +26,8 @@ extension EnvironmentValues {
 }
 
 extension View {
-    /// Applies the app preference at the popover root. The transaction catches explicit and implicit
-    /// SwiftUI animations; the environment value also reaches the time-driven easter-egg gate. macOS
-    /// Reduce Motion remains authoritative even when the app toggle is off.
+    /// Applies macOS Reduce Motion at the popover root. The transaction catches explicit and implicit
+    /// SwiftUI animations; the environment value also reaches the time-driven easter-egg gate.
     func reduceAnimationsWhenRequested() -> some View {
         modifier(ReduceAnimationsModifier())
     }

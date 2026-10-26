@@ -1,7 +1,7 @@
 import XCTest
 @testable import OpenUsage
 
-/// Covers the strip renderer's single-entry memo (#18): equal content return the
+/// Covers the strip renderer's single-entry memo: equal content return the
 /// previously rendered `NSImage` instance — so the hundreds of observation-loop re-renders between
 /// real data changes never re-run `ImageRenderer`, and `StatusItemImageUpdater` can skip `apply`
 /// on that same instance — while a changed value renders fresh.

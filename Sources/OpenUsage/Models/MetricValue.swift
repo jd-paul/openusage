@@ -1,7 +1,7 @@
 import Foundation
 
 /// One measured number on a metric row, carried raw so that formatting happens only at the display
-/// edge (see `MetricFormatter`) instead of being baked into a string the way `.text` rows used to.
+/// edge (see `MetricFormatter`).
 ///
 /// A single row can hold several values — a daily-spend row carries dollars *and* tokens, a Codex
 /// credits row carries dollars *and* a credit count — and the widget renders them all.

@@ -62,7 +62,7 @@ struct WidgetData: Hashable {
         /// simply reports no `resets_at` until then; OpenCode does report a placeholder for an untouched
         /// window, which `OpenCodeUsageMapper` drops at capture time. Zero usage is NOT trusted here:
         /// both APIs report utilization in whole percents, so an in-flight window under 1% also reads
-        /// 0 (#1160) — the reset date is what tells the two apart.
+        /// 0 — the reset date is what tells the two apart.
         case missingResetDate
     }
     var isBounded: Bool { limit != nil }
@@ -244,8 +244,8 @@ struct WidgetData: Hashable {
         case .percent:
             return nil
         case .dollars:
-            // Mirror the original OpenUsage panel: a bounded dollar metric's secondary line reads
-            // "$<limit> limit" — no "of" prefix, and cents only when the limit isn't a whole dollar.
+            // A bounded dollar metric's secondary line reads "$<limit> limit" — no "of" prefix, and
+            // cents only when the limit isn't a whole dollar.
             guard let limit else { return nil }
             let digits = limit.rounded() == limit ? 0 : 2
             let amount = Formatters.currency(limit, fractionDigits: digits)

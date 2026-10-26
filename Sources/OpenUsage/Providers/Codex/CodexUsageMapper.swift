@@ -33,7 +33,7 @@ enum CodexUsageMapper {
 
         // Model-specific limits (e.g. GPT-5.3-Codex-Spark) ride in a separate `additional_rate_limits`
         // array, each entry reusing the primary/secondary window shape. Surfaced as their own Spark /
-        // Spark Weekly meters (issue #796) — the JS edition had these; the Swift rewrite dropped them.
+        // Spark Weekly meters.
         lines.append(contentsOf: sparkLines(body: body, now: now))
 
         // On-demand rate-limit reset credits. The row reads "2 available" (the count is carried raw, so

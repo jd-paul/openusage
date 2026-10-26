@@ -6,7 +6,6 @@ import SwiftUI
 ///   projected to run out before reset, or "~3% spare" when cutting it close), then a full-width
 ///   capsule meter (color = pace verdict; in the orange state a tick splits the projected spare
 ///   cushion off the bar; hovering shows the verdict), then a primary text row ("50% left" ⟷ "Resets in 4d 17h").
-///   Mirrors the original OpenUsage card.
 /// - **Unbounded** (`limit == nil`, text-only row): **no bar**. Label on the left, a single right-aligned
 ///   descriptive line ("1,503 left") and an optional secondary line ("on-device estimate").
 /// Rows size to their own content (variable height). Same `WidgetData` the menu bar uses — only layout differs.
@@ -27,8 +26,8 @@ struct WidgetRowView: View {
 
     var body: some View {
         // A row with a concrete reset date derives time-sensitive state (reset countdown, pace marker,
-        // "Runs out in …") from the current clock, so it re-renders on a 30s tick — the cadence the
-        // original app uses — instead of waiting for the next data refresh. TimelineView only schedules
+        // "Runs out in …") from the current clock, so it re-renders on a 30s tick instead of waiting
+        // for the next data refresh. TimelineView only schedules
         // ticks while the popover is actually visible. Rows without a reset date are static.
         Group {
             if data.resetsAt != nil || !data.expiriesAt.isEmpty {

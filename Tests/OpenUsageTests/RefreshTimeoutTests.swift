@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import OpenUsage
 
-/// The per-provider refresh deadline (#1081). A provider whose `refresh()` never returns must not leave
+/// The per-provider refresh deadline. A provider whose `refresh()` never returns must not leave
 /// the dashboard spinner turning for the rest of the session, the abandoned work must actually be
 /// cancelled rather than left running, and a refresh that lands inside the deadline must be untouched.
 @MainActor

@@ -59,7 +59,7 @@ enum OpenCodeUsageMapper {
     ///
     /// A window with real usage anchors its reset to the oldest call, so it stays strictly inside the
     /// period and keeps its countdown — including the sub-1% case, where the whole-percent `percent`
-    /// field rounds down to 0 and used to be misread as an unstarted window. Weekly and monthly opt
+    /// field rounds down to 0 and would otherwise read as an unstarted window. Weekly and monthly opt
     /// out: their resets are calendar/billing instants that exist regardless of usage, and early in a
     /// cycle one would sit a near-full period out and be dropped by mistake.
     private static func window(

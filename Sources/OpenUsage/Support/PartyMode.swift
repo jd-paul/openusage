@@ -22,12 +22,11 @@ extension EnvironmentValues {
 /// `PopoverTransparencyStore.popoverShown`, which `StatusItemController` flips at its
 /// `showPanel`/`hidePanel` chokepoints.
 ///
-/// This is a STRUCTURAL mount gate (`if shown { TimelineView } else { static }`), deliberately NOT the
-/// reverted `TimelineView(.animation(paused: !shown))` overload (commit 1ef9c4e): that overload froze
-/// in-place activation because its schedule only re-primes on a window-lifecycle event, never on an
-/// in-place `paused` flip. Mounting a fresh `TimelineView` always attaches its display link, so the egg
-/// starts the instant it's switched on with the popover already open. Do not collapse this back to the
-/// paused overload.
+/// This is a structural mount gate (`if shown { TimelineView } else { static }`), not the
+/// `TimelineView(.animation(paused: !shown))` overload: that overload's schedule only re-primes on a
+/// window-lifecycle event, never on an in-place `paused` flip, so it freezes in-place activation.
+/// Mounting a fresh `TimelineView` always attaches its display link, so the egg starts the instant it's
+/// switched on with the popover already open.
 private struct PopoverIsVisibleKey: EnvironmentKey {
     static let defaultValue = false
 }
@@ -41,10 +40,9 @@ extension EnvironmentValues {
 
 /// Renders time-driven `content(t)` under a live `TimelineView(.animation)` while the popover is
 /// on-screen and motion is allowed, and at a single static frame otherwise — so no display link ticks
-/// behind a closed popover or under Reduce Animations, yet the look doesn't disappear. Reduced motion
+/// behind a closed popover or under Reduce Motion, yet the look doesn't disappear. Reduced motion
 /// uses the calm baseline (`t == 0`); a merely hidden popover keeps its current-looking phase. This is
-/// the shared home of the STRUCTURAL mount gate every easter-egg loop uses; it is
-/// deliberately NOT the reverted `TimelineView(.animation(paused:))` overload (see `\.popoverIsVisible`).
+/// the shared home of the mount gate every easter-egg loop uses (see `\.popoverIsVisible`).
 /// Both branches carry `.transition(.identity)` so toggling the egg crossfades via the surrounding
 /// `.animation`, never a hard cut. `t` is `timeIntervalSinceReferenceDate`.
 struct VisibilityGatedTimeline<Content: View>: View {

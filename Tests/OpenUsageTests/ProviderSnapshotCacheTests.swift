@@ -53,7 +53,7 @@ final class ProviderSnapshotCacheTests: XCTestCase {
         XCTAssertEqual(afterFlush.loadSnapshots(providerIDs: ["alpha", "beta"]).count, 2)
     }
 
-    /// #697 core guarantee: a snapshot persisted by a *previous* session and reloaded on launch must not
+    /// A snapshot persisted by a *previous* session and reloaded on launch must not
     /// satisfy the refresh gate, even when its `refreshedAt` is still well within TTL — otherwise the app
     /// would wait out the previous session's remaining interval before refetching. It must still *display*
     /// (instant paint), so `loadSnapshots` returns it.

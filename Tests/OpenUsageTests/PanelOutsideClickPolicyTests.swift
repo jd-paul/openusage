@@ -34,7 +34,7 @@ final class PanelOutsideClickPolicyTests: XCTestCase {
         XCTAssertFalse(PanelOutsideClickPolicy.shouldKeepOpen(.init(eventWindowTypeName: "NSWindow")))
     }
 
-    // MARK: - Status-button hit test (issue #1008)
+    // MARK: - Status-button hit test
 
     /// A button frame a few points shorter than its menu bar, the way AppKit lays it out: the
     /// screen tops out at y=1000 but the 24pt button frame ends at y=996.

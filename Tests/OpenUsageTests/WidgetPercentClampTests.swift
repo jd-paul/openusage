@@ -1,7 +1,7 @@
 import XCTest
 @testable import OpenUsage
 
-/// Regression for #703: a percent meter fed an out-of-range sample (a provider reporting a negative or
+/// A percent meter fed an out-of-range sample (a provider reporting a negative or
 /// >100 utilization) must never surface "-5%" or "105%" on any rendering path — the tile headline or the
 /// menu-bar value — in either meter style. The sample is sanitized at the
 /// construction choke point (`WidgetDataStore.resolve`), with a defensive clamp in `MetricFormatter`.

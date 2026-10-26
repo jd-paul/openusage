@@ -4,7 +4,7 @@ import XCTest
 /// Covers the refresh cadence as the single source of truth: `RefreshSetting`'s fixed interval, and the
 /// snapshot cache's session-scoped freshness — a snapshot is fresh for one interval only *within the
 /// session that fetched it*, so a relaunch always refetches on the first pass (it still paints the cached
-/// value instantly) while a within-session pass is served from cache until the interval elapses. See #697.
+/// value instantly) while a within-session pass is served from cache until the interval elapses.
 @MainActor
 final class RefreshSettingTests: XCTestCase {
     // MARK: - Fixed cadence
@@ -29,7 +29,7 @@ final class RefreshSettingTests: XCTestCase {
         XCTAssertEqual(store.snapshots["test"]?.line(label: "Session"),
                        .progress(label: "Session", used: 20, limit: 100, format: .percent))
 
-        // …but a disk-loaded snapshot never gates the refresh, so the first pass refetches (#697) even
+        // …but a disk-loaded snapshot never gates the refresh, so the first pass refetches even
         // though the snapshot is still within the interval.
         await store.refreshAll()
         XCTAssertEqual(runtime.refreshCount, 1)

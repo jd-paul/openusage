@@ -1,10 +1,10 @@
 import XCTest
 @testable import OpenUsage
 
-/// The metrics the original OpenUsage showed for Cursor, restored in Light: every one that comes from
-/// Cursor's API. Response shapes match the live API on 2026-10-23; every value is fake.
+/// Every Cursor metric that comes from Cursor's API. Response shapes match the live API on 2026-10-23;
+/// every value is fake.
 @MainActor
-final class CursorRestoredMetricsTests: XCTestCase {
+final class CursorMetricsTests: XCTestCase {
     /// A JWT whose subject carries the user id the cursor.com cookie endpoints need.
     nonisolated private static let accessToken = "e30." + Data(#"{"sub":"auth0|user_fake"}"#.utf8).base64EncodedString()
         .replacingOccurrences(of: "=", with: "") + ".sig"
@@ -81,7 +81,7 @@ final class CursorRestoredMetricsTests: XCTestCase {
             return HTTPResponse(statusCode: 200, headers: [:], body: Data(body.utf8))
         }
         let runtime = AccountProviderRuntime(account: account, vault: vault, http: http)
-        let suite = "CursorRestoredMetricsTests.\(UUID().uuidString)"
+        let suite = "CursorMetricsTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = WidgetDataStore(

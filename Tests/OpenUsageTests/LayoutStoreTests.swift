@@ -20,7 +20,7 @@ final class LayoutStoreTests: XCTestCase {
         XCTAssertTrue(store.placed.isEmpty)
     }
 
-    // MARK: - Undo (#603)
+    // MARK: - Undo
 
     func testUndoRestoresRemovedMetricToSamePosition() {
         let store = makeStore("UndoRestoresPosition")

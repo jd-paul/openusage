@@ -23,8 +23,8 @@ enum Formatters {
 
     /// The one mode-aware deadline phrase, shared by every "<verb> + when" label (reset countdowns,
     /// run-out projections): `.relative` → "<prefix> in 2d 6h", `.absolute` → "<prefix> today at
-    /// 5:30 PM" / "<prefix> tomorrow at 9:00 AM" / "<prefix> Feb 15 at 3:45 PM" (ported from the
-    /// original's `formatResetAbsoluteLabel`; time uses the locale's 12/24-hour convention). An
+    /// 5:30 PM" / "<prefix> tomorrow at 9:00 AM" / "<prefix> Feb 15 at 3:45 PM" (time uses the
+    /// locale's 12/24-hour convention). An
     /// imminent deadline (≤5 min out relative, past-due absolute) collapses to "<prefix> soon".
     static func deadlineLabel(
         _ prefix: String,

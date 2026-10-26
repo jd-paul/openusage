@@ -1,9 +1,9 @@
 import XCTest
 @testable import OpenUsage
 
-/// Regression coverage for #582: a refresh that keeps failing leaves the last good snapshot on screen
-/// (stale-while-revalidate by design), but nothing told the user how old that data was — the fossilized
-/// plan/limits looked current. The store now exposes a per-provider hint once the displayed snapshot ages
+/// A refresh that keeps failing leaves the last good snapshot on screen (stale-while-revalidate by
+/// design), so the user must be told how old that data is or the fossilized plan/limits look current.
+/// The store exposes a per-provider hint once the displayed snapshot ages
 /// past its freshness window: a short "Outdated" label the dashboard header renders, plus a tooltip
 /// ("Last updated 3h ago") that carries the precise age.
 @MainActor
@@ -43,8 +43,8 @@ final class StalenessLabelTests: XCTestCase {
         XCTAssertNil(store.stalenessHint(for: "devin"))
     }
 
-    /// The exact #582 scenario, end to end: a cached snapshot is on screen, the live refresh keeps
-    /// failing, so the fossil persists — and is now labelled with its age instead of silently passing
+    /// End to end: a cached snapshot is on screen, the live refresh keeps failing, so the fossil
+    /// persists — and is labelled with its age instead of silently passing
     /// for current data.
     func testFailingRefreshKeepsFossilButLabelsItStale() async {
         let provider = Provider(id: "devin", displayName: "Devin", icon: "devin")

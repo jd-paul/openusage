@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// Runs one provider's `refresh()` under a hard deadline (#1081).
+/// Runs one provider's `refresh()` under a hard deadline.
 ///
 /// A provider that never returns — a subprocess that doesn't exit, a credential read that blocks — used
 /// to hold the store's in-flight entry forever, so the dashboard spinner turned for the rest of the

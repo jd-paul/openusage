@@ -33,7 +33,7 @@ final class MetricFormatterTests: XCTestCase {
 
     func testPercentClampsOutOfRangeSamples() {
         // Percent is a bounded 0...100 domain: a bad sample (a provider reporting a negative or >100
-        // utilization) must never print "-5%" or "130%" — it clamps to the nearest bound. (#703)
+        // utilization) must never print "-5%" or "130%" — it clamps to the nearest bound.
         XCTAssertEqual(MetricFormatter.number(-5, kind: .percent, style: .full), "0%")
         XCTAssertEqual(MetricFormatter.number(-5, kind: .percent, style: .tray), "0%")
         XCTAssertEqual(MetricFormatter.number(130, kind: .percent, style: .full), "100%")

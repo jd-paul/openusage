@@ -6,11 +6,10 @@ struct CopilotMappedUsage: Equatable, Sendable {
     /// True for an org-managed (token-based-billing) seat whose response carried no *percent* per-seat
     /// meter — the signal that the real usage lives in *organization* billing, where the provider
     /// should look next. Kept as an explicit flag so the org lookup is never gated on the incidental
-    /// shape of `lines` (see issue #839: a placeholder `overage_permitted` used to sneak an
-    /// "Extra Usage: 0" row in and block the lookup). `lines` isn't necessarily empty when this is
-    /// `true`: the same placeholder can still carry the user's own `credits_used`, shown as a personal
-    /// Credits count (issue #1094) — the provider must merge that with any org-billing lines rather
-    /// than replace it.
+    /// shape of `lines`: a placeholder `overage_permitted` would otherwise sneak an "Extra Usage: 0" row
+    /// in and block the lookup. `lines` isn't necessarily empty when this is `true`: the same placeholder
+    /// can still carry the user's own `credits_used`, shown as a personal Credits count — the provider
+    /// must merge that with any org-billing lines rather than replace it.
     var isOrgManagedSeat: Bool = false
 }
 
@@ -23,7 +22,7 @@ struct CopilotMappedUsage: Equatable, Sendable {
 /// `limited_user_quotas` against `monthly_quotas`. Zero-entitlement placeholder snapshots — what GitHub
 /// returns for Copilot Business token-based-billing seats — have no percent allotment and are not
 /// rendered as a misleading "0% used" bar. The same bucket can still carry a personal `credits_used`
-/// count (issue #1094), which is shown as unbounded Credits.
+/// count, which is shown as unbounded Credits.
 enum CopilotUsageMapper {
     static let periodMs = MetricPeriod.monthMs
 
@@ -44,7 +43,7 @@ enum CopilotUsageMapper {
         // The metered premium pool is shown as "Credits"; overage beyond it as "Extra Usage". Extra
         // Usage only exists relative to an included pool, so it's tied to the Credits meter: an
         // org-managed placeholder can carry `overage_permitted: true` on a zero-entitlement bucket,
-        // and rendering "0" for it would be meaningless (and used to block the org-billing fallback).
+        // and rendering "0" for it would be meaningless.
         let snapshots = body["quota_snapshots"] as? [String: Any]
         let premium = snapshots?["premium_interactions"]
         let creditsLine = snapshotLine(label: "Credits", premium, resetsAt: resetsAt)
@@ -131,7 +130,7 @@ enum CopilotUsageMapper {
     /// percent-based lines all come back empty. There's no allotment to show a percentage against, so
     /// a real positive count is shown as unbounded Credits instead of leaving the card empty.
     /// Extra Usage stays suppressed here: the placeholder can carry `overage_permitted: true` with
-    /// no included pool (issue #839). A zero or missing `credits_used` stays "No data".
+    /// no included pool. A zero or missing `credits_used` stays "No data".
     private static func personalCreditsLines(_ raw: Any?) -> [MetricLine] {
         guard let snapshot = raw as? [String: Any],
               let creditsUsed = ProviderParse.number(snapshot["credits_used"]),

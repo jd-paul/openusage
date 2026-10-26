@@ -124,7 +124,7 @@ enum PanelOutsideClickPolicy {
 
     /// Status-button hit test. Differs from `NSRect.contains(buttonFrame)` in two ways, both needed
     /// so a click with the cursor slammed against the top of the screen — the natural way to click
-    /// the menu bar — counts as *on* the button (issue #1008):
+    /// the menu bar — counts as *on* the button:
     /// - The hit zone extends from the button frame's top edge to the top of the button's screen:
     ///   the button is a few points shorter than the menu bar (observed live: a 22pt-tall button
     ///   frame ending at y=1551 in a menu bar whose screen tops out at y=1555), while macOS still

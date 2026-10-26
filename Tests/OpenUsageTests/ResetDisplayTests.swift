@@ -2,8 +2,8 @@ import XCTest
 @testable import OpenUsage
 
 /// Covers the relative/absolute reset display: the shared `Formatters.deadlineLabel` (one helper for
-/// every "<verb> + when" string), its absolute day buckets (ported from the original
-/// `formatResetAbsoluteLabel`), and `WidgetData` honoring the global mode for the trailing label,
+/// every "<verb> + when" string), its absolute day buckets, and `WidgetData` honoring the global mode
+/// for the trailing label,
 /// the opposite-format tooltip, and the "Limit in …" run-out projection.
 final class ResetDisplayTests: XCTestCase {
     private func utcCalendar() -> Calendar {
@@ -68,7 +68,7 @@ final class ResetDisplayTests: XCTestCase {
     }
 
     func testMissingResetDateSignalKeepsCountdownForSubOnePercentSession() {
-        // #1160: Claude reports utilization in whole percents, so an in-flight session under 1% reads
+        // Claude reports utilization in whole percents, so an in-flight session under 1% reads
         // used == 0 — but its reset date exists precisely because the window started. The row must show
         // the normal countdown, never "Not started".
         let now = Date(timeIntervalSince1970: 1_800_000_000)

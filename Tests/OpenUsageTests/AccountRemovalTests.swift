@@ -3,8 +3,8 @@ import XCTest
 @testable import OpenUsage
 
 /// Removing an account ends everything running on its behalf. The hazard is a token refresh suspended
-/// at the network when the account is removed: its response used to resume, save the rotated tokens
-/// back into the Keychain, and publish a snapshot for a card that no longer existed.
+/// at the network when the account is removed: its response must not save the rotated tokens back into
+/// the Keychain or publish a snapshot for a card that no longer exists.
 @MainActor
 final class AccountRemovalTests: XCTestCase {
     func testRemovingAnAccountDiscardsItsInFlightTokenRefresh() async throws {

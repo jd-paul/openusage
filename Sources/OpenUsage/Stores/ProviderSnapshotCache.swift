@@ -18,7 +18,7 @@ struct ProviderSnapshotCache {
     /// this running session). The freshness gate (`snapshot(providerID:)`) trusts a snapshot only when
     /// its provider is in here — so a snapshot loaded from disk on launch is shown (via `loadSnapshots`)
     /// but never counts as fresh, forcing one refresh on the first post-launch pass. Lock-backed for the
-    /// same reason as `memo`: the value-type cache shares it across copies and stays safe. See #697.
+    /// same reason as `memo`: the value-type cache shares it across copies and stays safe.
     private let sessionWrites = OSAllocatedUnfairLock<Set<String>>(initialState: [])
     /// Whether the mirror holds stores not yet written to `UserDefaults` (see `persistPending`).
     private let hasPendingWrites = OSAllocatedUnfairLock<Bool>(initialState: false)
@@ -70,7 +70,7 @@ struct ProviderSnapshotCache {
         // Freshness has two requirements, and disk age alone is not enough: the snapshot must have been
         // written *this session* AND still be within TTL. A snapshot served from a previous session's
         // persisted blob is shown for instant paint but never gates a refresh, so every launch refetches
-        // promptly instead of waiting out the previous session's remaining interval (#697).
+        // promptly instead of waiting out the previous session's remaining interval.
         let writtenThisSession = sessionWrites.withLock { $0.contains(providerID) }
         let age = now().timeIntervalSince(snapshot.refreshedAt)
         let fresh = writtenThisSession && age < ttl

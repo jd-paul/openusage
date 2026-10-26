@@ -15,8 +15,8 @@ final class PaceTests: XCTestCase {
     }
 
     func testZeroUsageHasNoPaceSignal() {
-        // Nothing spent → no burn rate to project. Returning a fabricated "ahead" here used to
-        // surface a tautological "~100% left at reset" on untouched meters with pacing shown.
+        // Nothing spent → no burn rate to project; a fabricated "ahead" would surface a tautological
+        // "~100% left at reset" on untouched meters.
         let reset = resetsAt(elapsed: 0.5, period: week)
         XCTAssertNil(Pace.evaluate(used: 0, limit: 100, resetsAt: reset, periodDuration: week, now: now))
     }

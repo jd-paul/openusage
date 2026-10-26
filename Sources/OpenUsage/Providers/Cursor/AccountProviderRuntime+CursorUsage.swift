@@ -1,8 +1,7 @@
 import Foundation
 
 extension AccountProviderRuntime {
-    /// Maps a `GetCurrentPeriodUsage` body to Cursor's metrics, routed the way the original OpenUsage
-    /// routes it. Request-based Team and Enterprise seats read the REST usage endpoints instead. Everyone
+    /// Maps a `GetCurrentPeriodUsage` body to Cursor's metrics. Request-based Team and Enterprise seats read the REST usage endpoints instead. Everyone
     /// else maps the primary body with credits, and team-shaped seats pick up Extra Usage and the billing
     /// membership from usage-summary. Grok Bot has its own allowance and is added in every case. Every
     /// request but the primary one is optional: a failure leaves its metric out.

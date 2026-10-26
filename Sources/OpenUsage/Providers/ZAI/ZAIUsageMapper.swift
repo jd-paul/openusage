@@ -1,7 +1,7 @@
 import Foundation
 
 /// Builds metric lines from the Z.ai `/api/monitor/usage/quota/limit` payload and the plan name from
-/// `/api/biz/subscription/list`. Ports and extends the legacy Tauri plugin's mapping:
+/// `/api/biz/subscription/list`:
 /// - a `CREDIT_LIMIT` (or legacy `TOKENS_LIMIT`) entry whose window is sub-daily (`unit: 3`, hours)
 ///   is the 5-hour session meter,
 /// - a `CREDIT_LIMIT` (or legacy `TOKENS_LIMIT`) entry whose window is multi-day (`unit: 6`, weeks)
@@ -10,7 +10,7 @@ import Foundation
 ///
 /// Both endpoints are undocumented internal APIs used by Z.ai's own subscription UI; the response
 /// shapes are stable in practice. The mapper is pure (no I/O) so it tests cleanly against sample
-/// payloads, exactly like the legacy plugin's fixture-based tests.
+/// payloads.
 enum ZAIUsageMapper {
     /// One monthly web-search cycle, in milliseconds (Z.ai reports `unit: 5, number: 1`). The session
     /// and weekly meters instead carry the *payload's* actual window (see `classifyTokenWindow`), so
@@ -38,8 +38,7 @@ enum ZAIUsageMapper {
         guard let root = ProviderParse.jsonObject(body) else {
             throw ProviderError.invalidResponse
         }
-        // The limits array lives under `data.limits`; the legacy plugin also tolerated the root object
-        // being the container directly (no `data` wrapper), so honor both.
+        // The limits array lives under `data.limits`, or at the root when there is no `data` wrapper.
         let container: [String: Any]
         if let data = root["data"] {
             guard let data = data as? [String: Any] else { throw ProviderError.invalidResponse }
@@ -175,8 +174,7 @@ enum ZAIUsageMapper {
         )
     }
 
-    /// A limit entry matches by `type` or `name`; the legacy plugin checked both because Z.ai's
-    /// payload has used either field across revisions.
+    /// A limit entry matches by `type` or `name`: Z.ai's payload has used either field across revisions.
     private static func findLimit(_ limits: [[String: Any]], type: String) -> [String: Any]? {
         for entry in limits {
             if (entry["type"] as? String) == type || (entry["name"] as? String) == type {

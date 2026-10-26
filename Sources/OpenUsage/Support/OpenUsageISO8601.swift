@@ -1,6 +1,6 @@
 import Foundation
 
-/// Shared ISO-8601 date parsing/formatting used by multiple providers and the local API. Normalizes
+/// Shared ISO-8601 date parsing/formatting for the providers. Normalizes
 /// the various timestamp shapes providers return (space-separated, " UTC" suffix, variable fractional
 /// digits) before parsing.
 enum OpenUsageISO8601 {
@@ -14,7 +14,6 @@ enum OpenUsageISO8601 {
         formatter(fractionalSeconds: false).date(from: normalized)
     }
 
-    /// Aligns with the JavaScript plugin `ctx.util.toIso` string normalization (Claude `resets_at`, etc.).
     private static func normalizeTimestamp(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return s }
@@ -72,7 +71,7 @@ enum OpenUsageISO8601 {
         return head + frac + tz
     }
 
-    // ISO8601DateFormatter is expensive to construct and is hit on every snapshot decode and local-API
+    // ISO8601DateFormatter is expensive to construct and is hit on every snapshot decode and
     // encode, so the two fixed configurations are built once. `ISO8601DateFormatter` is thread-safe for
     // parsing/formatting, and parsing here runs on the main-actor refresh path; `nonisolated(unsafe)`
     // shares the immutable instances without per-call allocation.

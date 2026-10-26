@@ -83,8 +83,7 @@ final class WidgetDataStoreNotificationTests: XCTestCase {
         return (store, runtime, descriptor)
     }
 
-    /// All three triggers on — the state the default-on build used to give for free; tests opt in
-    /// explicitly now that the store defaults to off.
+    /// All three triggers on; the store defaults to off, so tests opt in explicitly.
     private func allOn(_ settings: NotificationSettingsStore) {
         settings.underTenPercent = true
         settings.healthyToClose = true

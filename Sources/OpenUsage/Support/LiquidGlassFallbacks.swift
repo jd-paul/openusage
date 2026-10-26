@@ -125,7 +125,7 @@ private struct MotionAwareInteractiveGlassModifier<Shape: InsettableShape>: View
     @Environment(\.reduceAnimations) private var reduceAnimations
 
     /// Liquid Glass owns its hover/press scale and shimmer outside the view's normal transaction. Swap
-    /// only that interactive variant for static system glass when either Reduce Animations source is on.
+    /// only that interactive variant for static system glass under Reduce Motion.
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(macOS 26, *) {

@@ -178,7 +178,7 @@ final class LayoutStore {
         }
     }
 
-    // MARK: - Undo (#603)
+    // MARK: - Undo
 
     /// Whether there's at least one customization step to walk back. Drives the Customize Undo button's
     /// presence and the app-wide ⌘Z handler's no-op guard.
