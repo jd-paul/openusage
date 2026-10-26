@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class OpenCodeProviderTests: XCTestCase {
     func testAccountSavedUnderTheOldRawValueStillLoads() throws {
-        let name = "OpenUsageLight.Accounts.\(UUID().uuidString)"
+        let name = "OpenUsage.Accounts.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         addTeardownBlock { defaults.removePersistentDomain(forName: name) }
         let saved = #"[{"id":"8AD3B217-0000-4000-8000-000000000000","kind":"opencode","label":"Work","addedAt":0}]"#

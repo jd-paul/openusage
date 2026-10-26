@@ -9,7 +9,7 @@ struct CopilotLogin: ProviderLogin {
         let startResponse = try await LoginHTTP.postForm(startURL, fields: [
             "client_id": Self.clientID,
             "scope": "read:user"
-        ], using: http, headers: ["User-Agent": "OpenUsage Light"])
+        ], using: http, headers: ["User-Agent": "OpenUsage"])
         let device = try LoginHTTP.decode(GitHubDeviceCode.self, from: startResponse)
         guard let verificationURL = URL(string: device.verificationURI), verificationURL.scheme == "https" else {
             throw LoginError.invalidResponse
@@ -23,7 +23,7 @@ struct CopilotLogin: ProviderLogin {
                 "client_id": Self.clientID,
                 "device_code": device.deviceCode,
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
-            ], using: http, headers: ["User-Agent": "OpenUsage Light"])
+            ], using: http, headers: ["User-Agent": "OpenUsage"])
             let values = LoginHTTP.jsonObject(response)
             if let accessToken = values["access_token"] {
                 return .complete(GitHubDeviceToken(accessToken: accessToken))
@@ -39,7 +39,7 @@ struct CopilotLogin: ProviderLogin {
         let profileURL = URL(string: "https://api.github.com/user")!
         let profile = try await LoginHTTP.get(profileURL, bearerToken: token.accessToken, using: http, headers: [
             "Accept": "application/vnd.github+json",
-            "User-Agent": "OpenUsage Light",
+            "User-Agent": "OpenUsage",
             "X-GitHub-Api-Version": "2022-11-28"
         ])
         let user = try LoginHTTP.decode(GitHubUser.self, from: profile)

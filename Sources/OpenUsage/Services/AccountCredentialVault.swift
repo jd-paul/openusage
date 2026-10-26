@@ -8,7 +8,7 @@ protocol CredentialVault: Sendable {
 }
 
 final class KeychainCredentialVault: CredentialVault, @unchecked Sendable {
-    static let service = "com.robinebers.openusage-light.accounts"
+    static let service = "com.robinebers.openusage.accounts"
 
     func load(_ id: UUID) throws -> AccountCredential? {
         var query = baseQuery(for: id)

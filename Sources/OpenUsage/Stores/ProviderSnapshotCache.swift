@@ -40,7 +40,7 @@ struct ProviderSnapshotCache {
 
     init(
         userDefaults: UserDefaults = .standard,
-        storageKey: String = "openusage-light.providerSnapshots.v1",
+        storageKey: String = "openusage.providerSnapshots.v10",
         ttl: TimeInterval = RefreshSetting.interval,
         now: @escaping () -> Date = Date.init
     ) {

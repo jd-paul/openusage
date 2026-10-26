@@ -42,7 +42,7 @@ final class AccountStoreTests: XCTestCase {
     }
 
     private func makeDefaults() -> UserDefaults {
-        let name = "OpenUsageLight.Accounts.\(UUID().uuidString)"
+        let name = "OpenUsage.Accounts.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)
         addTeardownBlock { defaults.removePersistentDomain(forName: name) }

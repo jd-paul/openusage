@@ -121,7 +121,7 @@ final class AccountRenameStoreTests: XCTestCase {
     }
 
     private func makeStores() -> (AccountStore, AccountRenameStore) {
-        let name = "OpenUsageLight.AccountRename.\(UUID().uuidString)"
+        let name = "OpenUsage.AccountRename.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)
         addTeardownBlock { defaults.removePersistentDomain(forName: name) }
