@@ -24,9 +24,9 @@ enum LogTag: String, Sendable {
 /// `OpenUsage` subsystem. Read lines with Console or
 /// `log stream --predicate 'subsystem == "OpenUsage"' --info`.
 ///
-/// Each call runs the message through `LogRedaction.redactLogMessage` as a lightweight last line of
-/// defense before it reaches the logger. `redactLogMessage` is URL/body-unaware: any call site that
-/// logs a URL or response body MUST pre-redact it via `LogRedaction.redactURL` / `bodyPreview`.
+/// Each call runs the message through `LogRedaction.redactLogMessage` as a last line of defense
+/// before it reaches the logger. Nothing logs a URL's query, a header, or a response body in the first
+/// place; the HTTP transport logs method, host and path, status, and duration only.
 ///
 /// Debug lines are compiled out of release builds before their message is built, so a `debug` call
 /// on a hot path (`[cache]`, `[http]`) costs nothing there; a debug build keeps them.

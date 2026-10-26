@@ -29,9 +29,9 @@ log show --last 1h --info --predicate 'subsystem == "OpenUsage"'
 Console.app shows the same lines; filter by subsystem. Debug-level lines exist in debug builds only
 (`CONFIG=debug ./script/build_and_run.sh`) and need `--debug` instead of `--info`.
 
-Every message passes `LogRedaction` before it is written: tokens, keys, emails, and home paths are
-masked. A call site that logs a URL or response body must pre-redact it with `LogRedaction.redactURL`
-or `bodyPreview`.
+The HTTP transport logs one line per exchange: method, host and path, status, and duration. It never
+logs a URL's query, a header, or a response body. Every message also passes `LogRedaction` before it
+is written, which masks tokens, keys, `account=` values, and home paths.
 
 ## Tests
 

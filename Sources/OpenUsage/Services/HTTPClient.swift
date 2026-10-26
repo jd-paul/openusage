@@ -22,12 +22,6 @@ protocol HTTPClient: Sendable {
     func send(_ request: HTTPRequest) async throws -> HTTPResponse
 }
 
-// NOTE: headers and successful-response bodies are NEVER logged — `Authorization`, `Cookie`, `Bearer`
-// headers and token-bearing bodies would leak. The Debug line carries the method, the redacted URL, and
-// the status code. On an HTTP error (>= 400) a redacted, truncated (<= 500 byte) preview of the body is
-// added at Debug to aid diagnosis — never the full body, and always run through `LogRedaction.bodyPreview`
-// first (which strips JWTs, api keys, and sensitive JSON values exactly like the Tauri host API did).
-
 struct URLSessionHTTPClient: HTTPClient {
     /// When true, requests use a loopback session that accepts a self-signed TLS cert for `127.0.0.1`
     /// only (see `LoopbackTLSDelegate`). The local language server serves HTTPS with a self-signed cert
@@ -52,6 +46,7 @@ struct URLSessionHTTPClient: HTTPClient {
         }
 
         let session = allowsInsecureLoopback ? Self.loopbackSession : Self.session
+        let start = ContinuousClock.now
         let (data, response) = try await session.data(for: urlRequest)
         guard let http = response as? HTTPURLResponse else {
             throw HTTPClientError.invalidResponse
@@ -61,14 +56,19 @@ struct URLSessionHTTPClient: HTTPClient {
         for (key, value) in http.allHeaderFields {
             headers[String(describing: key).lowercased()] = String(describing: value)
         }
+        let result = HTTPResponse(statusCode: http.statusCode, headers: headers, body: data)
+        AppLog.debug(.http, Self.diagnostic(for: request, response: result, duration: ContinuousClock.now - start))
+        return result
+    }
 
-        let line = "\(request.method) \(LogRedaction.redactURL(request.url.absoluteString)) -> \(http.statusCode)"
-        if http.statusCode >= 400 {
-            AppLog.debug(.http, "\(line) body: \(LogRedaction.bodyPreview(String(decoding: data, as: UTF8.self)))")
-        } else {
-            AppLog.debug(.http, line)
-        }
-        return HTTPResponse(statusCode: http.statusCode, headers: headers, body: data)
+    /// The one line the transport logs per exchange: method, host and path, status, and duration.
+    /// It never reads the query, the headers, or either body, so a credential in any of them (an
+    /// `Authorization` header, Cursor's PKCE verifier in the poll query, a token echoed in an error
+    /// body) cannot reach the log.
+    static func diagnostic(for request: HTTPRequest, response: HTTPResponse, duration: Duration) -> String {
+        let milliseconds = Int((duration / .milliseconds(1)).rounded())
+        let endpoint = (request.url.host() ?? "") + request.url.path()
+        return "\(request.method) \(endpoint) -> \(response.statusCode) (\(milliseconds) ms)"
     }
 }
 
