@@ -69,9 +69,8 @@ name selected. Return or a click elsewhere saves; Esc cancels.
 ## Share
 
 Copy a branded PNG of one provider's card to the clipboard: right-click the card and choose
-**Share Screenshot**, or open the footer's **Options** menu and choose **Share Screenshot** ▸ the
-provider. The image shows the card as you see it, follows your light or dark appearance, and carries a
-small OpenUsage mark at the bottom.
+**Share Screenshot**. The image shows the card as you see it, follows your light or dark appearance,
+and carries a small OpenUsage mark at the bottom.
 
 ## Update banner
 
@@ -83,8 +82,8 @@ check. See [Updates](updates.md).
 
 The bar pinned to the bottom of the panel. On the left: the app version and a live
 **Next update in …** countdown you can click (or press **⌘R**) to refresh now. On the right: the
-**Options** menu with **Accounts**, **Settings**, **Share Screenshot**, **Check for Updates…**,
-**Report an Issue…**, **About OpenUsage**, and **Quit OpenUsage**.
+**Options** menu with **Accounts**, **Settings**, **Report an Issue…**, **About OpenUsage**, and
+**Quit OpenUsage**.
 
 ## Keyboard
 
