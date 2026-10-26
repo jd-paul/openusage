@@ -133,3 +133,32 @@ final class SequenceProviderRuntime: ProviderRuntime {
         return snapshot
     }
 }
+
+/// Records captured telemetry events without touching PostHog.
+@MainActor
+final class RecordingTelemetrySink: TelemetrySink {
+    var events: [(name: String, properties: [String: Any])] = []
+    func capture(_ event: String, _ properties: [String: Any]) { events.append((event, properties)) }
+    func flush() {}
+    func events(named name: String) -> [[String: Any]] {
+        events.filter { $0.name == name }.map(\.properties)
+    }
+}
+
+extension AppContainer {
+    /// A container on isolated defaults with a recording telemetry sink; the shape every test uses.
+    static func forTesting(
+        accounts: AccountStore,
+        defaults: UserDefaults,
+        http: any HTTPClient = URLSessionHTTPClient(),
+        telemetry: RecordingTelemetrySink = RecordingTelemetrySink()
+    ) async -> AppContainer {
+        await AppContainer(
+            accounts: accounts,
+            defaults: defaults,
+            http: http,
+            telemetry: telemetry,
+            telemetryStore: TelemetryStore(defaults: defaults)
+        )
+    }
+}

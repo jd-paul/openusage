@@ -43,7 +43,6 @@ final class TelemetryRecorder {
     func setEnabled(_ enabled: Bool) {
         guard store.enabled != enabled else { return }
         store.enabled = enabled
-        sink.setOptionalAnalyticsEnabled(enabled)
         AppLog.info(.config, "optional analytics \(enabled ? "enabled" : "disabled") by user")
     }
 
@@ -61,11 +60,9 @@ final class TelemetryRecorder {
         }
     }
 
-    /// Record one provider refresh outcome. Only `.refreshed` / `.failed` count — cache hits, skips, and
-    /// backoffs are timer noise, not usage, and are dropped. Skipped while optional analytics are off.
-    func record(providerID: String, outcome: WidgetDataStore.RefreshOutcome, category: ErrorCategory?, manual: Bool) {
+    /// Record one real provider fetch. Skipped while optional analytics are off.
+    func record(providerID: String, result: WidgetDataStore.FetchResult, manual: Bool) {
         guard store.enabled else { return }
-        guard outcome == .refreshed || outcome == .failed else { return }
 
         let today = Self.dayString(now())
         var counters = store.providerCounters()
@@ -75,14 +72,12 @@ final class TelemetryRecorder {
             counters[providerID] = nil
         }
         var counter = counters[providerID] ?? ProviderDailyCounter(day: today)
-        switch outcome {
+        switch result {
         case .refreshed:
             counter.success += 1
-        case .failed:
+        case .failed(let category):
             counter.failure += 1
-            counter.errors[(category ?? .other).rawValue, default: 0] += 1
-        default:
-            break
+            counter.errors[category.rawValue, default: 0] += 1
         }
         if manual { counter.manual += 1 }
         counters[providerID] = counter

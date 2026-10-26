@@ -2,22 +2,12 @@ import XCTest
 @testable import OpenUsage
 
 /// Covers the daily-rollup/dedup contract of `TelemetryRecorder`: the 5-minute refresh timer produces
-/// ~1,440 outcomes/user/day, so the recorder must collapse them into at most one event per provider
-/// per day (and one `app_daily_active` per day), drop cache/skip/backoff noise, classify errors, and
-/// keep the daily ping when optional analytics are off.
+/// ~1,440 outcomes/user/day, so the recorder must collapse the real fetches among them into at most
+/// one event per provider per day (and one `app_daily_active` per day), classify errors, and keep the
+/// daily ping when optional analytics are off.
 @MainActor
 final class TelemetryRecorderTests: XCTestCase {
-    /// Records captured events without touching PostHog.
-    private final class FakeSink: TelemetrySink {
-        var events: [(name: String, properties: [String: Any])] = []
-        var enabledCalls: [Bool] = []
-        func capture(_ event: String, _ properties: [String: Any]) { events.append((event, properties)) }
-        func setOptionalAnalyticsEnabled(_ enabled: Bool) { enabledCalls.append(enabled) }
-        func flush() {}
-        func events(named name: String) -> [[String: Any]] {
-            events.filter { $0.name == name }.map(\.properties)
-        }
-    }
+    private typealias FakeSink = RecordingTelemetrySink
 
     private let snapshot = TelemetryConfigSnapshot(
         enabledProviders: ["claude", "codex"],
@@ -25,28 +15,24 @@ final class TelemetryRecorderTests: XCTestCase {
         pinnedMetricIDs: ["claude.session"]
     )
 
-    func testOnlyRefreshedAndFailedCount_andRollOverEmitsCompleteDailyCounts() {
+    func testRollOverEmitsCompleteDailyCounts() {
         let sink = FakeSink()
         let store = makeStore("rollover")
         var clock = day(25)
         let recorder = TelemetryRecorder(sink: sink, store: store, snapshot: { self.snapshot }, now: { clock })
 
-        // Day 25: real fetches plus timer noise that must be ignored.
-        recorder.record(providerID: "claude", outcome: .refreshed, category: nil, manual: false)
-        recorder.record(providerID: "claude", outcome: .refreshed, category: nil, manual: true)
-        recorder.record(providerID: "claude", outcome: .failed, category: .network, manual: false)
-        recorder.record(providerID: "claude", outcome: .failed, category: .notLoggedIn, manual: false)
-        recorder.record(providerID: "claude", outcome: .failed, category: .notAvailable, manual: false)
-        recorder.record(providerID: "claude", outcome: .cacheHit, category: nil, manual: false)
-        recorder.record(providerID: "claude", outcome: .skipped, category: nil, manual: false)
-        recorder.record(providerID: "claude", outcome: .backedOff, category: nil, manual: false)
+        recorder.record(providerID: "claude", result: .refreshed, manual: false)
+        recorder.record(providerID: "claude", result: .refreshed, manual: true)
+        recorder.record(providerID: "claude", result: .failed(.network), manual: false)
+        recorder.record(providerID: "claude", result: .failed(.notLoggedIn), manual: false)
+        recorder.record(providerID: "claude", result: .failed(.notAvailable), manual: false)
 
         // Same day → nothing emitted yet (it's still accumulating).
         XCTAssertTrue(sink.events(named: "provider_refresh_daily").isEmpty)
 
         // New day → the first record rolls day 25's complete totals into one event.
         clock = day(26)
-        recorder.record(providerID: "claude", outcome: .refreshed, category: nil, manual: false)
+        recorder.record(providerID: "claude", result: .refreshed, manual: false)
 
         let rollups = sink.events(named: "provider_refresh_daily")
         XCTAssertEqual(rollups.count, 1)
@@ -76,7 +62,6 @@ final class TelemetryRecorderTests: XCTestCase {
 
             if !analyticsEnabled {
                 recorder.setEnabled(false)
-                XCTAssertEqual(sink.enabledCalls, [false])
                 XCTAssertFalse(store.enabled, "optional-analytics opt-out must persist")
             }
 
@@ -103,7 +88,7 @@ final class TelemetryRecorderTests: XCTestCase {
         var clock = day(25)
         let recorder = TelemetryRecorder(sink: sink, store: store, snapshot: { self.snapshot }, now: { clock })
 
-        recorder.record(providerID: "grok", outcome: .refreshed, category: nil, manual: false)
+        recorder.record(providerID: "grok", result: .refreshed, manual: false)
 
         // A new day with no further grok outcomes: the tick sweep must still emit day 25's rollup.
         clock = day(26)
@@ -123,10 +108,10 @@ final class TelemetryRecorderTests: XCTestCase {
 
         recorder.setEnabled(false)
         recorder.tick()
-        recorder.record(providerID: "claude", outcome: .refreshed, category: nil, manual: false)
-        recorder.record(providerID: "claude", outcome: .failed, category: .network, manual: false)
+        recorder.record(providerID: "claude", result: .refreshed, manual: false)
+        recorder.record(providerID: "claude", result: .failed(.network), manual: false)
         clock = day(26)
-        recorder.record(providerID: "claude", outcome: .failed, category: .network, manual: false)
+        recorder.record(providerID: "claude", result: .failed(.network), manual: false)
         recorder.tick()
 
         XCTAssertTrue(

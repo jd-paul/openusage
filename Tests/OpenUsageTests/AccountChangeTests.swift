@@ -9,7 +9,7 @@ final class AccountChangeTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let accounts = AccountStore(defaults: defaults, vault: InMemoryCredentialVault())
-        let container = await AppContainer(accounts: accounts, defaults: defaults)
+        let container = await AppContainer.forTesting(accounts: accounts, defaults: defaults)
         let layout = container.layout
         let dataStore = container.dataStore
         XCTAssertTrue(layout.displayGroups.isEmpty)

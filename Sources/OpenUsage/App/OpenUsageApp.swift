@@ -28,7 +28,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func finishLaunching() async {
-        let container = await AppContainer()
+        // The one place the PostHog SDK starts and the bundle's telemetry suite is opened. The suite is
+        // separate from the app's settings, so a settings change can never re-enable optional analytics
+        // the user turned off or mint a new install id.
+        let container = await AppContainer(telemetry: PostHogTelemetrySink(), telemetryStore: TelemetryStore())
         self.container = container
         startDashboard(container)
     }

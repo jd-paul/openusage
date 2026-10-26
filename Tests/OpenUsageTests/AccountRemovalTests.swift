@@ -27,7 +27,7 @@ final class AccountRemovalTests: XCTestCase {
                 body: Data(#"{"access_token":"new-access","refresh_token":"rotated-refresh","expires_in":3600}"#.utf8)
             )
         }
-        let container = await AppContainer(accounts: accounts, defaults: defaults, http: http)
+        let container = await AppContainer.forTesting(accounts: accounts, defaults: defaults, http: http)
         let dataStore = container.dataStore
 
         let refresh = Task { await dataStore.refresh(providerID: account.cardID, force: true) }

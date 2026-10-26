@@ -10,7 +10,7 @@ final class PopoverTopBarTests: XCTestCase {
         let suite = "OpenUsageTests.PopoverTopBar.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
-        let container = await AppContainer(
+        let container = await AppContainer.forTesting(
             accounts: AccountStore(defaults: defaults, vault: InMemoryCredentialVault()),
             defaults: defaults
         )

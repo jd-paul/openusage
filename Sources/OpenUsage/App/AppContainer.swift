@@ -21,10 +21,16 @@ final class AppContainer {
 
     @ObservationIgnored private let http: any HTTPClient
 
+    /// `telemetry` and `telemetryStore` have no defaults on purpose: the PostHog sink starts the
+    /// process-global SDK and the production store writes the bundle's telemetry suite, so only the app
+    /// entry point supplies them and a test cannot build a container that reports anywhere but its own
+    /// fake sink and isolated store.
     init(
         accounts: AccountStore = AccountStore(),
         defaults: UserDefaults = .standard,
-        http: any HTTPClient = URLSessionHTTPClient()
+        http: any HTTPClient = URLSessionHTTPClient(),
+        telemetry sink: any TelemetrySink,
+        telemetryStore: TelemetryStore
     ) async {
         self.accounts = accounts
         self.http = http
@@ -46,12 +52,9 @@ final class AppContainer {
         self.dataStore = dataStore
         self.transparency = PopoverTransparencyStore()
         self.renaming = AccountRenameStore(accounts: accounts)
-        // Telemetry state lives in its own UserDefaults suite, so the install id and the user's
-        // optional-analytics choice stay independent of any settings change. Ids are kind-scoped
-        // (`Account.kindScopedID`), so the events name providers, never accounts.
-        let telemetryStore = TelemetryStore()
+        // Ids are kind-scoped (`Account.kindScopedID`), so the events name providers, never accounts.
         let telemetry = TelemetryRecorder(
-            sink: PostHogTelemetrySink(enabled: telemetryStore.enabled),
+            sink: sink,
             store: telemetryStore,
             snapshot: { [accounts, layout] in
                 var kinds: [String] = []
@@ -65,8 +68,8 @@ final class AppContainer {
                 )
             }
         )
-        dataStore.onRefreshOutcome = { [weak telemetry] providerID, outcome, category, manual in
-            telemetry?.record(providerID: Account.kindScopedID(providerID), outcome: outcome, category: category, manual: manual)
+        dataStore.onRefreshOutcome = { [weak telemetry] providerID, result, manual in
+            telemetry?.record(providerID: Account.kindScopedID(providerID), result: result, manual: manual)
         }
         self.telemetry = telemetry
         AppNotifications.shared.registerAsDelegate()

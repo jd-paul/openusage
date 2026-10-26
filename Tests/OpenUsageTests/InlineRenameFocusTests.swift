@@ -79,7 +79,7 @@ final class InlineRenameFocusTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
         let store = AccountStore(defaults: defaults, vault: InMemoryCredentialVault())
-        let container = await AppContainer(accounts: store, defaults: defaults)
+        let container = await AppContainer.forTesting(accounts: store, defaults: defaults)
         var accounts: [String: String] = [:]
         if soleCodex {
             accounts["Sunstory"] = store.add(kind: .codex, label: "Sunstory", credential: .apiKey("key")).cardID

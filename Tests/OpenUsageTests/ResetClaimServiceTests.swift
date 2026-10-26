@@ -86,7 +86,7 @@ final class ResetClaimServiceTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let accounts = AccountStore(defaults: defaults, vault: InMemoryCredentialVault())
-        let container = await AppContainer(accounts: accounts, defaults: defaults)
+        let container = await AppContainer.forTesting(accounts: accounts, defaults: defaults)
         // An API-key credential fails a Codex refresh before any request, so nothing reaches the network.
         let codex = accounts.add(kind: .codex, label: "Work", credential: .apiKey("key"))
         var backedOff = false

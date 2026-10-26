@@ -100,15 +100,6 @@ final class UpdaterController {
         AppLog.info(.updates, "started (feed present)")
     }
 
-    /// Restores the update preferences to their defaults — the Settings "Reset All Settings" path:
-    /// stable channel, automatic checks on (the release Info.plist ships `SUEnableAutomaticChecks`
-    /// true). A dormant updater (dev build, no feed) has no auto-check state to restore; the
-    /// pass-through setter is a no-op there.
-    func resetToDefaults() {
-        betaChannelEnabled = false
-        automaticallyChecksForUpdates = true
-    }
-
     /// User-initiated check. Shows Sparkle's standard UI (progress, release notes, install prompt).
     func checkForUpdates() {
         guard let controller else { return }
@@ -120,12 +111,6 @@ final class UpdaterController {
         DispatchQueue.main.async {
             controller.checkForUpdates(nil)
         }
-    }
-
-    /// The banner's install action. A user-initiated check: if the banner's update is still current,
-    /// Sparkle re-presents it in frontmost focus (its window, release notes, and install button).
-    func installAvailableUpdate() {
-        checkForUpdates()
     }
 
     /// The banner's dismiss action for this found update. Sparkle's next scheduled check re-surfaces
