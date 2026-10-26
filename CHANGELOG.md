@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+The new OpenUsage announced in [#1441](https://github.com/robinebers/openusage/issues/1441). The app
+shows only what each provider's API reports for the accounts you sign in to.
+
+### Removed
+- Account discovery. OpenUsage no longer reads other tools' credentials, config files, Keychain items,
+  databases, or logs. Sign in to each account from the new **Accounts** screen instead.
+- Spend and token tracking, model pricing, and the pricing supplement. The dashboard shows the limits
+  and dollar values a provider reports, nothing computed.
+- iCloud sync of settings and layout.
+- The log file and the Log Level setting. The app logs through unified logging only
+  (`log stream --predicate 'subsystem == "OpenUsage"'`).
+- The command-line interface and the local HTTP API.
+- The proxy setting.
+- The Devin and Pi providers, which have no account sign-in.
+- The welcome screen, provider enable/disable switches, and the On Demand metric tier. Metrics are on
+  or off per account, and starred metrics show in the menu bar.
+
+### Changed
+- Accounts: add several accounts per provider, rename them, and remove them from the app.
+- Dashboard: cards per provider with a section per account; right-click menus for reorder, hide,
+  star, undo, share screenshot, and quick links.
+- Severity colours are blue, orange, and red.
+- New app icon.
+
+### Kept
+- Automatic updates through Sparkle, with the same release feed, the beta channel, and the update
+  banner.
+- Anonymous telemetry and crash reporting through PostHog, with the same opt-out in Settings.
+- Notifications, menu-bar stars, keyboard shortcuts, Launch at Login, and the appearance settings.
+
 ## v0.7.16
 
 > **A new OpenUsage is coming.** The next update removes spend and token tracking, with no transition period, and moves sign-in into the app. To keep these features, stay on this version. Details: [#1441](https://github.com/robinebers/openusage/issues/1441)
