@@ -51,7 +51,7 @@ enum ZAIUsageMapper {
             throw ProviderError.invalidResponse
         }
         guard !limits.isEmpty else {
-            return [.noUsageData]
+            return []
         }
 
         var lines: [MetricLine] = []
@@ -81,7 +81,7 @@ enum ZAIUsageMapper {
 
         guard !lines.isEmpty else {
             if sawRecognizedLimit { throw ProviderError.invalidResponse }
-            return [.noUsageData]
+            return []
         }
         return lines
     }

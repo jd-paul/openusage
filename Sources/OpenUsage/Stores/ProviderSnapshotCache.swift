@@ -36,7 +36,7 @@ struct ProviderSnapshotCache {
 
     init(
         userDefaults: UserDefaults = .standard,
-        storageKey: String = "openusage.providerSnapshots.v10",
+        storageKey: String = "openusage.providerSnapshots.v11",
         ttl: TimeInterval = RefreshSetting.interval,
         now: @escaping () -> Date = Date.init
     ) {
@@ -83,7 +83,7 @@ struct ProviderSnapshotCache {
     /// Records a successful snapshot in the mirror. It reaches disk on the next `persistPending`, so a
     /// refresh pass of N accounts encodes the payload once instead of N times.
     func store(_ snapshot: ProviderSnapshot) {
-        guard !snapshot.lines.contains(where: \.isError) else {
+        guard snapshot.errorMessage == nil else {
             AppLog.debug(.cache, "skip write \(snapshot.providerID) (error snapshot)")
             return
         }

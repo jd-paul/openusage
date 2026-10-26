@@ -26,7 +26,7 @@ final class ZAIQuotaValidationMapperTests: XCTestCase {
         }
 
         let lines = try ZAIUsageMapper.mapQuota(Data(#"{"data":{"limits":[]}}"#.utf8))
-        XCTAssertNotNil(lines.first { $0.label == "Status" })
+        XCTAssertTrue(lines.isEmpty)
     }
 
     func testUnknownEntriesDoNotHideKnownMeters() throws {
@@ -47,6 +47,6 @@ final class ZAIQuotaValidationMapperTests: XCTestCase {
 
         let lines = try ZAIUsageMapper.mapQuota(body)
 
-        XCTAssertNotNil(lines.first { $0.label == "Status" })
+        XCTAssertTrue(lines.isEmpty)
     }
 }

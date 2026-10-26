@@ -22,7 +22,7 @@ final class AntigravityArgonQuotaTests: XCTestCase {
         let lines = AntigravityUsageMapper.parseQuotaSummary(data)
         XCTAssertEqual(lines?.map(\.label), ["Session", "Weekly", "Claude", "Claude Weekly"], file: file, line: line)
         XCTAssertEqual(lines?.map { metric -> Double? in
-            guard case .progress(_, let used, _, _, _, _, _) = metric else { return nil }
+            guard case .progress(_, let used, _, _, _, _) = metric else { return nil }
             return used
         }, [20, 30, 40, 50], file: file, line: line)
     }

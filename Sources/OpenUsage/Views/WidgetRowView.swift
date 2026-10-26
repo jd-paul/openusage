@@ -198,14 +198,6 @@ struct WidgetRowView: View {
                         .fixedSize(horizontal: true, vertical: false)
                         .hoverTooltip(data.unboundedValueTooltip)
                 }
-                if let subtitle = data.unboundedSubtitle {
-                    // Secondary, not tertiary: the subtitle is informational ("on-device estimate"),
-                    // and tertiary is reserved for inactive content on glass.
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
             .multilineTextAlignment(.trailing)
         }

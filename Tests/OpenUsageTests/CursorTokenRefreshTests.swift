@@ -102,7 +102,7 @@ final class CursorTokenRefreshTests: XCTestCase {
 
         let snapshot = await harness.runtime.refresh()
 
-        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
+        XCTAssertNil(snapshot.errorMessage, "\(snapshot.lines)")
         XCTAssertEqual(harness.stored?.expiresAt, Self.expiry)
         XCTAssertEqual(harness.stored?.accessToken, Self.oldToken)
         XCTAssertTrue(harness.refreshRequests.isEmpty)
@@ -118,7 +118,7 @@ final class CursorTokenRefreshTests: XCTestCase {
 
         let snapshot = await harness.runtime.refresh()
 
-        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
+        XCTAssertNil(snapshot.errorMessage, "\(snapshot.lines)")
         XCTAssertEqual(harness.usageTokens, [Self.newToken])
         try assertRefreshedAndSaved(harness)
     }
@@ -133,7 +133,7 @@ final class CursorTokenRefreshTests: XCTestCase {
 
         let snapshot = await harness.runtime.refresh()
 
-        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
+        XCTAssertNil(snapshot.errorMessage, "\(snapshot.lines)")
         XCTAssertEqual(harness.usageTokens, [Self.oldToken, Self.newToken])
         try assertRefreshedAndSaved(harness)
     }
@@ -149,7 +149,7 @@ final class CursorTokenRefreshTests: XCTestCase {
         let snapshot = await harness.runtime.refresh()
 
         XCTAssertEqual(harness.refreshRequests.count, 1)
-        guard case .badge(_, let text, _, _)? = snapshot.lines.first else { return XCTFail("Expected an error badge") }
+        guard let text = snapshot.errorMessage else { return XCTFail("Expected an error snapshot") }
         XCTAssertEqual(text, "Cursor sign-in expired. Add the account again.")
         XCTAssertEqual(harness.stored?.accessToken, Self.oldToken)
     }
@@ -165,7 +165,7 @@ final class CursorTokenRefreshTests: XCTestCase {
         let snapshot = await harness.runtime.refresh()
 
         XCTAssertEqual(harness.refreshRequests.count, 1)
-        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
+        XCTAssertNil(snapshot.errorMessage, "\(snapshot.lines)")
         XCTAssertEqual(harness.usageTokens, [Self.oldToken])
         XCTAssertEqual(harness.stored?.accessToken, Self.oldToken)
     }

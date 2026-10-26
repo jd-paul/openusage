@@ -12,7 +12,7 @@ final class ClaudeResetGrantsTests: XCTestCase {
     }
 
     private func countAndExpiries(_ line: MetricLine?) -> (Double?, [Date])? {
-        guard case .values(_, let values, _, let expiries) = line else { return nil }
+        guard case .values(_, let values, let expiries) = line else { return nil }
         return (values.first?.number, expiries)
     }
 

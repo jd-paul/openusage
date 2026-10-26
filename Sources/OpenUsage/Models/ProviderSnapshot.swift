@@ -13,6 +13,8 @@ struct ProviderSnapshot: Hashable, Sendable, Codable {
     /// header's orange triangle rather than blanking the provider. Cached with the snapshot; cleared on
     /// the next refresh when the condition resolves.
     var warning: String?
+    /// Set only on a failed refresh: the message the provider's card shows. `lines` is empty then.
+    var errorMessage: String?
 
     init(
         providerID: String,
@@ -20,7 +22,8 @@ struct ProviderSnapshot: Hashable, Sendable, Codable {
         plan: String? = nil,
         lines: [MetricLine],
         refreshedAt: Date = Date(),
-        warning: String? = nil
+        warning: String? = nil,
+        errorMessage: String? = nil
     ) {
         self.providerID = providerID
         self.displayName = displayName
@@ -28,6 +31,7 @@ struct ProviderSnapshot: Hashable, Sendable, Codable {
         self.lines = lines
         self.refreshedAt = refreshedAt
         self.warning = warning
+        self.errorMessage = errorMessage
     }
 
     func line(label: String) -> MetricLine? {
@@ -53,17 +57,13 @@ struct ProviderSnapshot: Hashable, Sendable, Codable {
         )
     }
 
-    /// Build an error snapshot straight from a caught error: the badge text is the error's user-facing
+    /// Build an error snapshot straight from a caught error: the message is the error's user-facing
     /// `localizedDescription`.
     static func error(provider: Provider, error: Error) -> ProviderSnapshot {
         Self.error(provider: provider, message: error.localizedDescription)
     }
 
     static func error(provider: Provider, message: String) -> ProviderSnapshot {
-        ProviderSnapshot(
-            providerID: provider.id,
-            displayName: provider.displayName,
-            lines: [.badge(label: MetricLine.errorBadgeLabel, text: message, colorHex: "#EF4444")]
-        )
+        ProviderSnapshot(providerID: provider.id, displayName: provider.displayName, lines: [], errorMessage: message)
     }
 }

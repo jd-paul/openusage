@@ -44,9 +44,9 @@ final class CursorCurrentPeriodUsageTests: XCTestCase {
 
         let snapshot = await runtime.refresh()
 
-        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
+        XCTAssertNil(snapshot.errorMessage, "\(snapshot.lines)")
         XCTAssertEqual(snapshot.plan, "Pro")
-        guard case .progress(_, let used, let limit, _, let resetsAt, _, _)? = snapshot.line(label: "Total usage") else {
+        guard case .progress(_, let used, let limit, _, let resetsAt, _)? = snapshot.line(label: "Total usage") else {
             return XCTFail("Missing Total usage in \(snapshot.lines)")
         }
         XCTAssertEqual(used, 25)
@@ -62,7 +62,7 @@ final class CursorCurrentPeriodUsageTests: XCTestCase {
 
         let snapshot = await runtime.refresh()
 
-        guard case .badge(_, let text, _, _)? = snapshot.lines.first else { return XCTFail("Expected an error badge") }
+        guard let text = snapshot.errorMessage else { return XCTFail("Expected an error snapshot") }
         XCTAssertEqual(text, ProviderError.signInExpired(.cursor).localizedDescription)
     }
 }

@@ -46,7 +46,7 @@ final class CodexUsageClientAndMapperTests: XCTestCase {
         )
         let mapped = try CodexUsageMapper.mapUsageResponse(response)
 
-        guard case .progress(_, let used, let limit, _, _, _, _) = mapped.lines.first(where: { $0.label == "Session" })
+        guard case .progress(_, let used, let limit, _, _, _) = mapped.lines.first(where: { $0.label == "Session" })
         else { return XCTFail("expected Session meter") }
         XCTAssertEqual(used, 42)
         XCTAssertEqual(limit, 100)
@@ -93,7 +93,7 @@ final class CodexUsageClientAndMapperTests: XCTestCase {
                 usage, resetCredits: resetCredits, now: OpenUsageISO8601.date(from: "2026-02-20T16:00:00.000Z")!
             )
 
-            guard case .values(_, let values, _, let expiriesAt) = mapped.lines.first else {
+            guard case .values(_, let values, let expiriesAt) = mapped.lines.first else {
                 return XCTFail("expected reset credits for status \(status ?? "omitted")")
             }
             XCTAssertEqual(values, [MetricValue(number: 2, kind: .count, label: "available")])
@@ -114,7 +114,7 @@ final class CodexUsageClientAndMapperTests: XCTestCase {
             let mapped = try CodexUsageMapper.mapUsageResponse(
                 usage, resetCredits: entry.response, now: Date(timeIntervalSince1970: 1_800_000_000)
             )
-            guard case .values(_, let values, _, let expiriesAt) = mapped.lines.first else {
+            guard case .values(_, let values, let expiriesAt) = mapped.lines.first else {
                 return XCTFail("expected reset credits when dedicated response is \(entry.name)")
             }
             XCTAssertEqual(values, [MetricValue(number: 3, kind: .count, label: "available")], entry.name)
@@ -132,7 +132,7 @@ final class CodexUsageClientAndMapperTests: XCTestCase {
     }
 
     private func resetsValues(_ lines: [MetricLine]) -> [MetricValue]? {
-        guard case .values(_, let values, _, _) = lines.first(where: { $0.label == "Rate Limit Resets" }) else {
+        guard case .values(_, let values, _) = lines.first(where: { $0.label == "Rate Limit Resets" }) else {
             return nil
         }
         return values

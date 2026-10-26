@@ -17,7 +17,7 @@ final class CursorUsageSummaryMapperTests: XCTestCase {
         )
 
         XCTAssertEqual(mapped.plan, "Enterprise")
-        guard case .progress(_, let used, let limit, let format, _, _, _) =
+        guard case .progress(_, let used, let limit, let format, _, _) =
             mapped.lines.first(where: { $0.label == "On-demand" })
         else { return XCTFail("expected On-demand meter") }
         XCTAssertEqual(used, 123.45)

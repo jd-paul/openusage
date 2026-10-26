@@ -80,7 +80,7 @@ final class OAuthRefreshPersistenceTests: XCTestCase {
 
         let snapshot = await runtime.refresh()
 
-        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
+        XCTAssertNil(snapshot.errorMessage, "\(snapshot.lines)")
         let tokenRequest = try XCTUnwrap(http.requests.first { $0.url.host() == "oauth2.googleapis.com" })
         XCTAssertEqual(String(decoding: tokenRequest.body ?? Data(), as: UTF8.self),
                        "client_id=\(AntigravityLogin.clientID.urlFormEncoded)&client_secret=\(AntigravityLogin.clientSecret.urlFormEncoded)"
@@ -111,7 +111,7 @@ final class OAuthRefreshPersistenceTests: XCTestCase {
         let snapshot = await runtime.refresh()
 
         XCTAssertEqual(http.requests.map(\.url.absoluteString), ["https://oauth2.googleapis.com/token"])
-        guard case .badge(_, let text, _, _)? = snapshot.lines.first else { return XCTFail("Expected an error badge") }
+        guard let text = snapshot.errorMessage else { return XCTFail("Expected an error snapshot") }
         XCTAssertEqual(text, ProviderError.signInExpired(.antigravity).localizedDescription)
         guard case .oauth(let saved)? = try vault.load(account.id) else { return XCTFail("Expected the credential to survive") }
         XCTAssertEqual(saved.accessToken, "old-access", "a refused refresh must not touch the stored credential")

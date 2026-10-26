@@ -84,8 +84,7 @@ final class WidgetMeterStyleTests: XCTestCase {
                 icon: provider.icon,
                 kind: .dollars,
                 used: 0,
-                limit: nil,
-                subtitleOverride: "on-device estimate"
+                limit: nil
             )
         )
         let runtime = TestProviderRuntime(
@@ -114,9 +113,7 @@ final class WidgetMeterStyleTests: XCTestCase {
         let used = store.data(for: descriptor)
 
         XCTAssertEqual(remaining.valueText, "$42.50")
-        XCTAssertEqual(remaining.unboundedSubtitle, "on-device estimate")
         XCTAssertEqual(used.valueText, remaining.valueText)
-        XCTAssertEqual(used.unboundedSubtitle, remaining.unboundedSubtitle)
         XCTAssertEqual(used.displayedValue, remaining.displayedValue)
     }
 

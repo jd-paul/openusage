@@ -5,7 +5,7 @@ import XCTest
 /// check that lets a refresh skip the second host.
 final class AntigravityQuotaSummaryMergeTests: XCTestCase {
     private func used(_ line: MetricLine?) -> Double? {
-        guard case .progress(_, let used, _, _, _, _, _)? = line else { return nil }
+        guard case .progress(_, let used, _, _, _, _)? = line else { return nil }
         return used
     }
 

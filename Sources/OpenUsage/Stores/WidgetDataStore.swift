@@ -326,7 +326,7 @@ final class WidgetDataStore {
                 "\(providerID) slow refresh (\(durationMs)ms, threshold=\(Int(slowProviderRefreshThreshold * 1000))ms)"
             )
         }
-        if let message = Self.errorMessage(in: snapshot) {
+        if let message = snapshot.errorMessage {
             // Failed refresh: surface the error but keep the last good snapshot on screen rather than
             // collapsing every row to "No data". The provider error string is already user-safe.
             providerErrors[providerID] = message
@@ -373,13 +373,6 @@ final class WidgetDataStore {
     /// real "Token expired" failure. When there's no error, the soft warning (if any) shows.
     func headerNotice(for providerID: String) -> String? {
         errorMessage(for: providerID) ?? warningMessage(for: providerID)
-    }
-
-    /// A snapshot that carries only error lines is a failed refresh; its message comes from the badge.
-    private static func errorMessage(in snapshot: ProviderSnapshot) -> String? {
-        guard !snapshot.lines.isEmpty, snapshot.lines.allSatisfy(\.isError) else { return nil }
-        if case .badge(_, let text, _, _) = snapshot.lines[0] { return text }
-        return "Refresh failed"
     }
 
     func data(for descriptor: WidgetDescriptor) -> WidgetData {
@@ -435,7 +428,7 @@ final class WidgetDataStore {
 
     private func resolve(_ line: MetricLine, descriptor: WidgetDescriptor) -> WidgetData? {
         switch line {
-        case .progress(_, let used, let limit, let format, let resetsAt, let periodDurationMs, _):
+        case .progress(_, let used, let limit, let format, let resetsAt, let periodDurationMs):
             // A percent meter is a bounded 0...100 domain; sanitize an out-of-range sample (a provider
             // reporting a negative or >100 utilization) here, at the single construction choke point
             // every provider funnels through, so no surface — headline, flip tooltip, menu bar — can
@@ -451,7 +444,6 @@ final class WidgetDataStore {
                 used: normalizedUsed,
                 limit: limit,
                 countSuffix: format.countSuffix,
-                valuePrefix: descriptor.sample.valuePrefix,
                 resetsAt: resetsAt,
                 periodDurationMs: periodDurationMs,
                 limitNoun: descriptor.sample.limitNoun
@@ -460,11 +452,7 @@ final class WidgetDataStore {
             // `.progress` result doesn't start from the sample, so carry the signal explicitly.
             result.sessionStartSignal = descriptor.sample.sessionStartSignal
             return result
-        case .text:
-            // Text lines carry provider notices; no dashboard descriptor consumes
-            // them. Numeric widgets use typed progress/values lines and must never parse display text.
-            return nil
-        case .values(_, let values, _, let expiriesAt):
+        case .values(_, let values, let expiriesAt):
             // The number is carried raw — no regex re-parse. Presentation (title, icon, trailing word)
             // comes from the descriptor's sample; the live numbers come from the line.
             var data = descriptor.sample
@@ -479,10 +467,9 @@ final class WidgetDataStore {
             data.expiriesAt = expiriesAt
             data.hasData = !data.values.isEmpty
             return data
-        case .badge(_, let text, _, let subtitle):
+        case .badge(_, let text):
             var data = descriptor.sample
             data.valueTextOverride = text
-            data.subtitleOverride = subtitle
             return data
         }
     }

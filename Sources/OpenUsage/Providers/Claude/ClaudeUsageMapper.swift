@@ -67,36 +67,22 @@ enum ClaudeUsageMapper {
     }
 
     /// Snapshot shown when the usage endpoint rate-limits us and there is no last-good usage to fall back
-    /// on (e.g. the first fetch after launch): a status badge plus the staleness note, no live bars.
+    /// on (e.g. the first fetch after launch): no live bars, just the header warning.
     static func rateLimitedUsage(credentials: ClaudeOAuth, retryAfterSeconds: Int?) -> ClaudeMappedUsage {
-        let retryText = retryAfterSeconds.map(formatRateLimitMinutes)
-        let waitText = retryText.map { "Rate limited, retry in ~\($0)" } ?? "Rate limited, try again later"
-        return ClaudeMappedUsage(
+        ClaudeMappedUsage(
             plan: formatPlan(subscriptionType: credentials.subscriptionType, rateLimitTier: credentials.rateLimitTier),
-            lines: [
-                .badge(label: "Status", text: waitText, colorHex: "#F59E0B"),
-                rateLimitedNote(retryAfterSeconds: retryAfterSeconds)
-            ],
+            lines: [],
             warning: rateLimitedWarning(retryAfterSeconds: retryAfterSeconds)
         )
     }
 
-    /// Provider header warning (the orange triangle + tooltip) for the rate-limited state. The badge/note
-    /// lines above only render when their metrics are enabled in the layout, so without this the default
-    /// dashboard showed bare "No data" rows with no hint of why. Also warns the
-    /// user off manual refreshes, which extend Anthropic's rate limiting.
+    /// Provider header warning (the orange triangle + tooltip) for the rate-limited state, so the "No
+    /// data" rows come with the reason. Also warns the user off manual refreshes, which extend
+    /// Anthropic's rate limiting.
     static func rateLimitedWarning(retryAfterSeconds: Int?) -> String {
         let base = "Updates blocked by Anthropic. Be patient — manual refreshes will make it worse."
         guard let retryText = retryAfterSeconds.map(formatRateLimitMinutes) else { return base }
         return "\(base) Retrying in ~\(retryText)."
-    }
-
-    /// The "live usage is rate limited" note appended to a last-good snapshot so the still-shown bars are
-    /// flagged as possibly stale. Shared with `rateLimitedUsage` so the wording stays in one place.
-    static func rateLimitedNote(retryAfterSeconds: Int?) -> MetricLine {
-        let retryText = retryAfterSeconds.map(formatRateLimitMinutes)
-        let noteText = retryText.map { "Live usage rate limited - retry in ~\($0)" } ?? "Live usage rate limited - data may be stale"
-        return .text(label: "Note", value: noteText)
     }
 
     static func formatPlan(subscriptionType: String?, rateLimitTier: String?) -> String? {

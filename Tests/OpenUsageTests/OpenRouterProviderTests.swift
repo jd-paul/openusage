@@ -21,7 +21,7 @@ final class OpenRouterProviderTests: XCTestCase {
 
         XCTAssertEqual(snapshot.lines.map(\.label), Self.cardLabels)
         XCTAssertEqual(runtime.widgetDescriptors.map(\.metricLabel), Self.cardLabels)
-        guard case .values(_, let values, _, _) = snapshot.lines.first
+        guard case .values(_, let values, _) = snapshot.lines.first
         else { return XCTFail("expected Balance value") }
         XCTAssertEqual(try XCTUnwrap(values.first?.number), 77.77, accuracy: 0.001)
     }

@@ -157,7 +157,7 @@ final class ClaudeResetGrantsCadenceTests: XCTestCase {
     }
 
     private func resetsAvailable(_ lines: [MetricLine]) -> Double? {
-        guard case .values(_, let values, _, _) = lines.first(where: { $0.label == "Rate Limit Resets" }) else {
+        guard case .values(_, let values, _) = lines.first(where: { $0.label == "Rate Limit Resets" }) else {
             return nil
         }
         return values.first?.number

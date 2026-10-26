@@ -16,7 +16,6 @@ struct WidgetData: Hashable {
     let used: Double
     var limit: Double?         // nil => unbounded (number tile); cleared when a .values line resolves
     var countSuffix: String?   // e.g. "credits", "requests"
-    var valuePrefix: String?   // e.g. "~" for forecasts
     var displayMode: WidgetDisplayMode = .used
     /// Global relative/absolute reset display, stamped by `WidgetDataStore` (like `displayMode`).
     var resetDisplayMode: ResetDisplayMode = .relative
@@ -36,7 +35,6 @@ struct WidgetData: Hashable {
     var showsResetExpiries: Bool = false
     var periodDurationMs: Int?
     var valueTextOverride: String?
-    var subtitleOverride: String?
     var limitNoun: String?     // word after a dollar limit, e.g. "$100 limit" (defaults to "limit")
     /// Fixed trailing word for an unbounded row, e.g. "left" for an extra balance.
     var unboundedValueWord: String?
@@ -194,9 +192,9 @@ struct WidgetData: Hashable {
         // A `.values` row's primary reading is its first value; meters fall through to the
         // bounded/`used` formatting.
         if let first = values.first {
-            return (valuePrefix ?? "") + MetricFormatter.number(first.number, kind: first.kind, style: .row)
+            return MetricFormatter.number(first.number, kind: first.kind, style: .row)
         }
-        return (valuePrefix ?? "") + format(displayedValue)
+        return format(displayedValue)
     }
 
     /// The menu-bar (tray) reading: bounded metrics stay unit-aware (percent meters as %, dollar meters
@@ -239,9 +237,6 @@ struct WidgetData: Hashable {
 
     /// Subtitle under the bounded headline (reset timing or limit context).
     var boundedSubtitle: String? {
-        if let subtitleOverride {
-            return subtitleOverride
-        }
         if let resetLabel {
             return resetLabel
         }
@@ -349,12 +344,6 @@ struct WidgetData: Hashable {
         // entries already read "Feb 15 at 3:45 PM").
         let header = resetDisplayMode == .relative ? "Resets expire in:" : "Resets expire:"
         return ([header] + entries).joined(separator: "\n")
-    }
-
-    /// Secondary line under an unbounded row's detail.
-    var unboundedSubtitle: String? {
-        guard hasData else { return nil }
-        return subtitleOverride
     }
 
     /// Full, un-abbreviated values for the row's hover tooltip when the compact value shortens them.
@@ -483,7 +472,6 @@ extension WidgetData {
     /// Claude and Antigravity session rows show "Not started" while the rolling window has not begun.
     func boundedTrailingText(now: Date = Date()) -> String? {
         guard hasData else { return Self.noDataSubtitle }
-        if let subtitleOverride { return subtitleOverride }
         if isFreshSessionWindow(now: now) { return "Not started" }
         if let resetsAt {
             return resetDisplayMode == .absolute
@@ -516,7 +504,7 @@ extension WidgetData {
     /// True when the bounded primary row's trailing text is a concrete reset countdown. False for
     /// limit/suffix context, fresh session windows, or no reset date.
     func hasResetLabel(now: Date = Date()) -> Bool {
-        hasData && subtitleOverride == nil && resetsAt != nil && !isFreshSessionWindow(now: now)
+        hasData && resetsAt != nil && !isFreshSessionWindow(now: now)
     }
 
     /// Hover copy explaining the "Not started" trailing label: the rolling session window only begins

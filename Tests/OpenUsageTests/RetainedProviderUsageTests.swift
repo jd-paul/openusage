@@ -11,7 +11,7 @@ final class RetainedProviderUsageTests: XCTestCase {
         ])
 
         XCTAssertEqual(mapped.plan, "Pro")
-        guard case .progress(_, let used, let limit, _, _, _, _) =
+        guard case .progress(_, let used, let limit, _, _, _) =
             mapped.lines.first(where: { $0.label == "Credits" })
         else { return XCTFail("expected Credits meter") }
         XCTAssertEqual(used, 25)
@@ -28,7 +28,7 @@ final class RetainedProviderUsageTests: XCTestCase {
         let mapped = try GrokUsageMapper.mapCreditsConfig(response)
 
         XCTAssertTrue(mapped.lines.contains { $0.label == "Weekly limit" })
-        guard case .badge(_, let text, _, _) = mapped.lines.first(where: { $0.label == "Pay as you go" })
+        guard case .badge(_, let text) = mapped.lines.first(where: { $0.label == "Pay as you go" })
         else { return XCTFail("expected Pay as you go badge") }
         XCTAssertEqual(text, "2500 cap")
     }
@@ -37,7 +37,7 @@ final class RetainedProviderUsageTests: XCTestCase {
         let lines = OpenRouterUsageMapper.creditsLines(from: ["total_usage": 2.5, "total_credits": 10])
 
         XCTAssertEqual(lines.map(\.label), ["Balance"])
-        guard case .values(_, let values, _, _) = lines.first
+        guard case .values(_, let values, _) = lines.first
         else { return XCTFail("expected Balance value") }
         XCTAssertEqual(values.first?.number, 7.5)
     }
@@ -48,7 +48,7 @@ final class RetainedProviderUsageTests: XCTestCase {
           "period":{"from":"2026-06-01T00:00:00Z","until":"2026-07-01T00:00:00Z"}}}
         """#.utf8))
 
-        guard case .progress(_, let used, let limit, let format, _, _, _) =
+        guard case .progress(_, let used, let limit, let format, _, _) =
             lines.first(where: { $0.label == "Monthly" })
         else { return XCTFail("expected Monthly meter") }
         XCTAssertEqual(used, 27.5)

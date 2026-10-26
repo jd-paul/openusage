@@ -198,7 +198,7 @@ final class CodexResetClaimTests: XCTestCase {
 
         let snapshot = await runtime.refresh()
 
-        guard case .values(_, let values, _, let expiries) = snapshot.line(label: "Rate Limit Resets") else {
+        guard case .values(_, let values, let expiries) = snapshot.line(label: "Rate Limit Resets") else {
             return XCTFail("expected the Rate Limit Resets row")
         }
         XCTAssertEqual(values, [MetricValue(number: 2, kind: .count, label: "available")])
@@ -223,7 +223,7 @@ final class CodexResetClaimTests: XCTestCase {
 
         let snapshot = await runtime.refresh()
 
-        guard case .values(_, let values, _, let expiries) = snapshot.line(label: "Rate Limit Resets") else {
+        guard case .values(_, let values, let expiries) = snapshot.line(label: "Rate Limit Resets") else {
             return XCTFail("expected the Rate Limit Resets row")
         }
         XCTAssertEqual(values, [MetricValue(number: 1, kind: .count, label: "available")])

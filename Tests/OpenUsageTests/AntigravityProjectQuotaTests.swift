@@ -49,7 +49,7 @@ final class AntigravityProjectQuotaTests: XCTestCase {
     func testQuotaSummaryNamesTheAccountsProject() async throws {
         let snapshot = try await refresh()
 
-        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
+        XCTAssertNil(snapshot.errorMessage, "\(snapshot.lines)")
         XCTAssertEqual(snapshot.lines.map(\.label), [AntigravityMetric.weeklyLabel, AntigravityMetric.claudeWeeklyLabel])
         XCTAssertEqual(snapshot.plan, "Antigravity Starter Quota")
     }
@@ -57,7 +57,7 @@ final class AntigravityProjectQuotaTests: XCTestCase {
     func testRejectedQuotaCallReadsAsExpiredSignIn() async throws {
         let snapshot = try await refresh(summaryStatus: 403)
 
-        guard case .badge(_, let text, _, _)? = snapshot.lines.first else { return XCTFail("Expected an error badge") }
+        guard let text = snapshot.errorMessage else { return XCTFail("Expected an error snapshot") }
         XCTAssertEqual(text, ProviderError.signInExpired(.antigravity).localizedDescription)
     }
 }

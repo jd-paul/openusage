@@ -261,7 +261,6 @@ final class WidgetDataStoreTests: XCTestCase {
         XCTAssertFalse(remaining.isBounded)
         XCTAssertEqual(remaining.unboundedDetail, "1K credits")
         XCTAssertEqual(remaining.menuBarValue, "1K credits")
-        XCTAssertNil(remaining.unboundedSubtitle)
 
         store.meterStyle = .used
         let used = store.data(for: descriptor)
