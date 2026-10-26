@@ -64,36 +64,12 @@ final class PopoverTransparencyStore {
     /// Toggled by `TooMuchTransparencyKeyReader` when the full code is entered — so a second entry turns
     /// the egg off. Exiting drops back to the base state (Normal / Increase Transparency): the persisted
     /// `increaseTransparency` is preserved untouched (its Settings toggle is disabled while the egg runs),
-    /// so the resolver returns to whichever base the user was in before.
+    /// so the resolver returns to whichever base the user was in before. Leaving the egg always clears
+    /// Drunk Mode (state 4 → base, never a dangling drunk-without-party).
     func toggleSecretCode() {
-        setSecretCode(!secretCodeActive)
-    }
-
-    /// The Settings "Party Mode" toggle (shown only while the egg is active). Reading mirrors the egg
-    /// state; setting it `false` exits the egg entirely — the only way *in* is the secret code, so the
-    /// toggle is never rendered while off and `set(true)` can't be reached from the UI. Turning it off
-    /// from "Party Mode + Drunk Mode" also clears Drunk Mode (you can't be drunk without the party), so
-    /// both rows disappear together.
-    var partyModeActive: Bool {
-        get { secretCodeActive }
-        set { setSecretCode(newValue) }
-    }
-
-    /// Single point that flips the egg, so the cheat code and the Party Mode toggle share one exit path:
-    /// leaving the egg always clears Drunk Mode (state 4 → base, never a dangling drunk-without-party).
-    private func setSecretCode(_ active: Bool) {
-        guard active != secretCodeActive else { return }
-        secretCodeActive = active
-        if !active { drunkMode = false }
-        AppLog.info(.statusItem, "Too-much-transparency egg \(active ? "enabled" : "disabled")")
-    }
-
-    /// Restores the transparency preference to its default (off) and exits the easter egg — the
-    /// Settings "Reset All Settings" path. Without the egg exit, a reset during Party/Drunk Mode
-    /// would keep overriding the freshly-reset preference with the party look.
-    func resetToDefaults() {
-        setSecretCode(false)
-        increaseTransparency = false
+        secretCodeActive.toggle()
+        if !secretCodeActive { drunkMode = false }
+        AppLog.info(.statusItem, "Too-much-transparency egg \(secretCodeActive ? "enabled" : "disabled")")
     }
 
     /// Flips the on-screen flag from `StatusItemController`'s show/hide chokepoints. Guards on change so a
@@ -117,28 +93,6 @@ final class PopoverTransparencyStore {
 
     /// SwiftUI surface treatment derived from the resolved style.
     var surfaceTreatment: PopoverSurfaceTreatment { effectiveStyle.surfaceTreatment }
-
-    /// True exactly when an egg animation loop should be mounted and ticking: the popover is on-screen
-    /// AND the resolved style is one of the animated egg states. The headless test seam for "no animation
-    /// work while the popover is hidden" — the SwiftUI loops gate on the same two inputs
-    /// (`\.popoverIsVisible` plus the party/drunk style). Reads `effectiveStyle`, so the accessibility
-    /// clamp (which resolves the egg to `.opaque`) correctly reports no animation even with the code on.
-    var eggAnimationsActive: Bool {
-        popoverShown && (effectiveStyle == .party || effectiveStyle == .drunk)
-    }
-
-    /// True when the user turned the proper toggle on but a system accessibility setting is overriding it
-    /// — so Settings can show a friendly "paused" note instead of silently doing nothing.
-    var isPaused: Bool {
-        increaseTransparency && (reduceTransparency || increaseContrast)
-    }
-
-    /// True when the egg is active but a system accessibility setting (Reduce Transparency / Increase
-    /// Contrast) is clamping the panel back to opaque — so Settings can explain why the party looks
-    /// normal rather than leaving the user puzzled that the code "did nothing".
-    var partyPaused: Bool {
-        secretCodeActive && (reduceTransparency || increaseContrast)
-    }
 
     /// Accessibility display options post to `NSWorkspace`'s OWN notification center (never `.default`).
     /// The notification carries no payload, so we ignore it and re-read the flags on the main actor —

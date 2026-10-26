@@ -1,10 +1,11 @@
 import Foundation
 
-/// Quota-call failures for an Antigravity account. Token-refresh failures stay `LoginError`.
+/// Failures for an Antigravity account's token refresh and quota calls.
 enum AntigravityError: Error, LocalizedError, Equatable {
-    /// Cloud Code rejected the token (401/403).
+    /// Cloud Code rejected the token (401/403), or Google refused the refresh token.
     case authExpired
-    /// Every Cloud Code host was unreachable or answered with a non-auth error.
+    /// Every Cloud Code host was unreachable or answered with a non-auth error, or the token refresh
+    /// failed transiently.
     case unavailable
     /// A 2xx body that isn't a quota summary.
     case invalidResponse

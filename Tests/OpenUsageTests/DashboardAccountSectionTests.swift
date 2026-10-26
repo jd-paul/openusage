@@ -170,7 +170,7 @@ final class DashboardAccountSectionTests: XCTestCase {
         XCTAssertNil(hosted.renaming.edit, "a double-click beside the name starts a rename")
 
         doubleClick(name, hosted.window, hosted.host)
-        XCTAssertTrue(hosted.renaming.isRenaming(hosted.accountID), "a double-click on the name opens no rename")
+        XCTAssertEqual(hosted.renaming.edit?.providerID, hosted.accountID, "a double-click on the name opens no rename")
         XCTAssertEqual(hosted.renaming.draft, "Personal")
         try assertWholeNameSelected("Personal", in: hosted.window)
         XCTAssertEqual(log.accountDrags + log.metricDrags, 0)
@@ -208,7 +208,7 @@ final class DashboardAccountSectionTests: XCTestCase {
         XCTAssertNil(renaming.edit, "a single click on the name starts a rename")
 
         doubleClick(name, window, host)
-        XCTAssertTrue(renaming.isRenaming(provider.id), "a double-click on the header's name opens no rename")
+        XCTAssertEqual(renaming.edit?.providerID, provider.id, "a double-click on the header's name opens no rename")
         XCTAssertEqual(renaming.draft, "Work")
         try assertWholeNameSelected("Work", in: window)
         renaming.cancel()

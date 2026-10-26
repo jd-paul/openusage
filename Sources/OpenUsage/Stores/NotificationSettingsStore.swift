@@ -46,16 +46,4 @@ final class NotificationSettingsStore {
             closeToRunningOut: closeToRunningOut
         )
     }
-
-    /// True when at least one trigger is on — used to decide whether to request authorization (when the
-    /// first trigger is turned on) and whether the Settings permission notice should show. Turning all
-    /// three off silences everything.
-    var anyEnabled: Bool { underTenPercent || healthyToClose || closeToRunningOut }
-
-    /// Restores all three triggers to their default (off) — the Settings "Reset All Settings" path.
-    func resetToDefaults() {
-        underTenPercent = false
-        healthyToClose = false
-        closeToRunningOut = false
-    }
 }

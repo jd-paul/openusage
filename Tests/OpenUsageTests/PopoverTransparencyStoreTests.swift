@@ -54,19 +54,19 @@ final class PopoverTransparencyStoreTests: XCTestCase {
         XCTAssertFalse(store.drunkMode, "Drunk Mode clears when the egg turns off")
     }
 
-    // MARK: - Party Mode toggle / state machine (Normal 1, Increase Transparency 2, Party 3, Drunk 4)
+    // MARK: - Egg state machine (Normal 1, Increase Transparency 2, Party 3, Drunk 4)
 
     func testPartyModeReturnsToEitherPriorBaseStyle() {
         for increased in [false, true] {
             let store = makeStore(increased ? "partyIncreased" : "partyOpaque")
             store.increaseTransparency = increased
-            XCTAssertFalse(store.partyModeActive)
+            XCTAssertFalse(store.secretCodeActive)
 
             store.toggleSecretCode()
-            XCTAssertTrue(store.partyModeActive)
+            XCTAssertTrue(store.secretCodeActive)
             XCTAssertEqual(store.effectiveStyle, .party)
 
-            store.partyModeActive = false
+            store.toggleSecretCode()
             XCTAssertFalse(store.secretCodeActive)
             XCTAssertEqual(store.increaseTransparency, increased)
             XCTAssertEqual(store.effectiveStyle, increased ? .increased : .opaque)
@@ -74,12 +74,12 @@ final class PopoverTransparencyStoreTests: XCTestCase {
     }
 
     func testPartyToggleOffFromState4ClearsDrunkAndReturnsToBase() {
-        // 1 -> 3 -> 4, then Party off goes 4 -> base (NOT 4 -> 3), clearing Drunk along the way.
+        // 1 -> 3 -> 4, then the egg off goes 4 -> base (NOT 4 -> 3), clearing Drunk along the way.
         let store = makeStore("p4base1")
         store.toggleSecretCode()                    // 1 -> 3
         store.drunkMode = true                       // 3 -> 4
         XCTAssertEqual(store.effectiveStyle, .drunk)
-        store.partyModeActive = false               // 4 -> base
+        store.toggleSecretCode()                    // 4 -> base
         XCTAssertFalse(store.secretCodeActive)
         XCTAssertFalse(store.drunkMode, "can't be drunk without the party")
         XCTAssertEqual(store.effectiveStyle, .opaque)
@@ -103,7 +103,7 @@ final class PopoverTransparencyStoreTests: XCTestCase {
         store.increaseTransparency = true            // base 2
         store.toggleSecretCode()                     // 2 -> 3
         store.drunkMode = true                        // 3 -> 4
-        store.partyModeActive = false                // 4 -> base
+        store.toggleSecretCode()                     // 4 -> base
         XCTAssertFalse(store.secretCodeActive)
         XCTAssertTrue(store.increaseTransparency, "the prior base (Increase Transparency) is restored")
     }
@@ -138,78 +138,6 @@ final class PopoverTransparencyStoreTests: XCTestCase {
         }
     }
 
-    func testPartyPausedReflectsAccessibility() {
-        // No flags: the party renders, so it's not paused.
-        let clear = makeStore("partyPausedClear")
-        clear.toggleSecretCode()
-        XCTAssertFalse(clear.partyPaused)
-        // A flag on while the egg is active: paused, so Settings can explain the normal-looking panel.
-        let reduced = makeStore("partyPausedReduce", reduceTransparency: true)
-        reduced.toggleSecretCode()
-        XCTAssertTrue(reduced.partyPaused)
-        // A flag on but no egg: not "party paused" (that notice is egg-specific).
-        let noEgg = makeStore("partyPausedNoEgg", increaseContrast: true)
-        XCTAssertFalse(noEgg.partyPaused)
-    }
-
-    // MARK: - Egg animation gate (no animation work while the popover is hidden — PR #784)
-
-    func testEggAnimationsInactiveWhileHidden() {
-        // The egg is active but the popover is closed (default popoverShown == false): no loop mounts, so
-        // no display link ticks. This is the ~30% idle-CPU regression the owner flagged on PR #784.
-        let store = makeStore("animHidden")
-        store.toggleSecretCode()
-        XCTAssertEqual(store.effectiveStyle, .party)
-        XCTAssertFalse(store.eggAnimationsActive, "no animation while the popover is hidden")
-        store.drunkMode = true
-        XCTAssertEqual(store.effectiveStyle, .drunk)
-        XCTAssertFalse(store.eggAnimationsActive, "drunk doesn't animate while hidden either")
-    }
-
-    func testEggAnimationsActiveOnInPlaceActivation() {
-        // Popover already on-screen, then the code is entered: the loops must activate immediately — the
-        // in-place-start guarantee the conditional mount restores over the reverted `.animation(paused:)`.
-        let store = makeStore("animInPlace")
-        store.setPopoverShown(true)
-        XCTAssertFalse(store.eggAnimationsActive, "no egg yet")
-        store.toggleSecretCode()
-        XCTAssertTrue(store.eggAnimationsActive, "party animates the moment it's switched on while shown")
-        store.drunkMode = true
-        XCTAssertTrue(store.eggAnimationsActive, "drunk animates in place too")
-    }
-
-    func testEggAnimationsStopWhenPopoverHides() {
-        // Shown + active, then the popover closes: the gate flips off so the loops unmount.
-        let store = makeStore("animHide")
-        store.setPopoverShown(true)
-        store.toggleSecretCode()
-        XCTAssertTrue(store.eggAnimationsActive)
-        store.setPopoverShown(false)
-        XCTAssertFalse(store.eggAnimationsActive, "closing the popover stops the animation")
-    }
-
-    func testEggAnimationsInactiveWithoutTheEgg() {
-        // Shown but no egg: nothing animates — the loops exist only for the party/drunk styles.
-        let store = makeStore("animNoEgg")
-        store.setPopoverShown(true)
-        XCTAssertFalse(store.eggAnimationsActive, "a normal popover never animates")
-        store.increaseTransparency = true
-        XCTAssertFalse(store.eggAnimationsActive, "Increase Transparency is static, not animated")
-    }
-
-    func testEggAnimationsYieldToAccessibilityClamp() {
-        // The accessibility clamp resolves the egg to .opaque, so even shown + code-entered there's no
-        // animation — consistent with the panel staying opaque.
-        for store in [makeStore("animReduce", reduceTransparency: true),
-                      makeStore("animContrast", increaseContrast: true)] {
-            store.setPopoverShown(true)
-            store.toggleSecretCode()
-            store.drunkMode = true
-            XCTAssertEqual(store.effectiveStyle, .opaque)
-            XCTAssertFalse(store.eggAnimationsActive, "a clamped egg renders opaque, so nothing animates")
-        }
-    }
-
     func testPopoverShownIsNeverPersisted() {
         // popoverShown is runtime-transient like the egg: a fresh store (a relaunch) starts hidden.
         let defaults = makeDefaults("shownEphemeral")
@@ -217,21 +145,5 @@ final class PopoverTransparencyStoreTests: XCTestCase {
         store.setPopoverShown(true)
         XCTAssertTrue(store.popoverShown)
         XCTAssertFalse(PopoverTransparencyStore(defaults: defaults).popoverShown, "not persisted")
-    }
-
-    func testResetToDefaultsTurnsOffTransparencyAndExitsTheEgg() {
-        let defaults = makeDefaults("reset")
-        let store = PopoverTransparencyStore(defaults: defaults)
-        store.increaseTransparency = true
-        store.toggleSecretCode()
-        store.drunkMode = true
-
-        store.resetToDefaults()
-
-        XCTAssertFalse(store.increaseTransparency)
-        XCTAssertFalse(store.secretCodeActive, "reset exits the egg so it can't override the reset look")
-        XCTAssertFalse(store.drunkMode)
-        // A fresh store reading the same defaults sees the reset value.
-        XCTAssertFalse(PopoverTransparencyStore(defaults: defaults).increaseTransparency)
     }
 }

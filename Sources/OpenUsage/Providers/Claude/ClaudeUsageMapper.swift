@@ -74,11 +74,6 @@ enum ClaudeUsageMapper {
         return outcome(result) ?? .failed(.refused)
     }
 
-    /// Labels returned directly by Anthropic's live usage endpoint.
-    static let liveLimitLabels: Set<String> = [
-        "Session", "Weekly", "Sonnet", "Fable", "Extra usage spent"
-    ]
-
     /// Snapshot shown when the usage endpoint rate-limits us and there is no last-good usage to fall back
     /// on (e.g. the first fetch after launch): a status badge plus the staleness note, no live bars.
     static func rateLimitedUsage(credentials: ClaudeOAuth, retryAfterSeconds: Int?) -> ClaudeMappedUsage {
@@ -104,29 +99,12 @@ enum ClaudeUsageMapper {
         return "\(base) Retrying in ~\(retryText)."
     }
 
-    static let missingProfileScopeWarning = "Re-login to restore session and weekly limits."
-
     /// The "live usage is rate limited" note appended to a last-good snapshot so the still-shown bars are
     /// flagged as possibly stale. Shared with `rateLimitedUsage` so the wording stays in one place.
     static func rateLimitedNote(retryAfterSeconds: Int?) -> MetricLine {
         let retryText = retryAfterSeconds.map(formatRateLimitMinutes)
         let noteText = retryText.map { "Live usage rate limited - retry in ~\($0)" } ?? "Live usage rate limited - data may be stale"
         return .text(label: "Note", value: noteText)
-    }
-
-    static func parseRetryAfterSeconds(_ response: HTTPResponse, now: Date = Date()) -> Int? {
-        guard let raw = response.header("retry-after")?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !raw.isEmpty
-        else {
-            return nil
-        }
-        if let seconds = Int(raw), seconds >= 0 {
-            return seconds
-        }
-        if let date = HTTPDateFormatter.date(from: raw) {
-            return max(0, Int(ceil(date.timeIntervalSince(now))))
-        }
-        return nil
     }
 
     static func formatPlan(subscriptionType: String?, rateLimitTier: String?) -> String? {
@@ -244,14 +222,4 @@ enum ClaudeUsageMapper {
         return "\(Int(ceil(Double(seconds) / 60)))m"
     }
 
-}
-
-private enum HTTPDateFormatter {
-    static func date(from value: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "EEE',' dd MMM yyyy HH':'mm':'ss zzz"
-        return formatter.date(from: value)
-    }
 }

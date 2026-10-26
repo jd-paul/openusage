@@ -23,58 +23,18 @@ enum TokenRefreshOutcome: Sendable {
     case unavailable
 }
 
-/// All network I/O for Antigravity: the local language-server RPC (loopback HTTPS, self-signed), the
-/// Google Cloud Code endpoints, and the Google OAuth token refresh.
+/// All network I/O for Antigravity: the Google Cloud Code endpoints and the Google OAuth token refresh.
 struct AntigravityUsageClient: Sendable {
-    static let lsService = "exa.language_server_pb.LanguageServerService"
     // The daily endpoint can omit Gemini quotas from a successful response; prefer production.
     static let cloudCodeURLs = [
         "https://cloudcode-pa.googleapis.com",
         "https://daily-cloudcode-pa.googleapis.com"
     ]
-    static let fetchModelsPath = "/v1internal:fetchAvailableModels"
     static let loadCodeAssistPath = "/v1internal:loadCodeAssist"
-    static let retrieveQuotaPath = "/v1internal:retrieveUserQuota"
     static let quotaSummaryPath = "/v1internal:retrieveUserQuotaSummary"
     static let googleOAuthURL = "https://oauth2.googleapis.com/token"
-    // Google OAuth "installed application" client credentials, extracted verbatim from the Antigravity
-    // app bundle — the same pair the shipped app and the legacy Tauri plugin use. For installed-app OAuth
-    // clients Google does not treat the "secret" as confidential (it ships in every copy of the client),
-    // so committing it here is an intentional, accepted trade-off, not a leaked private key. It's required
-    // for the refresh-token grant — without it we can't refresh the keychain token when the app is closed.
-    static let googleClientID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
-    static let googleClientSecret = "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"
-    static let lsMetadata = ["ideName": "antigravity", "extensionName": "antigravity", "ideVersion": "unknown", "locale": "en"]
 
-    /// Loopback session that trusts the LS's self-signed cert; remote calls use full validation.
-    var lsHTTP: HTTPClient
     var http: HTTPClient
-
-    init(
-        lsHTTP: HTTPClient = URLSessionHTTPClient(allowsInsecureLoopback: true),
-        http: HTTPClient = URLSessionHTTPClient()
-    ) {
-        self.lsHTTP = lsHTTP
-        self.http = http
-    }
-
-    /// Call a language-server RPC method. Returns nil on a transport failure (port not the live one).
-    func callLS(scheme: String, port: Int, csrf: String, method: String) async -> HTTPResponse? {
-        guard let url = URL(string: "\(scheme)://127.0.0.1:\(port)/\(Self.lsService)/\(method)") else { return nil }
-        let body = try? JSONSerialization.data(withJSONObject: ["metadata": Self.lsMetadata])
-        let request = HTTPRequest(
-            method: "POST",
-            url: url,
-            headers: [
-                "Content-Type": "application/json",
-                "Connect-Protocol-Version": "1",
-                "x-codeium-csrf-token": csrf
-            ],
-            body: body,
-            timeout: 10
-        )
-        return try? await lsHTTP.send(request)
-    }
 
     /// POST a Cloud Code endpoint, trying each base URL in turn. A 401/403 short-circuits to `.authFailed`
     /// (same token would fail on the other base); other non-2xx / transport errors fall through to the
@@ -166,8 +126,8 @@ struct AntigravityUsageClient: Sendable {
     func refreshGoogleToken(_ refreshToken: String) async -> TokenRefreshOutcome {
         guard let url = URL(string: Self.googleOAuthURL) else { return .unavailable }
         let form = [
-            "client_id=\(Self.googleClientID.urlFormEncoded)",
-            "client_secret=\(Self.googleClientSecret.urlFormEncoded)",
+            "client_id=\(AntigravityLogin.clientID.urlFormEncoded)",
+            "client_secret=\(AntigravityLogin.clientSecret.urlFormEncoded)",
             "refresh_token=\(refreshToken.urlFormEncoded)",
             "grant_type=refresh_token"
         ].joined(separator: "&")

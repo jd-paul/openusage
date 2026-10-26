@@ -15,7 +15,6 @@ struct ClaudeOAuth: Hashable, Sendable {
 }
 
 enum ClaudeAuthError: Error, LocalizedError, Equatable {
-    case sessionExpired
     case tokenExpired
 
     var errorDescription: String? {
@@ -24,13 +23,10 @@ enum ClaudeAuthError: Error, LocalizedError, Equatable {
 }
 
 enum CodexAuthError: Error, LocalizedError, Equatable {
-    case notLoggedIn
     case sessionExpired
     case tokenConflict
     case tokenRevoked
     case tokenExpired
-    case usageAPIKey
-    case invalidAuthPayload
 
     var errorDescription: String? {
         "Codex sign-in expired. Add the account again."
@@ -38,7 +34,6 @@ enum CodexAuthError: Error, LocalizedError, Equatable {
 }
 
 enum CursorAuthError: Error, LocalizedError, Equatable {
-    case notLoggedIn
     case sessionExpired
     case tokenExpired
 
@@ -48,8 +43,6 @@ enum CursorAuthError: Error, LocalizedError, Equatable {
 }
 
 enum GrokAuthError: Error, LocalizedError, Equatable {
-    case notLoggedIn
-    case invalidAuth
     case expired
 
     var errorDescription: String? {
@@ -58,15 +51,9 @@ enum GrokAuthError: Error, LocalizedError, Equatable {
 }
 
 enum OpenCodeUsageError: Error, LocalizedError, Equatable {
-    case connectionFailed
     case invalidResponse
-    case requestFailed(Int)
 
     var errorDescription: String? {
-        switch self {
-        case .connectionFailed: ProviderUsageErrorText.connectionFailed
-        case .invalidResponse: ProviderUsageErrorText.invalidResponse
-        case .requestFailed(let status): ProviderUsageErrorText.requestFailed(statusCode: status)
-        }
+        ProviderUsageErrorText.invalidResponse
     }
 }

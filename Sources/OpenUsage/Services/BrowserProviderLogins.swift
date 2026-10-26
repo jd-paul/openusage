@@ -159,6 +159,9 @@ struct CodexLogin: ProviderLogin {
 }
 
 struct AntigravityLogin: ProviderLogin {
+    /// Google OAuth "installed application" client credentials, the pair the Antigravity app ships with.
+    /// Google does not treat an installed-app client's "secret" as confidential (it is in every copy of
+    /// the client), and the refresh-token grant requires it, so committing it is an accepted trade-off.
     static let clientID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
     static let clientSecret = "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"
     var http: any HTTPClient = URLSessionHTTPClient()

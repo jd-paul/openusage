@@ -115,14 +115,6 @@ enum MetricLine: Hashable, Sendable, Codable {
     /// The shared "no usage data" placeholder badge, shown when a provider returns no metric lines.
     static let noUsageData = MetricLine.badge(label: "Status", text: "No usage data", colorHex: "#A3A3A3")
 
-    /// Append `noUsageData` when nothing was produced, so an empty result reads as a clear status
-    /// instead of a blank tile.
-    static func appendNoDataIfNeeded(_ lines: inout [MetricLine]) {
-        if lines.isEmpty {
-            lines.append(.noUsageData)
-        }
-    }
-
     private enum CodingKeys: String, CodingKey {
         case type
         case label

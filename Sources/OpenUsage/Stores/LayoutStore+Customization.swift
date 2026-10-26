@@ -44,14 +44,6 @@ extension LayoutStore {
         }
     }
 
-    /// Every provider with all supported metrics, in its saved metric order.
-    var customizeGroups: [ProviderMetrics] {
-        orderedProviders().compactMap { provider in
-            let metrics = orderedSupportedMetrics(for: provider.id)
-            return metrics.isEmpty ? nil : ProviderMetrics(provider: provider, metrics: metrics)
-        }
-    }
-
     /// The Accounts detail (L2) for one account: every metric it supports, in its saved metric order.
     /// Nil for an unknown provider or one with no metrics.
     func customizeDetail(for providerID: String) -> ProviderMetrics? {

@@ -92,13 +92,13 @@ final class LayoutStoreTests: XCTestCase {
 
     func testUndoReversesProviderReorder() {
         let store = makeStore("UndoReorderProvider")
-        let orderBefore = store.customizeGroups.map(\.provider.id)
+        let orderBefore = store.orderedProviders().map(\.id)
 
         XCTAssertTrue(store.reorderProvider(dragged: "cursor", target: "claude"))
-        XCTAssertNotEqual(store.customizeGroups.map(\.provider.id), orderBefore)
+        XCTAssertNotEqual(store.orderedProviders().map(\.id), orderBefore)
 
         XCTAssertTrue(store.undo())
-        XCTAssertEqual(store.customizeGroups.map(\.provider.id), orderBefore,
+        XCTAssertEqual(store.orderedProviders().map(\.id), orderBefore,
                        "undo restores the exact prior provider order")
     }
 
@@ -532,7 +532,7 @@ final class LayoutStoreTests: XCTestCase {
 
         // Reorder providers first, so we can prove a per-provider reset leaves provider order alone.
         store.reorderProvider(dragged: "cursor", target: "claude")
-        let orderBefore = store.customizeGroups.map(\.provider.id)
+        let orderBefore = store.orderedProviders().map(\.id)
 
         // Diverge Claude from its defaults in every dimension a reset should restore.
         store.setMetricEnabled("claude.weekly", true)
@@ -560,7 +560,7 @@ final class LayoutStoreTests: XCTestCase {
         XCTAssertTrue(store.isPinned("codex.weekly"))
 
         // Provider order untouched — contents-only reset.
-        XCTAssertEqual(store.customizeGroups.map(\.provider.id), orderBefore)
+        XCTAssertEqual(store.orderedProviders().map(\.id), orderBefore)
     }
 
     func testResetProviderIsNoOpForUnknownProvider() {
@@ -594,7 +594,6 @@ final class LayoutStoreTests: XCTestCase {
             defaults: makeDefaults("DetailWhenDisabled"),
             storageKey: "layout"
         )
-        XCTAssertNotNil(store.customizeGroups.first { $0.provider.id == "codex" })
         let detail = store.customizeDetail(for: "codex")
         XCTAssertNotNil(detail)
         XCTAssertEqual(detail?.metrics.map(\.id), MockData.descriptors(for: "codex").map(\.id))

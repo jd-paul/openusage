@@ -131,22 +131,4 @@ final class AntigravityArgonQuotaTests: XCTestCase {
         let lines = AntigravityUsageMapper.parseQuotaSummary(data)
         XCTAssertEqual(lines?.map(\.label), ["Session"])
     }
-
-    func testLegacyArgonModelsNeverJoinTheSharedSessionEvenWithNumericQuota() {
-        let json = """
-        {"models":{
-          "argon":{"model":"MODEL_PLACEHOLDER_M421","displayName":"Gemini 4 Argon","quotaInfo":{}},
-          "argon-low":{"model":"gemini-4-argon-low","displayName":"Gemini 4 Argon (Low)","quotaInfo":{"remainingFraction":0.1}},
-          "flash":{"displayName":"Gemini 3.8 Flash (High)","quotaInfo":{"remainingFraction":0.8}}
-        }}
-        """
-        let lines = AntigravityUsageMapper.buildLines(AntigravityUsageMapper.parseCloudCodeModels(Data(json.utf8)))
-        XCTAssertEqual(lines, [.progress(
-            label: "Session", used: 20, limit: 100, format: .percent,
-            resetsAt: nil, periodDurationMs: MetricPeriod.sessionMs
-        )])
-
-        let buckets = Data(#"{"buckets":[{"modelId":"gemini-4-argon","remainingFraction":0.1},{"modelId":"gemini-3.8-flash","remainingFraction":0.8}]}"#.utf8)
-        XCTAssertEqual(AntigravityUsageMapper.buildLines(AntigravityUsageMapper.parseQuotaBuckets(buckets)), lines)
-    }
 }

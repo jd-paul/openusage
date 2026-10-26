@@ -10,15 +10,7 @@ import Foundation
 /// titles them "Gemini 5h", "Gemini", "Argon", "Claude 5h" and "Claude" (the weekly windows take the
 /// plain pool names, since every account has those); the labels below stay the binding keys, so
 /// snapshots cached under them keep matching.
-/// `geminiID` keeps its historical `antigravity.geminiPro` raw value so existing users' layout state
-/// (enabled/pin/order) carries over to the shared meter with zero migration.
 enum AntigravityMetric {
-    static let geminiID = "antigravity.geminiPro"
-    static let geminiWeeklyID = "antigravity.geminiWeekly"
-    static let argonWeeklyID = "antigravity.argonWeekly"
-    static let claudeID = "antigravity.claude"
-    static let claudeWeeklyID = "antigravity.claudeWeekly"
-
     static let sessionLabel = "Session"
     static let weeklyLabel = "Weekly"
     static let argonWeeklyLabel = "Argon Weekly"

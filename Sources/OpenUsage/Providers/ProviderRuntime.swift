@@ -1,9 +1,5 @@
 import Foundation
 
-enum ProviderRefreshContext {
-    @TaskLocal static var isManual = false
-}
-
 /// One signed-in account and its provider usage endpoint.
 ///
 /// `refresh()` returns the latest snapshot. Build its `lines` from the app's small metric vocabulary,
@@ -23,15 +19,6 @@ protocol ProviderRuntime: AnyObject {
     var widgetDescriptors: [WidgetDescriptor] { get }
 
     func refresh() async -> ProviderSnapshot
-
-    /// Hands the provider the snapshot painted from the launch cache, called once at launch and only
-    /// when the entry's account stamp matched the card's known identity. Providers whose in-memory
-    /// fallback state doesn't survive a relaunch can hold it for their first degraded refresh.
-    func adoptLaunchSnapshot(_ snapshot: ProviderSnapshot)
-}
-
-extension ProviderRuntime {
-    func adoptLaunchSnapshot(_ snapshot: ProviderSnapshot) {}
 }
 
 /// Run a blocking, `Sendable` credential load off the MainActor.

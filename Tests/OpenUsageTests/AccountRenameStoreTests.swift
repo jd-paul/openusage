@@ -12,7 +12,7 @@ final class AccountRenameStoreTests: XCTestCase {
 
         renaming.begin(account.cardID)
 
-        XCTAssertTrue(renaming.isRenaming(account.cardID))
+        XCTAssertEqual(renaming.edit?.providerID, account.cardID)
         XCTAssertEqual(renaming.draft, "AM1")
     }
 
@@ -80,7 +80,7 @@ final class AccountRenameStoreTests: XCTestCase {
         renaming.begin(second.cardID)
 
         XCTAssertEqual(accounts.account(cardID: first.cardID)?.label, "Work")
-        XCTAssertTrue(renaming.isRenaming(second.cardID))
+        XCTAssertEqual(renaming.edit?.providerID, second.cardID)
         XCTAssertEqual(renaming.draft, "AM2")
     }
 
@@ -97,7 +97,7 @@ final class AccountRenameStoreTests: XCTestCase {
         renaming.commit(stale)
         renaming.cancel(stale)
 
-        XCTAssertTrue(renaming.isRenaming(account.cardID))
+        XCTAssertEqual(renaming.edit?.providerID, account.cardID)
         XCTAssertEqual(accounts.account(cardID: account.cardID)?.label, "AM1")
     }
 

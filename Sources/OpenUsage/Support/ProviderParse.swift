@@ -63,36 +63,6 @@ enum ProviderParse {
         cents.rounded() / 100
     }
 
-    /// Decode `T` from JSON text, falling back to a hex-encoded JSON blob — some providers store their
-    /// credentials/auth file as hex (optionally `0x`-prefixed) rather than plain JSON.
-    static func decodeJSONWithHexFallback<T: Decodable>(_ text: String, as type: T.Type) -> T? {
-        decodeJSONWithHexFallback(text) { try? JSONDecoder().decode(type, from: $0) }
-    }
-
-    /// Also exposes the decoded bytes for callers that must preserve fields outside their model.
-    static func decodeJSONWithHexFallback<T>(_ text: String, decode: (Data) -> T?) -> T? {
-        if let decoded = decode(Data(text.utf8)) { return decoded }
-
-        var hex = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if hex.hasPrefix("0x") || hex.hasPrefix("0X") {
-            hex = String(hex.dropFirst(2))
-        }
-        guard !hex.isEmpty, hex.count.isMultiple(of: 2), hex.allSatisfy(\.isHexDigit) else {
-            return nil
-        }
-
-        var bytes: [UInt8] = []
-        var index = hex.startIndex
-        while index < hex.endIndex {
-            let next = hex.index(index, offsetBy: 2)
-            guard let byte = UInt8(hex[index..<next], radix: 16) else { return nil }
-            bytes.append(byte)
-            index = next
-        }
-        guard let decoded = String(bytes: bytes, encoding: .utf8) else { return nil }
-        return decode(Data(decoded.utf8))
-    }
-
     /// Decode a JWT's payload (the middle dot-separated segment) as a JSON object. Base64url is
     /// translated to standard base64 and padded before decoding.
     static func jwtPayload(_ token: String) -> [String: Any]? {
@@ -116,24 +86,6 @@ enum ProviderParse {
     /// account's own stored token.
     static func jwtExpiry(_ token: String) -> Date? {
         number(jwtPayload(token)?["exp"]).map(Date.init(timeIntervalSince1970:))
-    }
-
-    /// Unwrap a `go-keyring-base64:`-prefixed value — how Go tools (`gh`, `agy`) store secrets in the
-    /// macOS Keychain — returning the decoded string. A value without the prefix is returned trimmed
-    /// as-is; an empty result is `nil`. Shared by every provider that reads a go-keyring-stored token.
-    static func unwrapGoKeyring(_ raw: String) -> String? {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prefix = "go-keyring-base64:"
-        if text.hasPrefix(prefix) {
-            let encoded = String(text.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let data = Data(base64Encoded: encoded),
-                  let decoded = String(data: data, encoding: .utf8)
-            else {
-                return nil
-            }
-            text = decoded.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return text.nilIfEmpty
     }
 }
 
@@ -159,15 +111,6 @@ extension String {
     /// `nil` when the string is empty, otherwise the string itself — for treating "" as "missing".
     var nilIfEmpty: String? {
         isEmpty ? nil : self
-    }
-
-    /// Drop any trailing slashes, for joining base URLs and paths.
-    var trimmingTrailingSlashes: String {
-        var copy = self
-        while copy.hasSuffix("/") {
-            copy.removeLast()
-        }
-        return copy
     }
 
     /// Title-case a provider plan name: split on `isSeparator`, upper-case each word's first character,

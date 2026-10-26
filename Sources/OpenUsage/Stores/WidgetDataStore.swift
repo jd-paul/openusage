@@ -114,15 +114,6 @@ final class WidgetDataStore {
         didSet { defaults.set(alwaysShowPacing, forKey: Self.alwaysShowPacingKey) }
     }
 
-    /// Restores the Usage Display preferences (meter style, reset-time format, always-show-pacing) to
-    /// their defaults — the Settings "Reset All Settings" path. Cached usage snapshots are data, not
-    /// settings, and stay untouched.
-    func resetDisplaySettings() {
-        meterStyle = .remaining
-        resetDisplayMode = .relative
-        alwaysShowPacing = false
-    }
-
     init(
         registry: WidgetRegistry,
         providers: [ProviderRuntime],
@@ -162,7 +153,6 @@ final class WidgetDataStore {
         let loaded = cache.loadSnapshots(providerIDs: registry.providers.map(\.id))
         self.localSnapshots = loaded
         self.snapshots = loaded
-        for (cardID, snapshot) in loaded { providersByID[cardID]?.adoptLaunchSnapshot(snapshot) }
     }
 
     /// Adopts a new set of account runtimes in place. A removed account's refresh is cancelled and its
@@ -177,10 +167,7 @@ final class WidgetDataStore {
         cache.remove(providerIDs: Set(localSnapshots.keys).subtracting(ids))
         var next = localSnapshots.filter { ids.contains($0.key) }
         let added = ids.subtracting(next.keys)
-        for (cardID, snapshot) in cache.loadSnapshots(providerIDs: Array(added)) {
-            next[cardID] = snapshot
-            providersByID[cardID]?.adoptLaunchSnapshot(snapshot)
-        }
+        for (cardID, snapshot) in cache.loadSnapshots(providerIDs: Array(added)) { next[cardID] = snapshot }
         localSnapshots = next
         snapshots = next
         providerErrors = providerErrors.filter { ids.contains($0.key) }
@@ -312,7 +299,7 @@ final class WidgetDataStore {
         // A provider that never returns would otherwise hold the in-flight entry — and the spinner —
         // forever. Past the deadline, stop waiting and treat it as any other failed refresh.
         let work = Task { [providerRefreshTimeout] in
-            await ProviderRefreshDeadline.snapshot(from: provider, force: force, timeout: providerRefreshTimeout)
+            await ProviderRefreshDeadline.snapshot(from: provider, timeout: providerRefreshTimeout)
         }
         inFlight[providerID] = work
         defer { if inFlight[providerID] == work { inFlight[providerID] = nil } }
@@ -510,8 +497,8 @@ final class WidgetDataStore {
             // them. Numeric widgets use typed progress/values lines and must never parse display text.
             return nil
         case .values(_, let values, _, let expiriesAt):
-            // The number is carried raw — no regex re-parse. Presentation (title, icon, selection,
-            // trailing word) comes from the descriptor's sample; the live numbers come from the line.
+            // The number is carried raw — no regex re-parse. Presentation (title, icon, trailing word)
+            // comes from the descriptor's sample; the live numbers come from the line.
             var data = descriptor.sample
             data.values = values
             // A `.values` line is unbounded by definition (see `MetricLine`), so it never renders as a
@@ -522,7 +509,7 @@ final class WidgetDataStore {
             // Optional expiry instants (Codex rate-limit-reset credits): surfaced in the row's hover
             // tooltip (see `expiryTooltip`), with the row re-rendering on the clock tick so they stay live.
             data.expiriesAt = expiriesAt
-            data.hasData = !data.selectedValues.isEmpty
+            data.hasData = !data.values.isEmpty
             return data
         case .badge(_, let text, _, let subtitle):
             var data = descriptor.sample

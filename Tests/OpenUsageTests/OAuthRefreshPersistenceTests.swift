@@ -57,4 +57,63 @@ final class OAuthRefreshPersistenceTests: XCTestCase {
         XCTAssertEqual(second.plan, "Max 20x")
         XCTAssertEqual(http.requests.filter { $0.url.path == "/api/oauth/profile" }.count, 1)
     }
+
+    func testAntigravityRefreshPersistsTheNewAccessTokenAndUsesIt() async throws {
+        let account = Account(kind: .antigravity, label: "Google")
+        let vault = InMemoryCredentialVault()
+        try vault.save(
+            .oauth(OAuthTokens(accessToken: "old-access", refreshToken: "google-refresh", expiresAt: .distantPast)),
+            for: account.id
+        )
+        let http = RoutingHTTPClient { request in
+            switch request.url.absoluteString {
+            case "https://oauth2.googleapis.com/token":
+                return HTTPResponse(statusCode: 200, headers: [:], body: Data(#"{"access_token":"new-access","expires_in":3600}"#.utf8))
+            case "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary":
+                let body = #"{"groups":[{"displayName":"Gemini Models","buckets":[{"bucketId":"gemini-5h","remainingFraction":0.8}]}]}"#
+                return HTTPResponse(statusCode: 200, headers: [:], body: Data(body.utf8))
+            default:
+                return HTTPResponse(statusCode: 404, headers: [:], body: Data())
+            }
+        }
+        let runtime = AccountProviderRuntime(account: account, vault: vault, http: http)
+
+        let snapshot = await runtime.refresh()
+
+        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        let tokenRequest = try XCTUnwrap(http.requests.first { $0.url.host() == "oauth2.googleapis.com" })
+        XCTAssertEqual(String(decoding: tokenRequest.body ?? Data(), as: UTF8.self),
+                       "client_id=\(AntigravityLogin.clientID.urlFormEncoded)&client_secret=\(AntigravityLogin.clientSecret.urlFormEncoded)"
+                       + "&refresh_token=google-refresh&grant_type=refresh_token")
+        let quotaRequests = http.requests.filter { $0.url.path.hasSuffix("retrieveUserQuotaSummary") }
+        XCTAssertFalse(quotaRequests.isEmpty)
+        XCTAssertTrue(quotaRequests.allSatisfy { $0.headers["Authorization"] == "Bearer new-access" }, "\(quotaRequests)")
+        guard case .oauth(let saved)? = try vault.load(account.id) else {
+            return XCTFail("Expected the refreshed OAuth credential in the vault")
+        }
+        XCTAssertEqual(saved.accessToken, "new-access")
+        XCTAssertEqual(saved.refreshToken, "google-refresh")
+        XCTAssertEqual(try XCTUnwrap(saved.expiresAt).timeIntervalSinceNow, 3300, accuracy: 5)
+    }
+
+    func testAntigravityRefusedRefreshTokenReadsAsExpiredSignIn() async throws {
+        let account = Account(kind: .antigravity, label: "Google")
+        let vault = InMemoryCredentialVault()
+        try vault.save(
+            .oauth(OAuthTokens(accessToken: "old-access", refreshToken: "revoked", expiresAt: .distantPast)),
+            for: account.id
+        )
+        let http = RoutingHTTPClient { _ in
+            HTTPResponse(statusCode: 400, headers: [:], body: Data(#"{"error":"invalid_grant"}"#.utf8))
+        }
+        let runtime = AccountProviderRuntime(account: account, vault: vault, http: http)
+
+        let snapshot = await runtime.refresh()
+
+        XCTAssertEqual(http.requests.map(\.url.absoluteString), ["https://oauth2.googleapis.com/token"])
+        guard case .badge(_, let text, _, _)? = snapshot.lines.first else { return XCTFail("Expected an error badge") }
+        XCTAssertEqual(text, AntigravityError.authExpired.localizedDescription)
+        guard case .oauth(let saved)? = try vault.load(account.id) else { return XCTFail("Expected the credential to survive") }
+        XCTAssertEqual(saved.accessToken, "old-access", "a refused refresh must not touch the stored credential")
+    }
 }

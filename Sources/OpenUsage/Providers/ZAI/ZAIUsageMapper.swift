@@ -32,12 +32,6 @@ enum ZAIUsageMapper {
     /// clear `.notAvailable` error (a header warning) instead of three blank "No data" meters that don't
     /// say why. Matched on the structured `success:false` plus the "coding plan" phrase the message
     /// carries (ASCII even in the localized string), so an unrelated business failure doesn't trip it.
-    static func isNoCodingPlan(_ body: Data) -> Bool {
-        guard let root = ProviderParse.jsonObject(body),
-              (root["success"] as? Bool) == false else { return false }
-        return ((root["msg"] as? String) ?? "").lowercased().contains("coding plan")
-    }
-
     /// Session + weekly + web-search meters from the quota payload. Missing required values are an
     /// invalid response rather than zero usage; an explicit empty array remains a valid no-data state.
     static func mapQuota(_ body: Data) throws -> [MetricLine] {

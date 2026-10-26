@@ -54,15 +54,6 @@ struct ClaudeAccountProfile: Decodable, Hashable, Sendable {
     var organization: Organization?
 }
 
-enum ClaudeAccountVerification: Sendable {
-    /// The token belongs to the expected account and organization. Carries the decoded profile so the
-    /// caller can read the live plan from it without a second request.
-    case verified(ClaudeAccountProfile)
-    /// Non-2xx from the profile endpoint, handed back unchanged so the caller can treat it like a failed
-    /// usage response (401 → token refresh, 429 → cooldown, anything else → request failure).
-    case failed(HTTPResponse)
-}
-
 struct ClaudeUsageClient: Sendable {
     private static let scopes = "user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
 
@@ -185,25 +176,5 @@ struct ClaudeUsageClient: Sendable {
             throw ClaudeUsageError.invalidResponse
         }
         return profile
-    }
-
-    func verifyAccount(
-        accessToken: String,
-        expectedIdentityKey: String,
-        config: ClaudeOAuthConfig
-    ) async throws -> ClaudeAccountVerification {
-        let expected = expectedIdentityKey.split(separator: "|", omittingEmptySubsequences: false)
-        guard expected.count == 2 else { throw ClaudeAuthError.sessionExpired }
-
-        let response = try await fetchProfile(accessToken: accessToken, config: config)
-        guard (200..<300).contains(response.statusCode) else { return .failed(response) }
-        let profile = try Self.decodeProfile(response)
-        guard profile.account.uuid.caseInsensitiveCompare(String(expected[0])) == .orderedSame,
-              profile.organization?.uuid.caseInsensitiveCompare(String(expected[1])) == .orderedSame
-        else {
-            AppLog.warn(LogTag.auth("claude"), "Claude credential does not match its account or organization")
-            throw ClaudeAuthError.sessionExpired
-        }
-        return .verified(profile)
     }
 }

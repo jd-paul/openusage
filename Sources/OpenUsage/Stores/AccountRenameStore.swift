@@ -25,10 +25,6 @@ final class AccountRenameStore {
         self.accounts = accounts
     }
 
-    func isRenaming(_ providerID: String) -> Bool {
-        edit?.providerID == providerID
-    }
-
     /// Opens an edit of the account behind a dashboard card (`Provider.id`), seeded with its name. Any
     /// edit still open is committed first.
     func begin(_ providerID: String) {

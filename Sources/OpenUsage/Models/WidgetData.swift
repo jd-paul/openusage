@@ -46,9 +46,6 @@ struct WidgetData: Hashable {
     /// Raw numbers for an unbounded `.values` row (empty for meters). The view
     /// formats these at render time instead of reading a baked string — see `unboundedDetail`.
     var values: [MetricValue] = []
-    /// Which of `values` this widget renders — cost-only, tokens-only, or the combined `.all`. Set by
-    /// the descriptor factory, so one provider row can back several tiles and the mapper stays oblivious.
-    var selection: ValueSelection = .all
     /// A tray-only unit word appended after this tile's menu-bar value for an unbounded count (e.g. Codex
     /// Rate Limit Resets → "2 resets"). Set by the descriptor, so renaming the tile can't silently drop
     /// the suffix — replaces matching on the tile's title. `nil` for tiles that show the bare value.
@@ -75,9 +72,6 @@ struct WidgetData: Hashable {
         case missingResetDate
     }
     var isBounded: Bool { limit != nil }
-
-    /// `values` projected through `selection` — exactly what this tile shows.
-    var selectedValues: [MetricValue] { selection.apply(to: values) }
 
     var displayedValue: Double {
         guard displayMode == .remaining, let limit else { return used }
@@ -197,9 +191,9 @@ struct WidgetData: Hashable {
     var valueText: String {
         guard hasData else { return Self.noDataHeadline }
         if let valueTextOverride { return valueTextOverride }
-        // A `.values` row's primary reading is its first selected value; meters fall through to the
+        // A `.values` row's primary reading is its first value; meters fall through to the
         // bounded/`used` formatting.
-        if let first = selectedValues.first {
+        if let first = values.first {
             return (valuePrefix ?? "") + MetricFormatter.number(first.number, kind: first.kind, style: .row)
         }
         return (valuePrefix ?? "") + format(displayedValue)
@@ -221,7 +215,7 @@ struct WidgetData: Hashable {
             }
             return MetricFormatter.number(displayedValue, kind: kind, style: .tray)
         }
-        if let first = selectedValues.first {
+        if let first = values.first {
             if let traySuffix, first.kind == .count {
                 return "\(MetricFormatter.number(first.number, kind: .count, style: .tray)) \(traySuffix)"
             }
@@ -285,19 +279,18 @@ struct WidgetData: Hashable {
     var unboundedDetail: String {
         guard hasData else { return Self.noDataSubtitle }
         if let valueTextOverride { return valueTextOverride }
-        let selected = selectedValues
-        if !selected.isEmpty {
+        if !values.isEmpty {
             // One value: a lone dollar amount takes the widget's trailing word ("$4.08 spent",
             // "$1,503 left"); any other single value carries its own unit label ("1.2M tokens",
             // "2 available"). Several values join into the combined reading ("$4.08 · 1.2M tokens").
-            if selected.count == 1 {
-                let value = selected[0]
+            if values.count == 1 {
+                let value = values[0]
                 if value.kind == .dollars, let word = unboundedValueWord {
                     return "\(MetricFormatter.number(value.number, kind: .dollars, style: .row)) \(word)"
                 }
                 return MetricFormatter.string(for: value, style: .row)
             }
-            return selected.map { MetricFormatter.string(for: $0, style: .row) }.joined(separator: " · ")
+            return values.map { MetricFormatter.string(for: $0, style: .row) }.joined(separator: " · ")
         }
         // Fallback for an unbounded row without typed values: "<value> <suffix> <word>".
         let word = unboundedValueWord ?? displayMode.label.lowercased()
@@ -333,7 +326,7 @@ struct WidgetData: Hashable {
     /// couldn't fetch" — the usage-body fallback carries the count but no expiry list, so `expiriesAt`
     /// is empty while the row still reads e.g. "3 available".
     var resetCreditCount: Int {
-        Int((selectedValues.first?.number ?? 0).rounded(.down))
+        Int((values.first?.number ?? 0).rounded(.down))
     }
 
     /// Hover tooltip for a row carrying expiry instants (the Codex reset-credit row, "2 available"):
@@ -367,9 +360,8 @@ struct WidgetData: Hashable {
     /// Full, un-abbreviated values for the row's hover tooltip when the compact value shortens them.
     var unboundedTooltip: String? {
         guard hasData else { return nil }
-        let selected = selectedValues
-        guard selected.contains(where: { abs($0.number) >= 1000 }) else { return nil }
-        return selected.map { MetricFormatter.string(for: $0, style: .full) }.joined(separator: " · ")
+        guard values.contains(where: { abs($0.number) >= 1000 }) else { return nil }
+        return values.map { MetricFormatter.string(for: $0, style: .full) }.joined(separator: " · ")
     }
 
     /// Hover text for an unbounded row's value when the compact value abbreviates it.

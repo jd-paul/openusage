@@ -56,36 +56,22 @@ extension WidgetDescriptor {
                                 periodDurationMs: periodDurationMs))
     }
 
-    /// Unbounded numeric row backed by a provider `.values` line.
+    /// Unbounded numeric row backed by a provider `.values` line; every value in the line is shown.
     static func values(
         id: String,
         provider: Provider,
         title: String,
         metricLabel: String? = nil,
-        selection: ValueSelection = .all,
         valueWord: String? = nil,
         traySuffix: String? = nil,
         showsResetExpiries: Bool = false
     ) -> WidgetDescriptor {
-        // `kind` is unused for `.values` rendering (each value carries its own), but a count-only tile
-        // reads tidier seeded as `.count`; everything else defaults to `.dollars`.
-        let kind: MetricKind = { if case .kind(let only) = selection { return only }; return .dollars }()
-        var sample = WidgetData(title: title, icon: provider.icon, kind: kind, used: 0, limit: nil,
+        // `kind` is unused for `.values` rendering (each value carries its own).
+        var sample = WidgetData(title: title, icon: provider.icon, kind: .dollars, used: 0, limit: nil,
                                 unboundedValueWord: valueWord)
-        sample.selection = selection
         sample.traySuffix = traySuffix
         sample.showsResetExpiries = showsResetExpiries
         return make(id: id, provider: provider, metricLabel: metricLabel ?? title, sample: sample)
-    }
-
-    /// Combined tile showing every value in a `.values` row.
-    static func combined(
-        id: String,
-        provider: Provider,
-        title: String,
-        metricLabel: String? = nil
-    ) -> WidgetDescriptor {
-        values(id: id, provider: provider, title: title, metricLabel: metricLabel, selection: .all)
     }
 
     /// Unbounded dollar balance with a custom trailing word (e.g. "$1,503.00 left").

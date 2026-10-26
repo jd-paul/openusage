@@ -66,11 +66,4 @@ enum MetricFormatter {
         guard let label = value.label, !label.isEmpty else { return text }
         return "\(text) \(label)"
     }
-
-    /// Dollars per million tokens for legends and tooltips — dollar formatting plus a fixed `/MTok`
-    /// suffix so those one-line surfaces never drift.
-    static func costPerMtok(_ value: Double, style: Style) -> String {
-        number(value, kind: .dollars, style: style) + "/MTok"
-    }
-
 }

@@ -233,7 +233,7 @@ final class WidgetDataStoreTests: XCTestCase {
     func testCreditsRenderProviderReportedCountInvariantToMeterStyle() async {
         // Codex flex credits are provider-reported counts, with no locally estimated dollar value.
         let provider = Provider(id: "codex", displayName: "Codex", icon: .providerMark("codex"))
-        let descriptor = WidgetDescriptor.combined(
+        let descriptor = WidgetDescriptor.values(
             id: "codex.credits", provider: provider, title: "Extra Usage", metricLabel: "Credits"
         )
         let runtime = TestProviderRuntime(
@@ -571,27 +571,6 @@ final class WidgetDataStoreTests: XCTestCase {
 
         XCTAssertEqual(runtime.refreshCount, 1)
         XCTAssertEqual(store.data(for: descriptor).valueText, "20%")
-    }
-
-    func testResetDisplaySettingsRestoresDefaultsAndPersists() {
-        let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("codex"))
-        let registry = WidgetRegistry(providers: [provider], descriptors: [])
-        let defaults = makeUserDefaults("reset-display-settings")
-        let store = WidgetDataStore(registry: registry, providers: [], defaults: defaults)
-        store.meterStyle = .used
-        store.resetDisplayMode = .absolute
-        store.alwaysShowPacing = true
-
-        store.resetDisplaySettings()
-
-        XCTAssertEqual(store.meterStyle, .remaining)
-        XCTAssertEqual(store.resetDisplayMode, .relative)
-        XCTAssertFalse(store.alwaysShowPacing)
-        // A second store on the same suite must load the defaults back, not the pre-reset values.
-        let reloaded = WidgetDataStore(registry: registry, providers: [], defaults: defaults)
-        XCTAssertEqual(reloaded.meterStyle, .remaining)
-        XCTAssertEqual(reloaded.resetDisplayMode, .relative)
-        XCTAssertFalse(reloaded.alwaysShowPacing)
     }
 
     private func makeUserDefaults(_ name: String) -> UserDefaults {

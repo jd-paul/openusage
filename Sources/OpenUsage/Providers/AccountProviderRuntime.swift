@@ -62,7 +62,7 @@ final class AccountProviderRuntime: ProviderRuntime {
                 .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly"),
                 .percent(id: "\(prefix).spark", provider: provider, title: "Spark"),
                 .percent(id: "\(prefix).sparkWeekly", provider: provider, title: "Spark Weekly"),
-                .combined(id: "\(prefix).credits", provider: provider, title: "Extra Usage", metricLabel: "Credits"),
+                .values(id: "\(prefix).credits", provider: provider, title: "Extra Usage", metricLabel: "Credits"),
                 Self.rateLimitResets(id: "\(prefix).rateLimitResets", provider: provider)
             ]
         case .cursor:
@@ -321,29 +321,17 @@ final class AccountProviderRuntime: ProviderRuntime {
 
     private func refreshAntigravity(_ credential: AccountCredential) async throws -> (String?, [MetricLine]) {
         guard case .oauth(var tokens) = credential else { throw LoginError.invalidResponse }
-        if tokens.expiresAt.map({ $0 <= Date() }) == true, let refreshToken = tokens.refreshToken {
-            let response = try await http.send(HTTPRequest(
-                method: "POST",
-                url: URL(string: "https://oauth2.googleapis.com/token")!,
-                headers: ["Content-Type": "application/x-www-form-urlencoded"],
-                body: Data([
-                    "client_id=\(AntigravityLogin.clientID.urlFormEncoded)",
-                    "client_secret=\(AntigravityLogin.clientSecret.urlFormEncoded)",
-                    "refresh_token=\(refreshToken.urlFormEncoded)",
-                    "grant_type=refresh_token"
-                ].joined(separator: "&").utf8),
-                timeout: 15
-            ))
-            guard (200..<300).contains(response.statusCode),
-                  let body = ProviderParse.jsonObject(response.body),
-                  let accessToken = body["access_token"] as? String
-            else { throw LoginError.invalidResponse }
-            tokens.accessToken = accessToken
-            tokens.expiresAt = ProviderParse.number(body["expires_in"])
-                .map { Date().addingTimeInterval(max(0, $0 - 300)) }
-            try await replaceCredential(.oauth(tokens))
-        }
         let client = AntigravityUsageClient(http: http)
+        if tokens.expiresAt.map({ $0 <= Date() }) == true, let refreshToken = tokens.refreshToken {
+            switch await client.refreshGoogleToken(refreshToken) {
+            case .refreshed(let accessToken, let expiresIn):
+                tokens.accessToken = accessToken
+                tokens.expiresAt = Date().addingTimeInterval(max(0, expiresIn - 300))
+                try await replaceCredential(.oauth(tokens))
+            case .authFailed: throw AntigravityError.authExpired
+            case .unavailable: throw AntigravityError.unavailable
+            }
+        }
         let codeAssist: Data? = if case .ok(let data) = await client.loadCodeAssist(token: tokens.accessToken) { data } else { nil }
         let project = codeAssist.flatMap(AntigravityUsageMapper.parseProject)
         let response = await client.cloudCodeAllHosts(

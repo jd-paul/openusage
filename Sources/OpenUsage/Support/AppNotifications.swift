@@ -48,16 +48,6 @@ final class AppNotifications: NSObject, UNUserNotificationCenterDelegate {
         ensureAuthorization()
     }
 
-    /// Open System Settings → Notifications so the user can re-enable alerts for OpenUsage after a
-    /// macOS-level denial (the app can't re-prompt once the system has cached a decision). No-op under
-    /// tests.
-    func openSystemNotificationsSettings() {
-        guard !Self.isRunningUnderTests else { return }
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
     /// Post one immediate notification. `idPrefix` names the source (e.g. a metric key) for the log line;
     /// the actual identifier is made unique so repeated alerts on the same metric don't coalesce. `title`
     /// is the alert headline, `subtitle` carries provider + metric, and `body` is the verdict. Returns
