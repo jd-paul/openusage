@@ -74,33 +74,13 @@ for bundle in "$BUILD_DIR"/*.bundle; do
 done
 shopt -u nullglob
 
-# Compile the Icon Composer source (assets/AppIcon.icon) into Assets.car so
-# Tahoe renders the real Liquid Glass icon. CFBundleIconName below must match
-# the .icon file stem ("AppIcon"). The app floor is macOS 15, so a classic .icns
-# fallback is relevant there (the release build supplies one); this dev build only
-# stages the Assets.car and runs on the maintainer's current OS.
-echo "==> compiling app icon (actool)"
-PREBUILT_ICON_DIR="$ROOT_DIR/assets/AppIcon.prebuilt"
-if xcrun actool "$ROOT_DIR/assets/AppIcon.icon" --compile "$APP_RESOURCES" \
-  --app-icon AppIcon \
-  --enable-on-demand-resources NO \
-  --development-region en \
-  --target-device mac \
-  --platform macosx \
-  --minimum-deployment-target "$MIN_SYSTEM_VERSION" \
-  --output-partial-info-plist /dev/null \
-  --output-format human-readable-text --errors --warnings; then
-  : # compiled the icon fresh
-elif [ -f "$PREBUILT_ICON_DIR/Assets.car" ]; then
-  # actool is broken on some toolchains; commit 08863d7 ships a prebuilt icon so release CI bypasses
-  # it. Reuse the same prebuilt here, so a failed actool doesn't abort the dev build under set -e and
-  # the app still gets its real icon.
-  echo "==> actool failed; using prebuilt icon (assets/AppIcon.prebuilt)"
-  cp "$PREBUILT_ICON_DIR/Assets.car" "$APP_RESOURCES/Assets.car"
-  [ -f "$PREBUILT_ICON_DIR/AppIcon.icns" ] && cp "$PREBUILT_ICON_DIR/AppIcon.icns" "$APP_RESOURCES/AppIcon.icns"
-else
-  echo "WARNING: actool failed and no prebuilt icon found; continuing without an icon" >&2
-fi
+# Install the prebuilt app icon, like the release build: actool crashes on the Icon Composer source
+# (assets/AppIcon.icon) on current toolchains, so script/compile_icon.sh regenerates
+# assets/AppIcon.prebuilt whenever the source changes. CFBundleIconName below must match the .icon
+# stem ("AppIcon").
+echo "==> installing app icon (assets/AppIcon.prebuilt)"
+cp "$ROOT_DIR/assets/AppIcon.prebuilt/Assets.car" "$APP_RESOURCES/Assets.car"
+cp "$ROOT_DIR/assets/AppIcon.prebuilt/AppIcon.icns" "$APP_RESOURCES/AppIcon.icns"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
