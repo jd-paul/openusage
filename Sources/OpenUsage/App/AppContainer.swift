@@ -2,8 +2,8 @@ import Foundation
 import Observation
 
 /// Owns the app's long-lived stores. Accounts are the source of truth: when they change, the container
-/// updates the runtimes, layout, and data store in place, so the status item, panel, and every other
-/// account's data stay as they are.
+/// updates the runtimes, layout, and data store in place, synchronously, so the status item, panel, and
+/// every other account's data stay as they are.
 @MainActor
 @Observable
 final class AppContainer {
@@ -19,9 +19,16 @@ final class AppContainer {
     @ObservationIgnored private var providers: [AccountProviderRuntime]
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
 
-    init(accounts: AccountStore = AccountStore(), defaults: UserDefaults = .standard) async {
+    @ObservationIgnored private let http: any HTTPClient
+
+    init(
+        accounts: AccountStore = AccountStore(),
+        defaults: UserDefaults = .standard,
+        http: any HTTPClient = URLSessionHTTPClient()
+    ) async {
         self.accounts = accounts
-        let providers = ProviderCatalog.make(accounts: accounts.accounts, vault: accounts.credentialVault)
+        self.http = http
+        let providers = ProviderCatalog.make(accounts: accounts.accounts, vault: accounts.credentialVault, http: http)
         let registry = WidgetRegistry.from(providers)
         let notificationSettings = NotificationSettingsStore(defaults: defaults)
         let layout = LayoutStore(registry: registry, defaults: defaults)
@@ -63,7 +70,7 @@ final class AppContainer {
         }
         self.telemetry = telemetry
         AppNotifications.shared.registerAsDelegate()
-        observeAccounts()
+        accounts.didChange = { [weak self] in self?.syncAccounts() }
     }
 
     deinit {
@@ -93,22 +100,15 @@ final class AppContainer {
         }
     }
 
-    private func observeAccounts() {
-        withObservationTracking {
-            _ = accounts.accounts
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.syncAccounts()
-                self?.observeAccounts()
-            }
-        }
-    }
-
+    /// Runs synchronously inside every `AccountStore` change. A removed account's runtime leaves
+    /// `providers` and the data store cancels its refresh before the store's call returns, so a response
+    /// that lands later finds no account to commit to.
     private func syncAccounts() {
         let previousIDs = Set(providers.map(\.provider.id))
         providers = ProviderCatalog.make(
             accounts: accounts.accounts,
             vault: accounts.credentialVault,
+            http: http,
             reusing: providers
         )
         let registry = WidgetRegistry.from(providers)

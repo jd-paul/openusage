@@ -60,7 +60,10 @@ final class WidgetDataStore {
     var snapshots: [String: ProviderSnapshot] = [:]
     /// Last-good snapshots produced on this Mac.
     private(set) var localSnapshots: [String: ProviderSnapshot] = [:]
-    var refreshingProviderIDs: Set<String> = []
+    /// The refresh in flight per account. Owning the task is what lets `apply` cancel a removed
+    /// account's work; the keys drive the dashboard's spinners.
+    private var inFlight: [String: Task<ProviderSnapshot?, Never>] = [:]
+    var refreshingProviderIDs: Set<String> { Set(inFlight.keys) }
     /// Wall-clock time the most recent full refresh pass finished. Together with the chosen refresh
     /// cadence it drives the dashboard footer's live "Next update in …" countdown, so the footer reflects
     /// the real schedule instead of a hardcoded value. `nil` until the first pass completes.
@@ -159,13 +162,16 @@ final class WidgetDataStore {
         for (cardID, snapshot) in loaded { providersByID[cardID]?.adoptLaunchSnapshot(snapshot) }
     }
 
-    /// Adopts a new set of account runtimes in place. A removed account's data is dropped, a new
-    /// account shows its cached snapshot (if any) until its first refresh lands, and accounts that are
-    /// still present keep their snapshots untouched.
+    /// Adopts a new set of account runtimes in place. A removed account's refresh is cancelled and its
+    /// data dropped from the store and the cache, a new account shows its cached snapshot (if any)
+    /// until its first refresh lands, and accounts that are still present keep their snapshots untouched.
     func apply(providers: [ProviderRuntime], registry: WidgetRegistry) {
         self.registry = registry
         providersByID = Dictionary(uniqueKeysWithValues: providers.map { ($0.provider.id, $0) })
         let ids = Set(providersByID.keys)
+        for (id, task) in inFlight where !ids.contains(id) { task.cancel() }
+        inFlight = inFlight.filter { ids.contains($0.key) }
+        cache.remove(providerIDs: Set(localSnapshots.keys).subtracting(ids))
         var next = localSnapshots.filter { ids.contains($0.key) }
         let added = ids.subtracting(next.keys)
         for (cardID, snapshot) in cache.loadSnapshots(providerIDs: Array(added)) {
@@ -175,7 +181,6 @@ final class WidgetDataStore {
         localSnapshots = next
         snapshots = next
         providerErrors = providerErrors.filter { ids.contains($0.key) }
-        refreshingProviderIDs.formIntersection(ids)
         failureRetryAfter = failureRetryAfter.filter { ids.contains($0.key) }
     }
 
@@ -296,20 +301,26 @@ final class WidgetDataStore {
         guard let provider = providersByID[providerID] else { return .skipped }
         // Skip if an in-flight refresh already owns this provider (e.g. the background timer racing the
         // first popover open), so we never fire duplicate network calls for the same provider.
-        guard !refreshingProviderIDs.contains(providerID) else {
+        guard inFlight[providerID] == nil else {
             AppLog.debug(.refresh, "cache skip \(providerID) (already in flight)")
             return .skipped
         }
-        refreshingProviderIDs.insert(providerID)
-        defer { refreshingProviderIDs.remove(providerID) }
         let start = monotonicNow()
         // A provider that never returns would otherwise hold the in-flight entry — and the spinner —
         // forever. Past the deadline, stop waiting and treat it as any other failed refresh.
-        guard var snapshot = await ProviderRefreshDeadline.snapshot(
-            from: provider,
-            force: force,
-            timeout: providerRefreshTimeout
-        ) else {
+        let work = Task { [providerRefreshTimeout] in
+            await ProviderRefreshDeadline.snapshot(from: provider, force: force, timeout: providerRefreshTimeout)
+        }
+        inFlight[providerID] = work
+        defer { if inFlight[providerID] == work { inFlight[providerID] = nil } }
+        let result = await work.value
+        // The account may have been removed while this was in flight. Its runtime is gone from
+        // `providersByID` then, and nothing from the late result is published, cached, or counted.
+        guard providersByID[providerID] === provider else {
+            AppLog.debug(.refresh, "dropped \(providerID) refresh; the account was removed")
+            return .skipped
+        }
+        guard var snapshot = result else {
             providerErrors[providerID] = "Refresh timed out after \(Int(providerRefreshTimeout))s"
             failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
             AppLog.warn(.refresh, "\(providerID) timed out after \(Int(providerRefreshTimeout))s")

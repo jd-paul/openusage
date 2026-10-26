@@ -3,8 +3,17 @@ import Security
 
 protocol CredentialVault: Sendable {
     func load(_ id: UUID) throws -> AccountCredential?
+    /// Stores the credential, creating or replacing the entry. Adding an account uses this.
     func save(_ credential: AccountCredential, for id: UUID) throws
+    /// Replaces an existing credential and throws `CredentialVaultError.missingCredential` when there is
+    /// none. A token refresh uses this, so one that lands after the account was removed cannot recreate
+    /// the credential.
+    func update(_ credential: AccountCredential, for id: UUID) throws
     func delete(_ id: UUID) throws
+}
+
+enum CredentialVaultError: Error {
+    case missingCredential
 }
 
 final class KeychainCredentialVault: CredentialVault, @unchecked Sendable {
@@ -38,6 +47,13 @@ final class KeychainCredentialVault: CredentialVault, @unchecked Sendable {
         }
     }
 
+    func update(_ credential: AccountCredential, for id: UUID) throws {
+        let attributes = [kSecValueData as String: try JSONEncoder().encode(credential)]
+        let status = SecItemUpdate(baseQuery(for: id) as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound { throw CredentialVaultError.missingCredential }
+        guard status == errSecSuccess else { throw KeychainVaultError.status(status) }
+    }
+
     func delete(_ id: UUID) throws {
         let status = SecItemDelete(baseQuery(for: id) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
@@ -67,6 +83,13 @@ final class InMemoryCredentialVault: CredentialVault, @unchecked Sendable {
     func save(_ credential: AccountCredential, for id: UUID) throws {
         lock.lock()
         defer { lock.unlock() }
+        credentials[id] = credential
+    }
+
+    func update(_ credential: AccountCredential, for id: UUID) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        guard credentials[id] != nil else { throw CredentialVaultError.missingCredential }
         credentials[id] = credential
     }
 

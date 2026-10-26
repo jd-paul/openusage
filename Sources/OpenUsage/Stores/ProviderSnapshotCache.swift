@@ -110,6 +110,16 @@ struct ProviderSnapshotCache {
         }
     }
 
+    /// Drops the stored snapshots of removed accounts and persists at once.
+    func remove(providerIDs: Set<String>) {
+        guard !providerIDs.isEmpty else { return }
+        var payload = loadPayload()
+        payload.snapshots = payload.snapshots.filter { !providerIDs.contains($0.key) }
+        payload.producedByIdentityKeys = payload.producedByIdentityKeys.filter { !providerIDs.contains($0.key) }
+        sessionWrites.withLock { $0.subtract(providerIDs) }
+        save(payload)
+    }
+
     func persistPending() {
         guard hasDeferredWrites.withLock({ pending in
             defer { pending = false }

@@ -8,6 +8,10 @@ final class AccountStore {
 
     private(set) var accounts: [Account]
     private(set) var lastError: String?
+    /// Runs synchronously after every committed change to `accounts`, before control returns to the
+    /// caller. `AppContainer` swaps runtimes and cancels a removed account's work in it, so by the
+    /// time `remove` returns nothing can still commit on that account's behalf.
+    @ObservationIgnored var didChange: (() -> Void)?
     private let defaults: UserDefaults
     let credentialVault: any CredentialVault
 
@@ -28,7 +32,9 @@ final class AccountStore {
         do {
             try credentialVault.save(credential, for: account.id)
             accounts.append(account)
-            if !persist() {
+            if persist() {
+                didChange?()
+            } else {
                 accounts.removeAll { $0.id == account.id }
                 do {
                     try credentialVault.delete(account.id)
@@ -47,8 +53,11 @@ final class AccountStore {
         guard let index = accounts.firstIndex(where: { $0.id == id }) else { return }
         let previous = accounts[index].label
         accounts[index].label = label
-        guard !persist() else { return }
-        accounts[index].label = previous
+        if persist() {
+            didChange?()
+        } else {
+            accounts[index].label = previous
+        }
     }
 
     func remove(_ id: UUID) {
@@ -57,7 +66,10 @@ final class AccountStore {
             let credential = try credentialVault.load(id)
             try credentialVault.delete(id)
             let account = accounts.remove(at: accountIndex)
-            guard !persist() else { return }
+            if persist() {
+                didChange?()
+                return
+            }
             accounts.insert(account, at: accountIndex)
             if let credential {
                 do {

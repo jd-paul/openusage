@@ -213,7 +213,7 @@ final class AccountProviderRuntime: ProviderRuntime {
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
             tokens.expiresAt = refreshed.expiresIn.map { now().addingTimeInterval($0) }
-            try await save(.oauth(tokens))
+            try await replaceCredential(.oauth(tokens))
         }
         return tokens
     }
@@ -256,7 +256,7 @@ final class AccountProviderRuntime: ProviderRuntime {
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
             tokens.expiresAt = ProviderParse.jwtExpiry(refreshed.accessToken)
-            try await save(.oauth(tokens))
+            try await replaceCredential(.oauth(tokens))
         }
         return tokens
     }
@@ -288,7 +288,7 @@ final class AccountProviderRuntime: ProviderRuntime {
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
             tokens.expiresAt = refreshed.expiresIn.map { Date().addingTimeInterval(max(0, $0 - 300)) }
-            try await save(.oauth(tokens))
+            try await replaceCredential(.oauth(tokens))
         }
         let usage = try await client.fetchCreditsConfig(accessToken: tokens.accessToken)
         let mapped = try GrokUsageMapper.mapCreditsConfig(usage)
@@ -341,7 +341,7 @@ final class AccountProviderRuntime: ProviderRuntime {
             tokens.accessToken = accessToken
             tokens.expiresAt = ProviderParse.number(body["expires_in"])
                 .map { Date().addingTimeInterval(max(0, $0 - 300)) }
-            try await save(.oauth(tokens))
+            try await replaceCredential(.oauth(tokens))
         }
         let client = AntigravityUsageClient(http: http)
         let codeAssist: Data? = if case .ok(let data) = await client.loadCodeAssist(token: tokens.accessToken) { data } else { nil }
@@ -405,7 +405,10 @@ final class AccountProviderRuntime: ProviderRuntime {
         return (mapped.plan, mapped.lines)
     }
 
-    func save(_ credential: AccountCredential) async throws {
-        try await loadOffMainActor { [vault, account] in try vault.save(credential, for: account.id) }
+    /// Replaces the account's stored credential after a token refresh. The vault only replaces an
+    /// existing entry, so a refresh that lands after the account was removed fails here instead of
+    /// recreating the credential.
+    func replaceCredential(_ credential: AccountCredential) async throws {
+        try await loadOffMainActor { [vault, account] in try vault.update(credential, for: account.id) }
     }
 }
