@@ -100,6 +100,7 @@ final class InlineRenameFocusTests: XCTestCase {
                 .environment(container.dataStore)
                 .environment(container.transparency)
                 .environment(container.renaming)
+                .environment(UpdaterController())
                 .environment(\.colorScheme, .light)
         ))
         let frame = NSRect(x: -20_000, y: -20_000, width: PanelMetrics.width, height: 400)
