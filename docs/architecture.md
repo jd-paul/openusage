@@ -23,10 +23,11 @@ environment:
 | `AccountRenameStore` | Which account name is being edited. |
 | `TelemetryRecorder` | The daily ping and per-provider rollups (see `Services/Telemetry.swift`). |
 
-Accounts are the source of truth. `AppContainer.observeAccounts` watches `AccountStore.accounts` and,
-on a change, rebuilds the runtimes with `ProviderCatalog.make(accounts:vault:reusing:)`, applies the
-new `WidgetRegistry` to the layout and data store in place, and refreshes any account that is new.
-The status item and the panel are never rebuilt on an account change.
+Accounts are the source of truth. Every `AccountStore` change runs `AppContainer.syncAccounts`
+synchronously, which rebuilds the runtimes with `ProviderCatalog.make(accounts:vault:http:reusing:)`,
+applies the new `WidgetRegistry` to the layout and data store in place (a removed account's in-flight
+refresh is cancelled there, so a late response has nothing to commit to), and refreshes any account that
+is new. The status item and the panel are never rebuilt on an account change.
 
 ## Accounts and sign-in
 
@@ -61,7 +62,8 @@ in what order; `WidgetDataStore` turns snapshots into `WidgetData` for the views
 `AppContainer.startRefreshing` runs `WidgetDataStore.refreshAll` at launch and every
 `RefreshSetting.interval` (5 minutes), then `evaluateNotifications`, then `TelemetryRecorder.tick`.
 `refresh(providerID:)` honours the on-disk `ProviderSnapshotCache`, a one-minute failure backoff,
-and a two-minute deadline per account, and reports each real outcome through `onRefreshOutcome`.
+and a two-minute deadline per account, and reports each real outcome through `onRefreshOutcome`. The
+cache is written once at the end of a pass (`persistPending`) and again on quit.
 
 ## Views
 
