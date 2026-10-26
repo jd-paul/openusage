@@ -25,9 +25,9 @@ with `DeviceCodePoller`). Return the account's label (an email or the provider's
 
 Create `Sources/OpenUsage/Providers/<Name>/` with:
 
-- `<Name>UsageClient`: the HTTP calls, through the injected `HTTPClient`. Throw a `CategorizedError`
-  so failures carry an `ErrorCategory` (`notLoggedIn`, `authExpired`, `network`, `http4xx`, and so
-  on). Never log a credential or a response body.
+- `<Name>UsageClient`: the HTTP calls, through the injected `HTTPClient`. Throw an error whose
+  `errorDescription` is the account-specific message the dashboard shows. Never log a credential or a
+  response body.
 - `<Name>UsageMapper`: a pure function from the response to `(plan: String?, lines: [MetricLine])`.
   Validate the response here.
 

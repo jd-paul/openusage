@@ -33,14 +33,13 @@ the choice they already stored.
 ### What the toggle shares
 
 With extra analytics on, OpenUsage sends at most one event per provider per day with how many
-refreshes succeeded or failed, the kinds of errors (for example "not logged in" or "network"), and how
-many manual refreshes you triggered.
+refreshes succeeded or failed and how many manual refreshes you triggered.
 
 ### What is never shared
 
 - No account names, emails, or credentials.
 - No usage values: no limits, balances, or spend.
-- No error messages or file paths, only coarse error categories as counts.
+- No error messages or file paths, only success and failure counts.
 
 ### How it works
 

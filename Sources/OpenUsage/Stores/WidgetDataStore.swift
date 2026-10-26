@@ -88,10 +88,10 @@ final class WidgetDataStore {
 
     /// What a real provider fetch came back with. Cache hits, skips, and backoffs are timer noise and
     /// never reach `onRefreshOutcome`.
-    enum FetchResult: Sendable, Equatable { case refreshed, failed(ErrorCategory) }
+    enum FetchResult: Sendable, Equatable { case refreshed, failed }
 
     /// Telemetry hook wired by `AppContainer`: `(providerID, result, manual)`, once per real fetch, so
-    /// the recorder can roll daily usage and error counts up into one event per provider per day.
+    /// the recorder can roll daily success and failure counts up into one event per provider per day.
     /// `nil` (and so a no-op) in tests and previews. Not observable UI state.
     @ObservationIgnored var onRefreshOutcome: (@MainActor (String, FetchResult, Bool) -> Void)?
 
@@ -310,7 +310,7 @@ final class WidgetDataStore {
             providerErrors[providerID] = "Refresh timed out after \(Int(providerRefreshTimeout))s"
             failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
             AppLog.warn(.refresh, "\(providerID) timed out after \(Int(providerRefreshTimeout))s")
-            onRefreshOutcome?(providerID, .failed(.network), force)
+            onRefreshOutcome?(providerID, .failed, force)
             return .failed
         }
         // A canceled refresh may still return if a provider's underlying work is non-throwing. Never
@@ -333,7 +333,7 @@ final class WidgetDataStore {
             // Negative-cache the failure so a wake burst can't re-probe this provider in a tight loop.
             failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
             AppLog.warn(.refresh, "\(providerID) failed: \(message)")
-            onRefreshOutcome?(providerID, .failed(snapshot.errorCategory ?? .other), force)
+            onRefreshOutcome?(providerID, .failed, force)
             return .failed
         }
         if providerErrors[providerID] != nil {

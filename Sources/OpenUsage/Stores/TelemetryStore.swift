@@ -7,8 +7,6 @@ struct ProviderDailyCounter: Codable, Sendable, Equatable {
     var success = 0
     var failure = 0
     var manual = 0
-    /// Stable `ErrorCategory` raw value -> count. No messages, no PII.
-    var errors: [String: Int] = [:]
 }
 
 /// Telemetry bookkeeping kept in its own `UserDefaults` suite domain (`<bundle id>.telemetry`), separate
@@ -41,7 +39,7 @@ final class TelemetryStore {
         return minted
     }
 
-    /// Whether optional usage analytics are enabled (provider rollups and error categories).
+    /// Whether optional usage analytics are enabled (the provider rollups).
     /// Defaults to `true` when the user has never chosen. Existing opt-outs stay stored here; the
     /// daily active ping and crash reports do not read this flag.
     var enabled: Bool {

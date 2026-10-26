@@ -35,8 +35,8 @@ final class TelemetryRecorder {
         self.now = now
     }
 
-    /// Whether optional provider rollups and error categories are on.
-    /// Independent of the mandatory daily ping and crash reports.
+    /// Whether optional provider rollups are on. Independent of the mandatory daily ping and crash
+    /// reports.
     var isEnabled: Bool { store.enabled }
 
     /// Toggle optional provider analytics without stopping daily activity or crash reporting.
@@ -75,9 +75,8 @@ final class TelemetryRecorder {
         switch result {
         case .refreshed:
             counter.success += 1
-        case .failed(let category):
+        case .failed:
             counter.failure += 1
-            counter.errors[category.rawValue, default: 0] += 1
         }
         if manual { counter.manual += 1 }
         counters[providerID] = counter
@@ -116,29 +115,13 @@ final class TelemetryRecorder {
     }
 
     private func emitProviderRollup(providerID: String, counter: ProviderDailyCounter) {
-        sink.capture("provider_refresh_daily", Self.providerRollupProperties(providerID: providerID, counter: counter))
-        sink.flush()
-    }
-
-    private static func providerRollupProperties(providerID: String, counter: ProviderDailyCounter) -> [String: Any] {
-        var properties: [String: Any] = [
+        sink.capture("provider_refresh_daily", [
             "provider_id": providerID,
             "success_count": counter.success,
             "failure_count": counter.failure,
-            "error_categories": counter.errors,
             "manual_refresh_count": counter.manual
-        ]
-
-        for category in ErrorCategory.allCases {
-            properties["\(category.rawValue)_failure_count"] = counter.errors[category.rawValue] ?? 0
-        }
-
-        let expectedFailureCount = [ErrorCategory.notLoggedIn, .notAvailable].reduce(0) { total, category in
-            total + (counter.errors[category.rawValue] ?? 0)
-        }
-        properties["expected_failure_count"] = expectedFailureCount
-        properties["unexpected_failure_count"] = max(0, counter.failure - expectedFailureCount)
-        return properties
+        ])
+        sink.flush()
     }
 
     /// Local-calendar `yyyy-MM-dd`. Local (not UTC) so "every day" matches the user's perception; the

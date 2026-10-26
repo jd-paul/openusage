@@ -3,8 +3,8 @@ import XCTest
 
 /// Covers the daily-rollup/dedup contract of `TelemetryRecorder`: the 5-minute refresh timer produces
 /// ~1,440 outcomes/user/day, so the recorder must collapse the real fetches among them into at most
-/// one event per provider per day (and one `app_daily_active` per day), classify errors, and keep the
-/// daily ping when optional analytics are off.
+/// one event per provider per day (and one `app_daily_active` per day) and keep the daily ping when
+/// optional analytics are off.
 @MainActor
 final class TelemetryRecorderTests: XCTestCase {
     private typealias FakeSink = RecordingTelemetrySink
@@ -23,9 +23,9 @@ final class TelemetryRecorderTests: XCTestCase {
 
         recorder.record(providerID: "claude", result: .refreshed, manual: false)
         recorder.record(providerID: "claude", result: .refreshed, manual: true)
-        recorder.record(providerID: "claude", result: .failed(.network), manual: false)
-        recorder.record(providerID: "claude", result: .failed(.notLoggedIn), manual: false)
-        recorder.record(providerID: "claude", result: .failed(.notAvailable), manual: false)
+        recorder.record(providerID: "claude", result: .failed, manual: false)
+        recorder.record(providerID: "claude", result: .failed, manual: false)
+        recorder.record(providerID: "claude", result: .failed, manual: false)
 
         // Same day → nothing emitted yet (it's still accumulating).
         XCTAssertTrue(sink.events(named: "provider_refresh_daily").isEmpty)
@@ -41,16 +41,7 @@ final class TelemetryRecorderTests: XCTestCase {
         XCTAssertEqual(props["success_count"] as? Int, 2)
         XCTAssertEqual(props["failure_count"] as? Int, 3)
         XCTAssertEqual(props["manual_refresh_count"] as? Int, 1)
-        XCTAssertEqual(
-            props["error_categories"] as? [String: Int],
-            ["network": 1, "not_available": 1, "not_logged_in": 1]
-        )
-        XCTAssertEqual(props["network_failure_count"] as? Int, 1)
-        XCTAssertEqual(props["not_logged_in_failure_count"] as? Int, 1)
-        XCTAssertEqual(props["not_available_failure_count"] as? Int, 1)
-        XCTAssertEqual(props["auth_expired_failure_count"] as? Int, 0)
-        XCTAssertEqual(props["expected_failure_count"] as? Int, 2)
-        XCTAssertEqual(props["unexpected_failure_count"] as? Int, 1)
+        XCTAssertEqual(props.keys.sorted(), ["failure_count", "manual_refresh_count", "provider_id", "success_count"])
     }
 
     func testDailyActiveEmitsOncePerDayRegardlessOfAnalyticsOptOut() {
@@ -109,9 +100,9 @@ final class TelemetryRecorderTests: XCTestCase {
         recorder.setEnabled(false)
         recorder.tick()
         recorder.record(providerID: "claude", result: .refreshed, manual: false)
-        recorder.record(providerID: "claude", result: .failed(.network), manual: false)
+        recorder.record(providerID: "claude", result: .failed, manual: false)
         clock = day(26)
-        recorder.record(providerID: "claude", result: .failed(.network), manual: false)
+        recorder.record(providerID: "claude", result: .failed, manual: false)
         recorder.tick()
 
         XCTAssertTrue(

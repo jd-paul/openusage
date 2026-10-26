@@ -1,31 +1,6 @@
 import Foundation
 import PostHog
 
-/// Build-time configuration for the PostHog project. The project token is a client-side, write-only
-/// key (it ships in every distributed binary, like any analytics SDK key), so it is safe to commit;
-/// an `OPENUSAGE_POSTHOG_TOKEN` environment override is supported for local testing without editing
-/// source. The host is region-bound — a US token will not ingest against the EU host.
-enum TelemetryConfig {
-    /// Sentinel meaning "no real token configured" — the sink stays inert (no setup, no network) while
-    /// the resolved token equals this. Do NOT change this value.
-    static let placeholderToken = "phc_REPLACE_ME"
-
-    /// The project token baked into the build. Replace `phc_REPLACE_ME` with the real US-region
-    /// `phc_…` key (safe to commit — it's a client write-only key), or leave it and set
-    /// `OPENUSAGE_POSTHOG_TOKEN` at runtime for local testing.
-    private static let bakedToken = "phc_vGEqXEpQNwViyKnMNWvmKWpv8XxMT3yaeYi6gfidr4nf"
-
-    static var token: String {
-        let env = ProcessInfo.processInfo.environment["OPENUSAGE_POSTHOG_TOKEN"]?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if let env, !env.isEmpty { return env }
-        return bakedToken
-    }
-
-    /// US cloud. Switch to "https://eu.i.posthog.com" only with an EU-region project token.
-    static let host = "https://us.i.posthog.com"
-}
-
 /// The transport seam telemetry is emitted through. Abstracted from PostHog so the recorder's
 /// daily-rollup/dedup logic can be unit-tested against a fake sink. The optional-analytics toggle
 /// lives in `TelemetryRecorder`; the sink never opts out, because daily activity and crash reports
@@ -39,21 +14,17 @@ protocol TelemetrySink: AnyObject {
 /// Anonymous PostHog sink. Constructing it starts the process-global SDK, so only the app entry point
 /// does; everything else receives it as a `TelemetrySink`. No `identify()`/`group()`/`alias()`,
 /// `personProfiles = .never`, and only IDs/counts/enums are ever sent — never free-form error messages.
-/// When no real project token is configured the sink is inert
-/// (the app still builds and the toggle still works), so token-less builds never phone home.
 @MainActor
 final class PostHogTelemetrySink: TelemetrySink {
-    private let configured: Bool
+    /// The project token baked into the build: a client-side, write-only key that ships in every
+    /// distributed binary, like any analytics SDK key, so it is safe to commit. The host is region-bound
+    /// — a US token will not ingest against the EU host.
+    private static let token = "phc_vGEqXEpQNwViyKnMNWvmKWpv8XxMT3yaeYi6gfidr4nf"
+    /// US cloud. Switch to "https://eu.i.posthog.com" only with an EU-region project token.
+    private static let host = "https://us.i.posthog.com"
 
-    init(token: String = TelemetryConfig.token, host: String = TelemetryConfig.host) {
-        guard token.hasPrefix("phc_"), token != TelemetryConfig.placeholderToken else {
-            configured = false
-            AppLog.info(.config, "telemetry inert: no PostHog project token configured")
-            return
-        }
-        configured = true
-
-        let config = PostHogConfig(projectToken: token, host: host)
+    init() {
+        let config = PostHogConfig(projectToken: Self.token, host: Self.host)
         // Fully anonymous: no person profiles, no anonymous->identified merge.
         config.personProfiles = .never
         // We use no feature flags and emit our own daily rollups, so skip both startup fetches/autocapture.
@@ -87,12 +58,10 @@ final class PostHogTelemetrySink: TelemetrySink {
     }
 
     func capture(_ event: String, _ properties: [String: Any]) {
-        guard configured else { return }
         PostHogSDK.shared.capture(event, properties: properties)
     }
 
     func flush() {
-        guard configured else { return }
         PostHogSDK.shared.flush()
     }
 }

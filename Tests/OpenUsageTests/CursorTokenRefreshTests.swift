@@ -102,7 +102,7 @@ final class CursorTokenRefreshTests: XCTestCase {
 
         let snapshot = await harness.runtime.refresh()
 
-        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
         XCTAssertEqual(harness.stored?.expiresAt, Self.expiry)
         XCTAssertEqual(harness.stored?.accessToken, Self.oldToken)
         XCTAssertTrue(harness.refreshRequests.isEmpty)
@@ -118,7 +118,7 @@ final class CursorTokenRefreshTests: XCTestCase {
 
         let snapshot = await harness.runtime.refresh()
 
-        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
         XCTAssertEqual(harness.usageTokens, [Self.newToken])
         try assertRefreshedAndSaved(harness)
     }
@@ -133,7 +133,7 @@ final class CursorTokenRefreshTests: XCTestCase {
 
         let snapshot = await harness.runtime.refresh()
 
-        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
         XCTAssertEqual(harness.usageTokens, [Self.oldToken, Self.newToken])
         try assertRefreshedAndSaved(harness)
     }
@@ -165,7 +165,7 @@ final class CursorTokenRefreshTests: XCTestCase {
         let snapshot = await harness.runtime.refresh()
 
         XCTAssertEqual(harness.refreshRequests.count, 1)
-        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
         XCTAssertEqual(harness.usageTokens, [Self.oldToken])
         XCTAssertEqual(harness.stored?.accessToken, Self.oldToken)
     }

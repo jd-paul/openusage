@@ -80,7 +80,7 @@ final class OAuthRefreshPersistenceTests: XCTestCase {
 
         let snapshot = await runtime.refresh()
 
-        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
         let tokenRequest = try XCTUnwrap(http.requests.first { $0.url.host() == "oauth2.googleapis.com" })
         XCTAssertEqual(String(decoding: tokenRequest.body ?? Data(), as: UTF8.self),
                        "client_id=\(AntigravityLogin.clientID.urlFormEncoded)&client_secret=\(AntigravityLogin.clientSecret.urlFormEncoded)"

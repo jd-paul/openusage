@@ -49,7 +49,7 @@ final class AntigravityProjectQuotaTests: XCTestCase {
     func testQuotaSummaryNamesTheAccountsProject() async throws {
         let snapshot = try await refresh()
 
-        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
         XCTAssertEqual(snapshot.lines.map(\.label), [AntigravityMetric.weeklyLabel, AntigravityMetric.claudeWeeklyLabel])
         XCTAssertEqual(snapshot.plan, "Antigravity Starter Quota")
     }

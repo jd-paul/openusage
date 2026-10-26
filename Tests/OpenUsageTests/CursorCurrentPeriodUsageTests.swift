@@ -44,7 +44,7 @@ final class CursorCurrentPeriodUsageTests: XCTestCase {
 
         let snapshot = await runtime.refresh()
 
-        XCTAssertNil(snapshot.errorCategory, "\(snapshot.lines)")
+        XCTAssertFalse(snapshot.lines.contains(where: \.isError), "\(snapshot.lines)")
         XCTAssertEqual(snapshot.plan, "Pro")
         guard case .progress(_, let used, let limit, _, let resetsAt, _, _)? = snapshot.line(label: "Total usage") else {
             return XCTFail("Missing Total usage in \(snapshot.lines)")
