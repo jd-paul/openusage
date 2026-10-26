@@ -36,19 +36,19 @@ enum ZAIUsageMapper {
     /// invalid response rather than zero usage; an explicit empty array remains a valid no-data state.
     static func mapQuota(_ body: Data) throws -> [MetricLine] {
         guard let root = ProviderParse.jsonObject(body) else {
-            throw ZAIUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         // The limits array lives under `data.limits`; the legacy plugin also tolerated the root object
         // being the container directly (no `data` wrapper), so honor both.
         let container: [String: Any]
         if let data = root["data"] {
-            guard let data = data as? [String: Any] else { throw ZAIUsageError.invalidResponse }
+            guard let data = data as? [String: Any] else { throw ProviderError.invalidResponse }
             container = data
         } else {
             container = root
         }
         guard let limits = container["limits"] as? [[String: Any]] else {
-            throw ZAIUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         guard !limits.isEmpty else {
             return [.noUsageData]
@@ -80,7 +80,7 @@ enum ZAIUsageMapper {
         }
 
         guard !lines.isEmpty else {
-            if sawRecognizedLimit { throw ZAIUsageError.invalidResponse }
+            if sawRecognizedLimit { throw ProviderError.invalidResponse }
             return [.noUsageData]
         }
         return lines
@@ -114,7 +114,7 @@ enum ZAIUsageMapper {
         guard let unit = ProviderParse.number(entry["unit"]),
               let number = ProviderParse.number(entry["number"]),
               number > 0 else {
-            throw ZAIUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         let unitMs: Double
         switch unit {
@@ -126,7 +126,7 @@ enum ZAIUsageMapper {
         }
         let duration = unitMs * number
         guard duration >= 1, duration < Double(Int.max) else {
-            throw ZAIUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         let periodMs = Int(duration)
         // Sub-daily → session; multi-day → weekly. The computed window rides along so the meter's
@@ -140,7 +140,7 @@ enum ZAIUsageMapper {
     /// A percentage meter (Session or Weekly) from a credit/token quota entry.
     private static func percentLine(_ entry: [String: Any], label: String, periodMs: Int) throws -> MetricLine {
         guard let rawPercentage = ProviderParse.number(entry["percentage"]) else {
-            throw ZAIUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         let percentage = ProviderParse.clampPercent(rawPercentage)
         let resetsAt = ProviderParse.number(entry["nextResetTime"]).map { epochMsToDate($0) }
@@ -160,7 +160,7 @@ enum ZAIUsageMapper {
               let limit = ProviderParse.number(entry["usage"]),
               used >= 0,
               limit >= 0 else {
-            throw ZAIUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         // TIME_LIMIT carries a nextResetTime in current payloads (monthly renewal); honor it when
         // present so the countdown shows the real reset, otherwise the period cadence reads "monthly".

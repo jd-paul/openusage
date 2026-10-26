@@ -58,6 +58,6 @@ final class AntigravityProjectQuotaTests: XCTestCase {
         let snapshot = try await refresh(summaryStatus: 403)
 
         guard case .badge(_, let text, _, _)? = snapshot.lines.first else { return XCTFail("Expected an error badge") }
-        XCTAssertEqual(text, AntigravityError.authExpired.localizedDescription)
+        XCTAssertEqual(text, ProviderError.signInExpired(.antigravity).localizedDescription)
     }
 }

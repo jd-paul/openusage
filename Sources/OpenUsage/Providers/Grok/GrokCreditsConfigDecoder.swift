@@ -48,7 +48,7 @@ enum GrokCreditsConfigDecoder {
               let end = date(period["end"]),
               end > start
         else {
-            throw GrokUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
 
         // proto-JSON omits zero values, so an absent percent is a genuine 0% — but a present,
@@ -56,7 +56,7 @@ enum GrokCreditsConfigDecoder {
         let percent: Double
         if let raw = config["creditUsagePercent"] {
             guard let number = ProviderParse.number(raw), number.isFinite else {
-                throw GrokUsageError.invalidResponse
+                throw ProviderError.invalidResponse
             }
             percent = number
         } else {
@@ -67,10 +67,10 @@ enum GrokCreditsConfigDecoder {
         let onDemandCap: Double
         if let capObject = config["onDemandCap"] {
             guard let object = capObject as? [String: Any] else {
-                throw GrokUsageError.invalidResponse
+                throw ProviderError.invalidResponse
             }
             guard let cap = ProviderParse.number(object["val"] ?? 0), cap.isFinite else {
-                throw GrokUsageError.invalidResponse
+                throw ProviderError.invalidResponse
             }
             onDemandCap = cap
         } else {

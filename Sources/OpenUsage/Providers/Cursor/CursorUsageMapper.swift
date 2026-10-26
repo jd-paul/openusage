@@ -59,35 +59,6 @@ struct CursorPlanUsageFacts {
     }
 }
 
-enum CursorUsageError: Error, LocalizedError, Equatable {
-    case connectionFailed
-    case invalidResponse
-    case requestFailed(Int)
-    case usageAfterRefreshFailed
-    case requestBasedUnavailable(String)
-    case totalUsageLimitMissing
-    case noActiveSubscription
-
-    var errorDescription: String? {
-        switch self {
-        case .connectionFailed:
-            return ProviderUsageErrorText.connectionFailed
-        case .invalidResponse:
-            return ProviderUsageErrorText.invalidResponse
-        case .requestFailed(let statusCode):
-            return ProviderUsageErrorText.requestFailed(statusCode: statusCode)
-        case .usageAfterRefreshFailed:
-            return "Usage request failed after refresh. Try again."
-        case .requestBasedUnavailable(let message):
-            return message
-        case .totalUsageLimitMissing:
-            return "Total usage limit missing from API response."
-        case .noActiveSubscription:
-            return "No active Cursor subscription."
-        }
-    }
-}
-
 enum CursorUsageMapper {
     static let billingPeriodMs = MetricPeriod.monthMs
 
@@ -132,13 +103,13 @@ enum CursorUsageMapper {
         guard facts.isEnabled,
               let planUsage = usage["planUsage"] as? [String: Any]
         else {
-            throw CursorUsageError.noActiveSubscription
+            throw ProviderError.unavailable("No active Cursor subscription.")
         }
 
         let normalizedPlan = planName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
 
         guard facts.hasLimit || facts.hasTotalUsagePercent || facts.hasModelPools else {
-            throw CursorUsageError.totalUsageLimitMissing
+            throw ProviderError.unavailable("Total usage limit missing from API response.")
         }
 
         var lines: [MetricLine] = []
@@ -181,7 +152,7 @@ enum CursorUsageMapper {
                     resetsAt: cycle.resetsAt, periodDurationMs: cycle.periodDurationMs
                 ))
             } else {
-                throw CursorUsageError.requestBasedUnavailable("Cursor request-based usage data unavailable. Try again later.")
+                throw ProviderError.unavailable("Cursor request-based usage data unavailable. Try again later.")
             }
         } else {
             lines.append(.progress(
@@ -273,7 +244,7 @@ enum CursorUsageMapper {
         }
 
         guard !lines.isEmpty else {
-            throw CursorUsageError.requestBasedUnavailable(unavailableMessage)
+            throw ProviderError.unavailable(unavailableMessage)
         }
 
         return CursorMappedUsage(plan: planLabel(planName), lines: lines)

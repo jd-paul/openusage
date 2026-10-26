@@ -25,6 +25,8 @@ enum TokenRefreshOutcome: Sendable {
 
 /// All network I/O for Antigravity: the Google Cloud Code endpoints and the Google OAuth token refresh.
 struct AntigravityUsageClient: Sendable {
+    /// The card's message for an `.unavailable` outcome: every host was down or the refresh failed transiently.
+    static let unavailableMessage = "Antigravity usage is temporarily unavailable. Try again shortly."
     // The daily endpoint can omit Gemini quotas from a successful response; prefer production.
     static let cloudCodeURLs = [
         "https://cloudcode-pa.googleapis.com",

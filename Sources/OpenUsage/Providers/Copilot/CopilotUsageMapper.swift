@@ -29,7 +29,7 @@ enum CopilotUsageMapper {
 
     static func map(_ response: HTTPResponse) throws -> CopilotMappedUsage {
         guard let body = ProviderParse.jsonObject(response.body) else {
-            throw CopilotUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         return try map(body: body)
     }
@@ -77,7 +77,7 @@ enum CopilotUsageMapper {
         // is a real problem and fails loudly.
         guard !lines.isEmpty else {
             guard ProviderParse.bool(body["token_based_billing"]) == true else {
-                throw CopilotUsageError.quotaUnavailable
+                throw ProviderError.unavailable("Copilot usage data is unavailable for this account.")
             }
             return CopilotMappedUsage(
                 plan: plan,
@@ -209,24 +209,4 @@ enum CopilotUsageMapper {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
-}
-
-enum CopilotUsageError: Error, LocalizedError, Equatable {
-    case invalidResponse
-    case connectionFailed
-    case requestFailed(Int)
-    case quotaUnavailable
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse:
-            return "Copilot usage response invalid. Try again later."
-        case .connectionFailed:
-            return "Couldn't reach GitHub. Check your connection."
-        case .requestFailed(let status):
-            return "Copilot usage request failed (HTTP \(status)). Try again later."
-        case .quotaUnavailable:
-            return "Copilot usage data is unavailable for this account."
-        }
-    }
 }

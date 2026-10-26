@@ -40,7 +40,7 @@ enum CursorUsageSummaryMapper {
         appendOnDemand(summary, cycle: cycle, to: &lines)
 
         guard !lines.isEmpty else {
-            throw CursorUsageError.requestBasedUnavailable(unavailableMessage)
+            throw ProviderError.unavailable(unavailableMessage)
         }
 
         let summaryMembership = summary?["membershipType"] as? String

@@ -208,7 +208,7 @@ final class AccountProviderRuntime: ProviderRuntime {
         guard case .oauth(var tokens) = credential else { throw LoginError.invalidResponse }
         if tokens.expiresAt.map({ $0 <= now() }) == true, let refreshToken = tokens.refreshToken {
             let response = try await ClaudeUsageClient(httpClient: http).refreshToken(refreshToken, config: Self.claudeConfig)
-            guard (200..<300).contains(response.statusCode) else { throw ClaudeUsageError.requestFailed(response.statusCode) }
+            guard (200..<300).contains(response.statusCode) else { throw ProviderError.requestFailed(response.statusCode) }
             let refreshed = try JSONDecoder().decode(ClaudeRefreshResponse.self, from: response.body)
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
@@ -283,7 +283,7 @@ final class AccountProviderRuntime: ProviderRuntime {
         if tokens.expiresAt.map({ $0 <= Date() }) == true, let refreshToken = tokens.refreshToken {
             let response = try await client.refreshToken(refreshToken, clientID: GrokLogin.clientID)
             guard (200..<300).contains(response.statusCode), let refreshed = client.decodeRefreshResponse(response) else {
-                throw GrokUsageError.requestFailed(response.statusCode)
+                throw ProviderError.requestFailed(response.statusCode)
             }
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
@@ -307,13 +307,9 @@ final class AccountProviderRuntime: ProviderRuntime {
                 return tokens.accessToken
             }
         )
-        try ProviderAuthRetry.requireSuccess(
-            usageResponse,
-            authExpired: CursorAuthError.tokenExpired,
-            requestFailed: { CursorUsageError.requestFailed($0) }
-        )
+        try ProviderAuthRetry.requireSuccess(usageResponse, kind: .cursor)
         guard let usage = ProviderParse.jsonObject(usageResponse.body) else {
-            throw CursorUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         let mapped = try await cursorUsage(usage, client: client, accessToken: tokens.accessToken)
         return (mapped.plan, mapped.lines)
@@ -328,8 +324,8 @@ final class AccountProviderRuntime: ProviderRuntime {
                 tokens.accessToken = accessToken
                 tokens.expiresAt = Date().addingTimeInterval(max(0, expiresIn - 300))
                 try await replaceCredential(.oauth(tokens))
-            case .authFailed: throw AntigravityError.authExpired
-            case .unavailable: throw AntigravityError.unavailable
+            case .authFailed: throw ProviderError.signInExpired(.antigravity)
+            case .unavailable: throw ProviderError.unavailable(AntigravityUsageClient.unavailableMessage)
             }
         }
         let codeAssist: Data? = if case .ok(let data) = await client.loadCodeAssist(token: tokens.accessToken) { data } else { nil }
@@ -342,10 +338,10 @@ final class AccountProviderRuntime: ProviderRuntime {
             isComplete: AntigravityUsageMapper.isCompleteSummary
         )
         switch response {
-        case .authFailed: throw AntigravityError.authExpired
-        case .unavailable: throw AntigravityError.unavailable
+        case .authFailed: throw ProviderError.signInExpired(.antigravity)
+        case .unavailable: throw ProviderError.unavailable(AntigravityUsageClient.unavailableMessage)
         case .ok(let bodies):
-            guard let lines = AntigravityUsageMapper.parseQuotaSummaries(bodies) else { throw AntigravityError.invalidResponse }
+            guard let lines = AntigravityUsageMapper.parseQuotaSummaries(bodies) else { throw ProviderError.invalidResponse }
             return (codeAssist.flatMap(AntigravityUsageMapper.parseLoadCodeAssistPlan), lines)
         }
     }

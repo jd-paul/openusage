@@ -54,7 +54,7 @@ enum OllamaUsageMapper {
         // than an empty dashboard.
         guard let root = ProviderParse.jsonObject(body),
               let included = root["included"] as? [String: Any] else {
-            throw OllamaUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
 
         var lines: [MetricLine] = []
@@ -67,7 +67,7 @@ enum OllamaUsageMapper {
         if let monthly = monthlyLine(included) {
             lines.append(monthly)
         }
-        guard !lines.isEmpty else { throw OllamaUsageError.invalidResponse }
+        guard !lines.isEmpty else { throw ProviderError.invalidResponse }
 
         if let purchased = purchasedLine(root["purchased"]) {
             lines.append(purchased)

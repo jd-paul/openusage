@@ -12,23 +12,6 @@ struct ClaudeRefreshResponse: Decodable, Hashable, Sendable {
     }
 }
 
-enum ClaudeUsageError: Error, LocalizedError, Equatable {
-    case connectionFailed
-    case invalidResponse
-    case requestFailed(Int)
-
-    var errorDescription: String? {
-        switch self {
-        case .connectionFailed:
-            return ProviderUsageErrorText.connectionFailed
-        case .invalidResponse:
-            return ProviderUsageErrorText.invalidResponse
-        case .requestFailed(let statusCode):
-            return ProviderUsageErrorText.requestFailed(statusCode: statusCode)
-        }
-    }
-}
-
 /// The `/api/oauth/profile` payload. Carries the account/organization identity used for multi-account
 /// verification plus the organization's *current* plan (`organization_type`, `rate_limit_tier`). The
 /// stored login only has the plan Claude Code stamped at sign-in, so this is the source that reflects
@@ -163,17 +146,17 @@ struct ClaudeUsageClient: Sendable {
                 timeout: 10
             ))
         } catch {
-            throw ClaudeUsageError.connectionFailed
+            throw ProviderError.connectionFailed
         }
     }
 
     /// Decodes a 2xx profile body; a non-2xx status or an undecodable body throws the matching usage error.
     static func decodeProfile(_ response: HTTPResponse) throws -> ClaudeAccountProfile {
         guard (200..<300).contains(response.statusCode) else {
-            throw ClaudeUsageError.requestFailed(response.statusCode)
+            throw ProviderError.requestFailed(response.statusCode)
         }
         guard let profile = try? JSONDecoder().decode(ClaudeAccountProfile.self, from: response.body) else {
-            throw ClaudeUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         return profile
     }

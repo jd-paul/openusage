@@ -43,16 +43,12 @@ struct CodexUsageClient: Sendable {
             } ?? errorBody?["code"] as? String
 
             switch code {
-            case "refresh_token_expired":
-                throw CodexAuthError.sessionExpired
-            case "refresh_token_reused":
-                throw CodexAuthError.tokenConflict
-            case "refresh_token_invalidated":
-                throw CodexAuthError.tokenRevoked
+            case "refresh_token_expired", "refresh_token_reused", "refresh_token_invalidated":
+                throw ProviderError.signInExpired(.codex)
             default:
                 // No recognized OAuth error code (often a non-JSON proxy/WAF page) — report the HTTP
                 // status rather than asserting token expiry the user can't fix by re-logging in.
-                throw CodexUsageError.requestFailed(response.statusCode)
+                throw ProviderError.requestFailed(response.statusCode)
             }
         }
 
@@ -60,13 +56,13 @@ struct CodexUsageClient: Sendable {
         // token — surface the status. A 2xx whose body carries no usable access token is treated as a
         // dead session (re-login is the right remedy).
         guard (200..<300).contains(response.statusCode) else {
-            throw CodexUsageError.requestFailed(response.statusCode)
+            throw ProviderError.requestFailed(response.statusCode)
         }
         guard let body = ProviderParse.jsonObject(response.body),
               let accessToken = body["access_token"] as? String,
               !accessToken.isEmpty
         else {
-            throw CodexAuthError.tokenExpired
+            throw ProviderError.signInExpired(.codex)
         }
 
         return CodexRefreshResponse(

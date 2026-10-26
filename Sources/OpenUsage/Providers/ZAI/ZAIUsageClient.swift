@@ -33,25 +33,3 @@ struct ZAIUsageClient: Sendable {
         ))
     }
 }
-
-enum ZAIUsageError: Error, LocalizedError, Equatable {
-    case connectionFailed
-    case invalidResponse
-    case requestFailed(Int)
-    /// The key is valid but the account has no GLM Coding Plan (the quota endpoint answers a 2xx with
-    /// `success:false`). Distinct from a malformed/failed request — there is simply nothing to meter.
-    case noCodingPlan
-
-    var errorDescription: String? {
-        switch self {
-        case .connectionFailed:
-            return ProviderUsageErrorText.connectionFailed
-        case .invalidResponse:
-            return ProviderUsageErrorText.invalidResponse
-        case .requestFailed(let status):
-            return ProviderUsageErrorText.requestFailed(statusCode: status)
-        case .noCodingPlan:
-            return "No active GLM Coding Plan. Subscribe at z.ai/subscribe to see usage."
-        }
-    }
-}

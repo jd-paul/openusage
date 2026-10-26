@@ -13,14 +13,10 @@ enum ClaudeUsageMapper {
     static let weeklyPeriodMs = MetricPeriod.weekMs
 
     static func mapUsageResponse(_ response: HTTPResponse, credentials: ClaudeOAuth, now: Date = Date()) throws -> ClaudeMappedUsage {
-        try ProviderAuthRetry.requireSuccess(
-            response,
-            authExpired: ClaudeAuthError.tokenExpired,
-            requestFailed: { ClaudeUsageError.requestFailed($0) }
-        )
+        try ProviderAuthRetry.requireSuccess(response, kind: .claude)
 
         guard let body = ProviderParse.jsonObject(response.body) else {
-            throw ClaudeUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
 
         var lines: [MetricLine] = []
@@ -38,13 +34,9 @@ enum ClaudeUsageMapper {
 
     /// The reset-grants request's `cedar_ember` block; `nil` when the account is outside the program.
     static func mapResetGrantStatus(_ response: HTTPResponse) throws -> ClaudeResetGrantStatus? {
-        try ProviderAuthRetry.requireSuccess(
-            response,
-            authExpired: ClaudeAuthError.tokenExpired,
-            requestFailed: { ClaudeUsageError.requestFailed($0) }
-        )
+        try ProviderAuthRetry.requireSuccess(response, kind: .claude)
         guard let body = ProviderParse.jsonObject(response.body) else {
-            throw ClaudeUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         return ClaudeResetGrantStatus.parse(body["cedar_ember"])
     }

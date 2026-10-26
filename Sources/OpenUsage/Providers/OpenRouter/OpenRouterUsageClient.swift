@@ -23,7 +23,7 @@ struct OpenRouterUsageClient: Sendable {
 
     private func get(_ urlString: String, apiKey: String) async throws -> HTTPResponse {
         guard let url = URL(string: urlString) else {
-            throw OpenRouterUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
 
         return try await http.send(HTTPRequest(
@@ -35,22 +35,5 @@ struct OpenRouterUsageClient: Sendable {
             ],
             timeout: 15
         ))
-    }
-}
-
-enum OpenRouterUsageError: Error, LocalizedError, Equatable {
-    case connectionFailed
-    case invalidResponse
-    case requestFailed(Int)
-
-    var errorDescription: String? {
-        switch self {
-        case .connectionFailed:
-            return "Couldn't reach OpenRouter. Check your connection."
-        case .invalidResponse:
-            return "OpenRouter usage data unavailable. Try again later."
-        case .requestFailed(let status):
-            return "OpenRouter request failed (HTTP \(status))."
-        }
     }
 }

@@ -10,11 +10,7 @@ enum GrokUsageMapper {
     /// account's current period isn't weekly — an account still on the old monthly-only billing has
     /// no weekly pool, and mislabeling its monthly percent would be worse than an honest blank.
     static func mapCreditsConfig(_ response: HTTPResponse) throws -> GrokMappedUsage {
-        try ProviderAuthRetry.requireSuccess(
-            response,
-            authExpired: GrokAuthError.expired,
-            requestFailed: { GrokUsageError.requestFailed($0) }
-        )
+        try ProviderAuthRetry.requireSuccess(response, kind: .grok)
         let config = try GrokCreditsConfigDecoder.decode(responseBody: response.body)
 
         var lines: [MetricLine] = []

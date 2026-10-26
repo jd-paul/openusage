@@ -63,13 +63,13 @@ final class ClaudeResetGrantsTests: XCTestCase {
 
     func testRejectedOrUnreadableCheckThrows() {
         XCTAssertThrowsError(try resetsLine("", status: 401)) { error in
-            XCTAssertEqual(error as? ClaudeAuthError, .tokenExpired)
+            XCTAssertEqual(error as? ProviderError, .signInExpired(.claude))
         }
         XCTAssertThrowsError(try resetsLine("", status: 429)) { error in
-            XCTAssertEqual(error as? ClaudeUsageError, .requestFailed(429))
+            XCTAssertEqual(error as? ProviderError, .requestFailed(429))
         }
         XCTAssertThrowsError(try resetsLine("not json")) { error in
-            XCTAssertEqual(error as? ClaudeUsageError, .invalidResponse)
+            XCTAssertEqual(error as? ProviderError, .invalidResponse)
         }
     }
 

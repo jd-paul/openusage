@@ -13,7 +13,7 @@ final class ZAIQuotaValidationMapperTests: XCTestCase {
 
         for body in malformedLimits {
             XCTAssertThrowsError(try ZAIUsageMapper.mapQuota(Data(body.utf8)), body) { error in
-                XCTAssertEqual(error as? ZAIUsageError, .invalidResponse, body)
+                XCTAssertEqual(error as? ProviderError, .invalidResponse, body)
             }
         }
     }
@@ -21,7 +21,7 @@ final class ZAIQuotaValidationMapperTests: XCTestCase {
     func testMalformedEnvelopeIsRejectedButExplicitEmptyLimitsRemainValid() throws {
         for body in ["not-json", #"{"data":[]}"#, #"{"data":{}}"#, #"{"data":{"limits":{}}}"#] {
             XCTAssertThrowsError(try ZAIUsageMapper.mapQuota(Data(body.utf8)), body) { error in
-                XCTAssertEqual(error as? ZAIUsageError, .invalidResponse, body)
+                XCTAssertEqual(error as? ProviderError, .invalidResponse, body)
             }
         }
 

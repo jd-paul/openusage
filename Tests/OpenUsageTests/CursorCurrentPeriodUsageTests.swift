@@ -63,6 +63,6 @@ final class CursorCurrentPeriodUsageTests: XCTestCase {
         let snapshot = await runtime.refresh()
 
         guard case .badge(_, let text, _, _)? = snapshot.lines.first else { return XCTFail("Expected an error badge") }
-        XCTAssertEqual(text, CursorAuthError.tokenExpired.localizedDescription)
+        XCTAssertEqual(text, ProviderError.signInExpired(.cursor).localizedDescription)
     }
 }

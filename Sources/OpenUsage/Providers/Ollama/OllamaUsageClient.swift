@@ -29,7 +29,7 @@ struct OllamaUsageClient: Sendable {
 
     private func send(method: String, path: String, apiKey: String) async throws -> HTTPResponse {
         guard let url = URL(string: Self.host + path) else {
-            throw OllamaUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         return try await http.send(HTTPRequest(
             method: method,
@@ -40,22 +40,5 @@ struct OllamaUsageClient: Sendable {
             ],
             timeout: 15
         ))
-    }
-}
-
-enum OllamaUsageError: Error, LocalizedError, Equatable {
-    case connectionFailed
-    case invalidResponse
-    case requestFailed(Int)
-
-    var errorDescription: String? {
-        switch self {
-        case .connectionFailed:
-            return ProviderUsageErrorText.connectionFailed
-        case .invalidResponse:
-            return ProviderUsageErrorText.invalidResponse
-        case .requestFailed(let status):
-            return ProviderUsageErrorText.requestFailed(statusCode: status)
-        }
     }
 }

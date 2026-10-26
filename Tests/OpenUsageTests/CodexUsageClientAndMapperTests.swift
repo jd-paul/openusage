@@ -31,10 +31,10 @@ final class CodexUsageClientAndMapperTests: XCTestCase {
         do {
             _ = try await CodexUsageClient(http: http).refreshToken("refresh")
             XCTFail("expected refreshToken to throw")
-        } catch let error as CodexAuthError {
-            XCTAssertEqual(error, .sessionExpired)
+        } catch let error as ProviderError {
+            XCTAssertEqual(error, .signInExpired(.codex))
         } catch {
-            XCTFail("expected CodexAuthError.sessionExpired, got \(error)")
+            XCTFail("expected ProviderError.signInExpired(.codex), got \(error)")
         }
     }
 

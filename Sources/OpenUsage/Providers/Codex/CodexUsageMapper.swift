@@ -13,14 +13,10 @@ enum CodexUsageMapper {
         resetCredits: HTTPResponse? = nil,
         now: Date = Date()
     ) throws -> CodexMappedUsage {
-        try ProviderAuthRetry.requireSuccess(
-            response,
-            authExpired: CodexAuthError.tokenExpired,
-            requestFailed: { CodexUsageError.requestFailed($0) }
-        )
+        try ProviderAuthRetry.requireSuccess(response, kind: .codex)
 
         guard let body = ProviderParse.jsonObject(response.body) else {
-            throw CodexUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
 
         var lines: [MetricLine] = []
@@ -342,21 +338,4 @@ enum CodexUsageMapper {
         }
     }
 
-}
-
-enum CodexUsageError: Error, LocalizedError, Equatable {
-    case requestFailed(Int)
-    case invalidResponse
-    case connectionFailed
-
-    var errorDescription: String? {
-        switch self {
-        case .requestFailed(let statusCode):
-            return ProviderUsageErrorText.requestFailed(statusCode: statusCode)
-        case .invalidResponse:
-            return ProviderUsageErrorText.invalidResponse
-        case .connectionFailed:
-            return ProviderUsageErrorText.connectionFailed
-        }
-    }
 }

@@ -32,14 +32,14 @@ extension AccountProviderRuntime {
     /// answers with `access_token` and no `refresh_token`. The new JWT then works as the next refresh
     /// token, the same way the login poll pairs them. `shouldLogout` means Cursor ended the session.
     func refreshCursorTokens(_ tokens: OAuthTokens) async throws -> OAuthTokens {
-        guard let refreshToken = tokens.refreshToken else { throw CursorAuthError.tokenExpired }
+        guard let refreshToken = tokens.refreshToken else { throw ProviderError.signInExpired(.cursor) }
         let response = try await CursorUsageClient(http: http).refreshToken(refreshToken)
         let body = ProviderParse.jsonObject(response.body)
-        if body?["shouldLogout"] as? Bool == true { throw CursorAuthError.sessionExpired }
+        if body?["shouldLogout"] as? Bool == true { throw ProviderError.signInExpired(.cursor) }
         guard (200..<300).contains(response.statusCode),
               let accessToken = body?["access_token"] as? String,
               !accessToken.isEmpty
-        else { throw CursorAuthError.tokenExpired }
+        else { throw ProviderError.signInExpired(.cursor) }
         var refreshed = tokens
         refreshed.accessToken = accessToken
         refreshed.refreshToken = body?["refresh_token"] as? String ?? accessToken

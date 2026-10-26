@@ -16,7 +16,7 @@ enum OpenCodeUsageMapper {
 
     static func meterLines(_ response: HTTPResponse, capturedAt: Date = Date()) throws -> [MetricLine] {
         guard let body = ProviderParse.jsonObject(response.body) else {
-            throw OpenCodeUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         // Compare two server-authored instants when possible. This removes Mac clock skew from the
         // placeholder test. A missing or unparseable HTTP Date header is allowed by HTTP, so direct
@@ -28,7 +28,7 @@ enum OpenCodeUsageMapper {
 
     static func meterLines(body: [String: Any], capturedAt: Date = Date()) throws -> [MetricLine] {
         guard let usage = body["usage"] as? [String: Any] else {
-            throw OpenCodeUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         return [
             try window(usage["rolling"], label: "Session", periodMs: MetricPeriod.sessionMs,
@@ -74,7 +74,7 @@ enum OpenCodeUsageMapper {
               let resetString = object["resetsAt"] as? String,
               let reportedReset = OpenUsageISO8601.date(from: resetString)
         else {
-            throw OpenCodeUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         let used = ProviderParse.clampPercent(percent)
         var resetsAt: Date? = reportedReset

@@ -5,14 +5,12 @@ enum ProviderAuthRetry {
         response.statusCode == 401 || response.statusCode == 403
     }
 
-    static func requireSuccess(
-        _ response: HTTPResponse,
-        authExpired: Error,
-        requestFailed: (Int) -> Error
-    ) throws {
-        if isAuthFailure(response) { throw authExpired }
+    /// Triages a non-2xx: 401/403 means the sign-in expired, anything else is a request failure that
+    /// carries its status.
+    static func requireSuccess(_ response: HTTPResponse, kind: ProviderKind) throws {
+        if isAuthFailure(response) { throw ProviderError.signInExpired(kind) }
         guard (200..<300).contains(response.statusCode) else {
-            throw requestFailed(response.statusCode)
+            throw ProviderError.requestFailed(response.statusCode)
         }
     }
 

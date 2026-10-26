@@ -104,13 +104,13 @@ final class ResetClaimServiceTests: XCTestCase {
     }
 
     func testErrorsMapToTheAdviceTheMessageGives() {
-        XCTAssertEqual(ResetClaimFailure(ClaudeAuthError.tokenExpired), .signInExpired)
-        XCTAssertEqual(ResetClaimFailure(CodexAuthError.sessionExpired), .signInExpired)
+        XCTAssertEqual(ResetClaimFailure(ProviderError.signInExpired(.claude)), .signInExpired)
+        XCTAssertEqual(ResetClaimFailure(ProviderError.signInExpired(.codex)), .signInExpired)
         XCTAssertEqual(ResetClaimFailure(LoginError.cancelled), .signInExpired)
         XCTAssertEqual(ResetClaimFailure(URLError(.timedOut)), .connection)
-        XCTAssertEqual(ResetClaimFailure(ClaudeUsageError.connectionFailed), .connection)
-        XCTAssertEqual(ResetClaimFailure(CodexUsageError.connectionFailed), .connection)
-        XCTAssertEqual(ResetClaimFailure(ClaudeUsageError.requestFailed(500)), .refused)
+        XCTAssertEqual(ResetClaimFailure(ProviderError.connectionFailed), .connection)
+        XCTAssertEqual(ResetClaimFailure(ProviderError.connectionFailed), .connection)
+        XCTAssertEqual(ResetClaimFailure(ProviderError.requestFailed(500)), .refused)
     }
 
     func testEveryOutcomeGetsAPlainMessage() {

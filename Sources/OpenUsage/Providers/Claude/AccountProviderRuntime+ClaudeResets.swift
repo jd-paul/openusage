@@ -132,11 +132,11 @@ extension AccountProviderRuntime {
     private func claudeOrganizationUUID(accessToken: String) async throws -> String {
         let response = try await ClaudeUsageClient(httpClient: http)
             .fetchProfile(accessToken: accessToken, config: Self.claudeConfig)
-        if ProviderAuthRetry.isAuthFailure(response) { throw ClaudeAuthError.tokenExpired }
+        if ProviderAuthRetry.isAuthFailure(response) { throw ProviderError.signInExpired(.claude) }
         guard let uuid = try ClaudeUsageClient.decodeProfile(response).organization?.uuid,
               UUID(uuidString: uuid) != nil
         else {
-            throw ClaudeUsageError.invalidResponse
+            throw ProviderError.invalidResponse
         }
         return uuid
     }

@@ -216,7 +216,7 @@ final class OpenCodeUsageMapperTests: XCTestCase {
         ]
         for body in [missingWeekly, malformedRolling] {
             XCTAssertThrowsError(try OpenCodeUsageMapper.meterLines(body: body)) { error in
-                XCTAssertEqual(error as? OpenCodeUsageError, .invalidResponse)
+                XCTAssertEqual(error as? ProviderError, .invalidResponse)
             }
         }
     }
@@ -246,10 +246,10 @@ final class OpenCodeUsageMapperTests: XCTestCase {
 
     func testMissingUsageOrWindowIsInvalid() {
         XCTAssertThrowsError(try OpenCodeUsageMapper.meterLines(body: [:])) { error in
-            XCTAssertEqual(error as? OpenCodeUsageError, .invalidResponse)
+            XCTAssertEqual(error as? ProviderError, .invalidResponse)
         }
         XCTAssertThrowsError(try OpenCodeUsageMapper.meterLines(body: ["usage": ["weekly": ["percent": 1]]])) { error in
-            XCTAssertEqual(error as? OpenCodeUsageError, .invalidResponse)
+            XCTAssertEqual(error as? ProviderError, .invalidResponse)
         }
     }
 

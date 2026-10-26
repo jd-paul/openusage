@@ -14,23 +14,6 @@ struct GrokRefreshResponse: Decodable, Hashable, Sendable {
     }
 }
 
-enum GrokUsageError: Error, LocalizedError, Equatable {
-    case connectionFailed
-    case invalidResponse
-    case requestFailed(Int)
-
-    var errorDescription: String? {
-        switch self {
-        case .connectionFailed:
-            return "Grok billing request failed. Check your connection."
-        case .invalidResponse:
-            return "Grok billing response changed."
-        case .requestFailed(let statusCode):
-            return "Grok billing request failed (HTTP \(statusCode)). Try again later."
-        }
-    }
-}
-
 struct GrokUsageClient: Sendable {
     static let settingsURL = URL(string: "https://cli-chat-proxy.grok.com/v1/settings")!
     static let refreshURL = URL(string: "https://auth.x.ai/oauth2/token")!
