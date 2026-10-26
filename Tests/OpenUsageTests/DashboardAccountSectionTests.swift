@@ -26,15 +26,15 @@ final class DashboardAccountSectionTests: XCTestCase {
 
     private let account: DashboardAccount = {
         let lines = ["Session", "Weekly", "Fable"].map { title in
-            let data = WidgetData(title: title, icon: .providerMark("claude"), kind: .percent, used: 30, limit: 100)
+            let data = WidgetData(title: title, icon: "claude", kind: .percent, used: 30, limit: 100)
             return DashboardLine(descriptor: WidgetDescriptor(id: title, providerID: "claude", metricLabel: title, sample: data), data: data)
         }
-        var resets = WidgetData(title: "Rate Limit Resets", icon: .providerMark("claude"), kind: .count, used: 2, limit: nil)
+        var resets = WidgetData(title: "Rate Limit Resets", icon: "claude", kind: .count, used: 2, limit: nil)
         resets.values = [MetricValue(number: 2, kind: .count, label: "available")]
         resets.showsResetExpiries = true
         resets.expiriesAt = [Date().addingTimeInterval(9 * 86_400)]
         return DashboardAccount(
-            provider: Provider(id: "claude@1", displayName: "Claude", icon: .providerMark("claude"), accountLabel: "Personal"),
+            provider: Provider(id: "claude@1", displayName: "Claude", icon: "claude", accountLabel: "Personal"),
             lines: lines,
             resets: resets
         )
@@ -69,7 +69,7 @@ final class DashboardAccountSectionTests: XCTestCase {
             badges: AccountBadges(plan: "Max 5x", staleness: StalenessHint(label: "1h ago", tooltip: "Last updated 1 hour ago"))
         ) { _ in EmptyView() }
         let headerless = DashboardAccountSection(account: account, showsAccountLine: false) { DashboardMetricLine(data: $0.data) }
-        let other = DashboardAccount(provider: Provider(id: "claude@2", displayName: "Claude", icon: .providerMark("claude")), lines: [])
+        let other = DashboardAccount(provider: Provider(id: "claude@2", displayName: "Claude", icon: "claude"), lines: [])
         let card = DashboardProviderCard(family: DashboardFamily(id: "claude", provider: account.provider, accounts: [account, other])) { _ in
             EmptyView()
         }
@@ -77,7 +77,7 @@ final class DashboardAccountSectionTests: XCTestCase {
             family: DashboardFamily(id: "claude", provider: account.provider, accounts: [account]),
             badges: { AccountBadges(resets: $0.resets, plan: "Max 5x", notice: "Refresh failed") }
         ) { _ in EmptyView() }
-        var credits = WidgetData(title: "Extra Usage", icon: .providerMark("codex"), kind: .count, used: 452, limit: nil)
+        var credits = WidgetData(title: "Extra Usage", icon: "codex", kind: .count, used: 452, limit: nil)
         credits.values = [MetricValue(number: 452, kind: .count, label: "credits")]
         var weekly = account.lines[1].data
         weekly.resetsAt = Date().addingTimeInterval(86_400)
@@ -268,7 +268,7 @@ final class DashboardAccountSectionTests: XCTestCase {
         addTeardownBlock { defaults.removePersistentDomain(forName: name) }
         let accounts = AccountStore(defaults: defaults, vault: InMemoryCredentialVault())
         let stored = accounts.add(kind: .claude, label: label, credential: .apiKey("key"))
-        let provider = Provider(id: stored.cardID, displayName: "Claude", icon: .providerMark("claude"), accountLabel: label)
+        let provider = Provider(id: stored.cardID, displayName: "Claude", icon: "claude", accountLabel: label)
         return (AccountRenameStore(accounts: accounts), provider)
     }
 

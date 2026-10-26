@@ -4,10 +4,10 @@ import XCTest
 final class DashboardFamilyTests: XCTestCase {
     func testEveryMetricWithDataIsALineAndAccountsShareTheirProviderCard() {
         func provider(_ id: String) -> Provider {
-            Provider(id: id, displayName: "Claude", icon: .providerMark("claude"), accountLabel: id)
+            Provider(id: id, displayName: "Claude", icon: "claude", accountLabel: id)
         }
         func data(_ title: String, hasData: Bool = true) -> WidgetData {
-            var data = WidgetData(title: title, icon: .providerMark("claude"), kind: .percent, used: 10, limit: 100)
+            var data = WidgetData(title: title, icon: "claude", kind: .percent, used: 10, limit: 100)
             data.hasData = hasData
             return data
         }
@@ -27,16 +27,16 @@ final class DashboardFamilyTests: XCTestCase {
 
     func testResetsRideOnTheAccountOnlyWhileOneIsAvailable() {
         func resets(_ count: Double) -> WidgetData {
-            var data = WidgetData(title: "Rate Limit Resets", icon: .providerMark("codex"), kind: .count, used: count, limit: nil)
+            var data = WidgetData(title: "Rate Limit Resets", icon: "codex", kind: .count, used: count, limit: nil)
             data.values = [MetricValue(number: count, kind: .count, label: "available")]
             data.showsResetExpiries = true
             return data
         }
-        let weekly = WidgetData(title: "Weekly", icon: .providerMark("codex"), kind: .percent, used: 10, limit: 100)
+        let weekly = WidgetData(title: "Weekly", icon: "codex", kind: .percent, used: 10, limit: 100)
         func account(resetCount: Double) -> DashboardAccount {
             let samples = ["resets": resets(resetCount), "weekly": weekly]
             let group = ProviderGroup(
-                provider: Provider(id: "codex@1", displayName: "Codex", icon: .providerMark("codex")),
+                provider: Provider(id: "codex@1", displayName: "Codex", icon: "codex"),
                 widgets: ["resets", "weekly"].map { PlacedWidget(descriptorID: $0) }
             )
             return DashboardFamily.make(groups: [group]) { widget in

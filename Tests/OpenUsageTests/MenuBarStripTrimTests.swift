@@ -33,7 +33,7 @@ final class MenuBarStripTrimTests: XCTestCase {
                 MenuBarContent.Group(
                     providerID: "claude",
                     displayName: "Claude",
-                    icon: .providerMark("claude"),
+                    icon: "claude",
                     metrics: [
                         MenuBarContent.Metric(id: "claude.session", label: "Session", value: "99%",
                                               hasData: true),

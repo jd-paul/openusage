@@ -35,7 +35,7 @@ struct ShareCardView: View {
     /// warning triangle.
     var headerRow: some View {
         HStack(spacing: 10) {
-            ProviderIcon(source: provider.icon, inset: 0.04)
+            ProviderIcon(id: provider.icon, inset: 0.04)
                 .frame(width: 22, height: 22)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(provider.displayName)

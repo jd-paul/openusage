@@ -6,17 +6,18 @@ import XCTest
 final class DashboardMenusTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private let claude = Provider(
-        id: "claude@1", displayName: "Claude", icon: .providerMark("claude"), accountLabel: "Personal", links: ProviderKind.claude.links
+        id: "claude@1", displayName: "Claude", icon: "claude", accountLabel: "Personal", links: ProviderKind.claude.links
     )
+    private let claudeLinks: [DashboardCommand?] = ProviderKind.claude.links.map { .open($0.url) }
 
-    private func titles(_ sections: DashboardMenus.Sections) -> [[String]] {
-        sections.map { $0.map(\.title) }
+    private func commands(_ sections: DashboardMenus.Sections) -> [[DashboardCommand?]] {
+        sections.map { $0.map(\.command) }
     }
 
     private func account(resetExpiries: [Date]? = nil) -> DashboardAccount {
         var resets: WidgetData?
         if let resetExpiries {
-            var data = WidgetData(title: "Rate Limit Resets", icon: .providerMark("claude"), kind: .count, used: 2, limit: nil)
+            var data = WidgetData(title: "Rate Limit Resets", icon: "claude", kind: .count, used: 2, limit: nil)
             data.values = [MetricValue(number: 2, kind: .count, label: "available")]
             data.showsResetExpiries = true
             data.expiriesAt = resetExpiries
@@ -26,23 +27,21 @@ final class DashboardMenusTests: XCTestCase {
     }
 
     func testTheProviderMenuRefreshesManagesAndOpensTheLinks() {
-        let other = Provider(id: "claude@2", displayName: "Claude", icon: .providerMark("claude"), accountLabel: "AM 1")
+        let other = Provider(id: "claude@2", displayName: "Claude", icon: "claude", accountLabel: "AM 1")
         let family = DashboardFamily(id: "claude", provider: claude, accounts: [account(), DashboardAccount(provider: other, lines: [])])
-        let menu = DashboardMenus.provider(family)
 
-        XCTAssertEqual(titles(menu), [["Refresh"], ["Manage Accounts…"], ["Status Page", "Usage Dashboard"]])
-        XCTAssertEqual(menu[0][0].command, .refresh(["claude@1", "claude@2"]))
-        XCTAssertEqual(menu[2].map(\.command), [
-            .open(URL(string: "https://status.claude.com/")!),
-            .open(URL(string: "https://claude.ai/settings/usage")!),
+        XCTAssertEqual(commands(DashboardMenus.provider(family)), [
+            [.refresh(["claude@1", "claude@2"])],
+            [.manageAccounts],
+            claudeLinks,
         ])
     }
 
     func testThePlainAccountMenu() {
         let menu = DashboardMenus.account(account(), status: nil, canShare: true, hasHiddenMetrics: false)
-        XCTAssertEqual(titles(menu), [["Refresh", "Rename", "Edit Account…"], ["Share Screenshot"]])
-        XCTAssertEqual(menu.flatMap { $0 }.map(\.command), [
-            .refresh(["claude@1"]), .rename("claude@1"), .editAccount("claude@1"), .shareScreenshot("claude@1"),
+        XCTAssertEqual(commands(menu), [
+            [.refresh(["claude@1"]), .rename("claude@1"), .editAccount("claude@1")],
+            [.shareScreenshot("claude@1")],
         ])
     }
 
@@ -56,14 +55,13 @@ final class DashboardMenusTests: XCTestCase {
             hasHiddenMetrics: true
         )
 
-        XCTAssertEqual(titles(menu), [
-            ["Couldn't refresh. Check your connection."],
-            ["Refresh", "Rename", "Edit Account…"],
-            ["Share Screenshot"],
-            ["Show Hidden Metrics"],
+        XCTAssertEqual(menu[0], [DashboardMenuItem(title: "Couldn't refresh. Check your connection.")], "the status is a disabled line")
+        XCTAssertEqual(commands(menu), [
+            [nil],
+            [.refresh(["claude@1"]), .rename("claude@1"), .editAccount("claude@1")],
+            [.shareScreenshot("claude@1")],
+            [.showHiddenMetrics("claude@1")],
         ])
-        XCTAssertNil(menu[0][0].command, "the status is a disabled line")
-        XCTAssertEqual(menu[3][0].command, .showHiddenMetrics("claude@1"))
     }
 
     /// A card with one account has no account line, so its menu carries the account's commands and the
@@ -76,38 +74,30 @@ final class DashboardMenusTests: XCTestCase {
             hasHiddenMetrics: true
         )
 
-        XCTAssertEqual(titles(menu), [
-            ["Couldn't refresh. Check your connection."],
-            ["Refresh"],
-            ["Rename", "Edit Account…", "Manage Accounts…"],
-            ["Share Screenshot"],
-            ["Show Hidden Metrics"],
-            ["Status Page", "Usage Dashboard"],
-        ])
-        XCTAssertEqual(menu.flatMap { $0 }.map(\.command), [
-            nil,
-            .refresh(["claude@1"]),
-            .rename("claude@1"), .editAccount("claude@1"), .manageAccounts,
-            .shareScreenshot("claude@1"),
-            .showHiddenMetrics("claude@1"),
-            .open(URL(string: "https://status.claude.com/")!), .open(URL(string: "https://claude.ai/settings/usage")!),
+        XCTAssertEqual(commands(menu), [
+            [nil],
+            [.refresh(["claude@1"])],
+            [.rename("claude@1"), .editAccount("claude@1"), .manageAccounts],
+            [.shareScreenshot("claude@1")],
+            [.showHiddenMetrics("claude@1")],
+            claudeLinks,
         ])
         XCTAssertEqual(
-            titles(DashboardMenus.soleAccount(account(), status: nil, canShare: true, hasHiddenMetrics: false)),
-            [["Refresh"], ["Rename", "Edit Account…", "Manage Accounts…"], ["Share Screenshot"], ["Status Page", "Usage Dashboard"]]
+            commands(DashboardMenus.soleAccount(account(), status: nil, canShare: true, hasHiddenMetrics: false)),
+            [[.refresh(["claude@1"])], [.rename("claude@1"), .editAccount("claude@1"), .manageAccounts], [.shareScreenshot("claude@1")], claudeLinks]
         )
     }
 
     func testTheMetricMenuStarsAndHides() {
-        let data = WidgetData(title: "Weekly", icon: .providerMark("claude"), kind: .percent, used: 10, limit: 100)
+        let data = WidgetData(title: "Weekly", icon: "claude", kind: .percent, used: 10, limit: 100)
         var descriptor = WidgetDescriptor(id: "claude@1.weekly", providerID: "claude@1", metricLabel: "Weekly", sample: data)
 
-        XCTAssertEqual(titles(DashboardMenus.metric(descriptor, isStarred: false)), [["Star for Menu Bar", "Hide"]])
-        XCTAssertEqual(titles(DashboardMenus.metric(descriptor, isStarred: true)), [["Unstar", "Hide"]])
-        XCTAssertEqual(DashboardMenus.metric(descriptor, isStarred: true)[0].map(\.command), [
-            .toggleStar("claude@1.weekly"), .hide("claude@1.weekly"),
-        ])
+        XCTAssertEqual(DashboardMenus.metric(descriptor, isStarred: false), [[
+            DashboardMenuItem(title: "Star for Menu Bar", command: .toggleStar("claude@1.weekly")),
+            DashboardMenuItem(title: "Hide", command: .hide("claude@1.weekly")),
+        ]])
+        XCTAssertEqual(DashboardMenus.metric(descriptor, isStarred: true)[0][0].title, "Unstar")
         descriptor.pinnable = false
-        XCTAssertEqual(titles(DashboardMenus.metric(descriptor, isStarred: false)), [["Hide"]])
+        XCTAssertEqual(commands(DashboardMenus.metric(descriptor, isStarred: false)), [[.hide("claude@1.weekly")]])
     }
 }

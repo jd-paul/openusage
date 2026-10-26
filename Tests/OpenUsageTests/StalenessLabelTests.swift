@@ -47,7 +47,7 @@ final class StalenessLabelTests: XCTestCase {
     /// failing, so the fossil persists — and is now labelled with its age instead of silently passing
     /// for current data.
     func testFailingRefreshKeepsFossilButLabelsItStale() async {
-        let provider = Provider(id: "devin", displayName: "Devin", icon: .providerMark("devin"))
+        let provider = Provider(id: "devin", displayName: "Devin", icon: "devin")
         let descriptor = WidgetDescriptor(
             id: "devin.weekly", providerID: provider.id, metricLabel: "Weekly quota",
             sample: WidgetData(title: "Weekly", icon: provider.icon, kind: .percent, used: 0, limit: 100)
@@ -86,7 +86,7 @@ final class StalenessLabelTests: XCTestCase {
     }
 
     private func makeStore() -> WidgetDataStore {
-        let provider = Provider(id: "devin", displayName: "Devin", icon: .providerMark("devin"))
+        let provider = Provider(id: "devin", displayName: "Devin", icon: "devin")
         let descriptor = WidgetDescriptor(
             id: "devin.weekly", providerID: provider.id, metricLabel: "Weekly quota",
             sample: WidgetData(title: "Weekly", icon: provider.icon, kind: .percent, used: 0, limit: 100)

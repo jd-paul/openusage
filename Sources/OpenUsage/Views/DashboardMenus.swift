@@ -58,9 +58,7 @@ enum DashboardMenus {
     }
 
     private static func links(_ provider: Provider) -> [DashboardMenuItem] {
-        provider.visibleLinks.compactMap { link in
-            URL(string: link.url).map { DashboardMenuItem(title: link.label, command: .open($0)) }
-        }
+        provider.links.map { DashboardMenuItem(title: $0.label, command: .open($0.url)) }
     }
 
     /// `status` explains the account line's warning or stale icon.

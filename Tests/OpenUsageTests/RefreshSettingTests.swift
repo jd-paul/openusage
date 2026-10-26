@@ -82,7 +82,7 @@ final class RefreshSettingTests: XCTestCase {
     }
 
     private func makeRuntime(used: Double) -> CountingProviderRuntime {
-        let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("codex"))
+        let provider = Provider(id: "test", displayName: "Test", icon: "codex")
         let descriptor = WidgetDescriptor(
             id: "test.session",
             providerID: "test",

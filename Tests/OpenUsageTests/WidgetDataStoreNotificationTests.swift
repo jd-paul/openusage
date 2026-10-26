@@ -38,7 +38,7 @@ final class WidgetDataStoreNotificationTests: XCTestCase {
         return defaults
     }
 
-    private static let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("cursor"))
+    private static let provider = Provider(id: "test", displayName: "Test", icon: "cursor")
 
     private static func descriptor() -> WidgetDescriptor {
         WidgetDescriptor(

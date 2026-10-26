@@ -46,7 +46,7 @@ final class FailureBackoffTests: XCTestCase {
 
     func testSuccessClearsBackoffSoLaterWakesAreNotSuppressed() async {
         var clock = Date(timeIntervalSince1970: 1_800_000_000)
-        let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("codex"))
+        let provider = Provider(id: "test", displayName: "Test", icon: "codex")
         let descriptor = WidgetDescriptor(
             id: "test.weekly", providerID: provider.id, metricLabel: "Weekly quota",
             sample: WidgetData(title: "Weekly", icon: provider.icon, kind: .percent, used: 0, limit: 100)
@@ -83,7 +83,7 @@ final class FailureBackoffTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeFailingRuntime() -> CountingProviderRuntime {
-        let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("codex"))
+        let provider = Provider(id: "test", displayName: "Test", icon: "codex")
         let descriptor = WidgetDescriptor(
             id: "test.weekly", providerID: provider.id, metricLabel: "Weekly quota",
             sample: WidgetData(title: "Weekly", icon: provider.icon, kind: .percent, used: 0, limit: 100)

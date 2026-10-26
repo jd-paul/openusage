@@ -54,7 +54,7 @@ final class MenuBarStripMemoTests: XCTestCase {
             groups: [MenuBarContent.Group(
                 providerID: "claude",
                 displayName: "Claude",
-                icon: .providerMark("claude"),
+                icon: "claude",
                 metrics: [metric]
             )]
         )

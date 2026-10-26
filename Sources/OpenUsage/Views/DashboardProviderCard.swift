@@ -33,7 +33,7 @@ struct DashboardProviderCard<Account: View>: View {
 
     var header: some View {
         HStack(spacing: 6) {
-            ProviderIcon(source: family.provider.icon, inset: 0.04)
+            ProviderIcon(id: family.provider.icon, inset: 0.04)
                 .frame(width: 16, height: 16)
                 .partyPulse(partyMode)
             if let account = family.soleAccount {

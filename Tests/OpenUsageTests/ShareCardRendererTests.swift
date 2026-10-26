@@ -52,7 +52,7 @@ final class ShareCardRendererTests: XCTestCase {
     /// another text-only row.
     func testCondensedTextRowOffsetsFollowNeighborRule() {
         func row(bounded: Bool) -> WidgetData {
-            WidgetData(title: "Row", icon: .providerMark("claude"), kind: .percent, used: 0, limit: bounded ? 100 : nil)
+            WidgetData(title: "Row", icon: "claude", kind: .percent, used: 0, limit: bounded ? 100 : nil)
         }
         // Meter, then a run of three text-only rows.
         let rows = [row(bounded: true), row(bounded: false), row(bounded: false), row(bounded: false)]

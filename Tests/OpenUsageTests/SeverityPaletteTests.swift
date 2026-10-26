@@ -75,11 +75,11 @@ final class SeverityPaletteTests: XCTestCase {
     }
 
     private func percent() -> WidgetData {
-        WidgetData(title: "Session", icon: .providerMark("claude"), kind: .percent, used: 100, limit: 100)
+        WidgetData(title: "Session", icon: "claude", kind: .percent, used: 100, limit: 100)
     }
 
     private func resets(_ expiries: [Date]) -> WidgetData {
-        var data = WidgetData(title: "Rate Limit Resets", icon: .providerMark("codex"), kind: .count, used: Double(expiries.count), limit: nil)
+        var data = WidgetData(title: "Rate Limit Resets", icon: "codex", kind: .count, used: Double(expiries.count), limit: nil)
         data.values = [MetricValue(number: Double(expiries.count), kind: .count, label: "available")]
         data.showsResetExpiries = true
         data.expiriesAt = expiries

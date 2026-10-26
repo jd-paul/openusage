@@ -5,8 +5,8 @@ import XCTest
 @MainActor
 final class ProviderHeaderLayoutTests: XCTestCase {
     private let longPlan = String(repeating: "Future Enterprise Entitlement ", count: 12)
-    private let codexProvider = Provider(id: "codex", displayName: "Codex", icon: .providerMark("codex"))
-    private let claudeProvider = Provider(id: "claude@1", displayName: "Claude", icon: .providerMark("claude"), accountLabel: "Personal")
+    private let codexProvider = Provider(id: "codex", displayName: "Codex", icon: "codex")
+    private let claudeProvider = Provider(id: "claude@1", displayName: "Claude", icon: "claude", accountLabel: "Personal")
     /// The card: the panel minus its margin on each side. An account pads itself.
     private let boxWidth = PanelMetrics.width - 2 * PanelMetrics.margin
 
@@ -22,10 +22,10 @@ final class ProviderHeaderLayoutTests: XCTestCase {
     /// A Codex account once lost its Weekly bar: name, plan, and metric shared one line, and the bar was
     /// dropped first when the line ran out of room. The name line now stands over every metric line.
     func testAccountDrawsItsBarBesideALongNameAndPlan() throws {
-        let weekly = WidgetData(title: "Weekly", icon: .providerMark("codex"), kind: .percent, used: 40, limit: 100)
-        var credits = WidgetData(title: "Credits", icon: .providerMark("codex"), kind: .count, used: 452, limit: nil)
+        let weekly = WidgetData(title: "Weekly", icon: "codex", kind: .percent, used: 40, limit: 100)
+        var credits = WidgetData(title: "Credits", icon: "codex", kind: .count, used: 452, limit: nil)
         credits.values = [MetricValue(number: 452, kind: .count, label: "credits")]
-        let provider = Provider(id: "codex@1", displayName: "Codex", icon: .providerMark("codex"), accountLabel: "Sunstory Engineering")
+        let provider = Provider(id: "codex@1", displayName: "Codex", icon: "codex", accountLabel: "Sunstory Engineering")
         let section = DashboardAccountSection(
             account: DashboardAccount(provider: provider, lines: [line(weekly), line(credits)]),
             badges: AccountBadges(plan: longPlan, notice: "Refresh failed")
@@ -139,7 +139,7 @@ final class ProviderHeaderLayoutTests: XCTestCase {
             return try XCTUnwrap(Bitmap(card.header, width: boxWidth, scale: 2).inkBands().first)
         }
         func account(_ label: String, _ id: String = "claude@1") -> Provider {
-            Provider(id: id, displayName: "Claude", icon: .providerMark("claude"), accountLabel: label)
+            Provider(id: id, displayName: "Claude", icon: "claude", accountLabel: label)
         }
         let providerHeader = try header([account("Attention Machine"), account("Home", "claude@2")])
         let namedClaude = try header([account("Claude")])
@@ -148,11 +148,11 @@ final class ProviderHeaderLayoutTests: XCTestCase {
         XCTAssertGreaterThan(try header([account("Attention Machine")]).last, providerHeader.last + 40, "the header shows the provider's name")
     }
 
-    private let weekly = WidgetData(title: "Weekly", icon: .providerMark("claude"), kind: .percent, used: 24, limit: 100)
-    private let session = WidgetData(title: "Session", icon: .providerMark("claude"), kind: .percent, used: 30, limit: 100)
+    private let weekly = WidgetData(title: "Weekly", icon: "claude", kind: .percent, used: 24, limit: 100)
+    private let session = WidgetData(title: "Session", icon: "claude", kind: .percent, used: 30, limit: 100)
 
     private func twoAccountCard() -> some View {
-        let work = Provider(id: "claude@2", displayName: "Claude", icon: .providerMark("claude"), accountLabel: "Work")
+        let work = Provider(id: "claude@2", displayName: "Claude", icon: "claude", accountLabel: "Work")
         let accounts = [claudeProvider, work].map { DashboardAccount(provider: $0, lines: [line(session), line(weekly)]) }
         return DashboardProviderCard(
             family: DashboardFamily(id: "claude", provider: claudeProvider, accounts: accounts),

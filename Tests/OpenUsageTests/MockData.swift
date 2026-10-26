@@ -6,9 +6,9 @@ import SwiftUI
 /// live `ProviderRuntime`s.
 enum MockData {
     // MARK: - Providers (brand colors copied from OpenUsage plugin.json)
-    static let claude = Provider(id: "claude", displayName: "Claude", icon: .providerMark("claude"))
-    static let codex = Provider(id: "codex", displayName: "Codex", icon: .providerMark("codex"))
-    static let cursor = Provider(id: "cursor", displayName: "Cursor", icon: .providerMark("cursor"))
+    static let claude = Provider(id: "claude", displayName: "Claude", icon: "claude")
+    static let codex = Provider(id: "codex", displayName: "Codex", icon: "codex")
+    static let cursor = Provider(id: "cursor", displayName: "Cursor", icon: "cursor")
 
     static let providers: [Provider] = [claude, codex, cursor]
 

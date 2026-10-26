@@ -36,7 +36,7 @@ final class WidgetPercentClampTests: XCTestCase {
     /// A refreshed store whose single provider emits one `.progress(format: .percent)` line with the
     /// given `used` against a limit of 100 — i.e. the real resolve path every provider funnels through.
     private func makePercentStore(used: Double, suite: String) async -> (WidgetDataStore, WidgetDescriptor) {
-        let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("codex"))
+        let provider = Provider(id: "test", displayName: "Test", icon: "codex")
         let descriptor = WidgetDescriptor(
             id: "test.metric",
             providerID: provider.id,

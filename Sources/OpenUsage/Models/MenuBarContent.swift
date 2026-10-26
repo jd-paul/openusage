@@ -16,7 +16,7 @@ struct MenuBarContent: Equatable {
     struct Group: Equatable {
         let providerID: String
         let displayName: String
-        let icon: IconSource
+        let icon: String
         let metrics: [Metric]
         /// The account's tag on the provider mark ("A1"), set only when the strip shows more than one
         /// account of the same provider, so the marks can be told apart.

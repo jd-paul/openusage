@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class WidgetDataStorePlanTests: XCTestCase {
     func testPlanMirrorsSnapshotAndHandlesMissingValues() async {
-        let provider = Provider(id: "claude", displayName: "Claude", icon: .providerMark("claude"))
+        let provider = Provider(id: "claude", displayName: "Claude", icon: "claude")
         let cases: [(name: String, plan: String?)] = [("plan", "Max 20x"), ("no-plan", nil)]
 
         for item in cases {

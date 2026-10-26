@@ -1,31 +1,22 @@
 import SwiftUI
 
-/// A provider's copied vector mark, keyed by provider id.
-struct IconSource: Hashable {
-    let providerID: String
-
-    /// Named constructor retained at call sites so the stored string's meaning stays explicit.
-    static func providerMark(_ providerID: String) -> IconSource {
-        IconSource(providerID: providerID)
-    }
-}
-
-/// Renders an `IconSource` in monochrome (`Theme.iconGray`): on the glass popover, icon color
+/// Renders a provider mark in monochrome (`Theme.iconGray`): on the glass popover, icon color
 /// reads as noise (WWDC25 — monochrome reduces it), and provider identity comes from the name
 /// beside the mark.
 struct ProviderIcon: View {
-    let source: IconSource
+    /// The mark's provider id (`ProviderKind.rawValue`), which names its SVG in `ProviderIcons/`.
+    let id: String
     /// Margin kept around a vector provider mark, forwarded to `ProviderIconShape`. Defaults to the
     /// breathing-room value used in list contexts (e.g. Settings); callers that want the mark to
     /// fill its box — like the section header matching the menu-bar strip glyph — pass a smaller value.
     var inset: CGFloat = 0.14
 
     var body: some View {
-        if let mark = ProviderMarks.mark(for: source.providerID) {
+        if let mark = ProviderMarks.mark(for: id) {
             ProviderIconShape(mark: mark, inset: inset)
                 .fill(Theme.iconGray)
         } else {
-            Image(systemName: ProviderMarks.symbolFallback(for: source.providerID))
+            Image(systemName: ProviderMarks.symbolFallback(for: id))
                 .foregroundStyle(Theme.iconGray)
         }
     }

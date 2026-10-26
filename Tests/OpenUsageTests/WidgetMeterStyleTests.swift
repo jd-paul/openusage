@@ -74,7 +74,7 @@ final class WidgetMeterStyleTests: XCTestCase {
     }
 
     func testUnboundedTileIdenticalUnderBothModes() async {
-        let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("codex"))
+        let provider = Provider(id: "test", displayName: "Test", icon: "codex")
         let descriptor = WidgetDescriptor(
             id: "test.today",
             providerID: provider.id,
@@ -164,7 +164,7 @@ final class WidgetMeterStyleTests: XCTestCase {
         sampleDisplayMode: WidgetDisplayMode = .used,
         suite: String
     ) -> (WidgetDataStore, WidgetDescriptor) {
-        let provider = Provider(id: "test", displayName: "Test", icon: .providerMark("codex"))
+        let provider = Provider(id: "test", displayName: "Test", icon: "codex")
         let descriptor = WidgetDescriptor(
             id: "test.metric",
             providerID: provider.id,

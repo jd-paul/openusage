@@ -50,7 +50,7 @@ final class DashboardLabelFitTests: XCTestCase {
     /// Robin's accounts, names and plans, as each card draws them: a one-account card in its header, a
     /// card with several accounts on each account's name line.
     func testRobinsAccountsFitWithoutTruncating() {
-        var resets = WidgetData(title: "Rate Limit Resets", icon: .providerMark("codex"), kind: .count, used: 2, limit: nil)
+        var resets = WidgetData(title: "Rate Limit Resets", icon: "codex", kind: .count, used: 2, limit: nil)
         resets.values = [MetricValue(number: 2, kind: .count, label: "available")]
         resets.showsResetExpiries = true
         let soleAccounts: [(ProviderKind, String, String, WidgetData?)] = [
@@ -125,7 +125,7 @@ final class DashboardLabelFitTests: XCTestCase {
                 .monospacedDigit().fixedSize())
             XCTAssertEqual(drawn, alone, accuracy: 0.5, "\(data.valueText) drew \(drawn) pt wide, not \(alone)")
         }
-        var critical = WidgetData(title: "Weekly", icon: .providerMark("claude"), kind: .percent, used: 100, limit: 100)
+        var critical = WidgetData(title: "Weekly", icon: "claude", kind: .percent, used: 100, limit: 100)
         critical.displayMode = .used
         let flame = idealWidth(Image(systemName: "flame.fill").font(.system(size: DashboardMetricLine.fontSize - 3)))
         let percent = ("100%" as NSString).size(withAttributes: [.font: font]).width
@@ -173,7 +173,7 @@ final class DashboardLabelFitTests: XCTestCase {
 
     private func account(_ kind: ProviderKind, _ name: String) -> DashboardAccount {
         DashboardAccount(provider: Provider(id: "\(kind.rawValue)@1", displayName: kind.displayName,
-                                            icon: kind.iconSource, accountLabel: name), lines: [])
+                                            icon: kind.rawValue, accountLabel: name), lines: [])
     }
 
     private func header(kind: ProviderKind, name: String, plan: String, resets: WidgetData? = nil) -> some View {
@@ -186,7 +186,7 @@ final class DashboardLabelFitTests: XCTestCase {
     }
 
     private func meter(left: Double, limit: Double) -> WidgetData {
-        var data = WidgetData(title: "On-demand", icon: .providerMark("cursor"), kind: .dollars, used: limit - left, limit: limit)
+        var data = WidgetData(title: "On-demand", icon: "cursor", kind: .dollars, used: limit - left, limit: limit)
         data.displayMode = .remaining
         return data
     }

@@ -49,7 +49,7 @@ private struct ProviderChoiceStep: View {
         SheetHeader(provider: nil, title: "Add Account", message: "Choose a provider to sign in to.")
         List(ProviderKind.allCases, id: \.self, selection: $flow.selection) { provider in
             HStack(spacing: 10) {
-                ProviderIcon(source: provider.iconSource, inset: 0.06)
+                ProviderIcon(id: provider.rawValue, inset: 0.06)
                     .frame(width: 20, height: 20)
                 Text(provider.displayName)
                 Spacer()
@@ -212,7 +212,7 @@ private struct SheetHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let provider {
-                ProviderIcon(source: provider.iconSource, inset: 0.04)
+                ProviderIcon(id: provider.rawValue, inset: 0.04)
                     .frame(width: 32, height: 32)
                     .padding(.bottom, 8)
             }

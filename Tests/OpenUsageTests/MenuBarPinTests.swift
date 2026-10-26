@@ -118,7 +118,7 @@ final class MenuBarPinTests: XCTestCase {
     /// Two providers, each with three percent metrics, are sufficient to exercise provider-local caps.
     private func makeRegistry() -> WidgetRegistry {
         let providers = ["a", "b"].map { id in
-            Provider(id: id, displayName: id.uppercased(), icon: .providerMark("cursor"))
+            Provider(id: id, displayName: id.uppercased(), icon: "cursor")
         }
         let descriptors = providers.flatMap { provider in
             (1...3).map { n in metric(provider, id: "\(provider.id).m\(n)", label: "M\(n)") }
