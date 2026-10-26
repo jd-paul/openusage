@@ -64,7 +64,6 @@ final class ResetDisplayTests: XCTestCase {
         let state = data.meterState(now: now)
         XCTAssertEqual(state, .level(.normal))
         XCTAssertNil(state.tooltip)
-        XCTAssertNil(data.paceTick(for: state, now: now))
     }
 
     func testMissingResetDateSignalKeepsCountdownForSubOnePercentSession() {
@@ -182,7 +181,8 @@ final class ResetDisplayTests: XCTestCase {
         XCTAssertEqual(resetsRows.map(\.id), runtimes.filter { [.claude, .codex].contains($0.account.kind) }
             .map { "\($0.account.cardID).rateLimitResets" })
         for row in resetsRows {
-            XCTAssertEqual(row.sample.title, "Rate Limit Resets")
+            XCTAssertEqual(row.sample.title, "Limit Resets")
+            XCTAssertEqual(row.metricLabel, "Rate Limit Resets")
             XCTAssertEqual(row.sample.traySuffix, "resets")
             XCTAssertTrue(row.sample.showsResetExpiries)
         }
