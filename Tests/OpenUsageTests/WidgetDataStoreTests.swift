@@ -39,7 +39,7 @@ final class WidgetDataStoreTests: XCTestCase {
         XCTAssertNotNil(persisted[fixture.0.id])
     }
 
-    func testFlushPendingSnapshotWorkPersistsDuringRefreshBatch() async {
+    func testQuittingDuringARefreshPassPersistsTheSnapshotsAlreadyFetched() async {
         let fast = makeRuntime("fast")
         let slowProvider = Provider(id: "slow", displayName: "Slow", icon: .providerMark("codex"))
         let slowSnapshot = ProviderSnapshot(providerID: slowProvider.id, displayName: slowProvider.displayName, lines: [])
@@ -54,11 +54,13 @@ final class WidgetDataStoreTests: XCTestCase {
         let refreshTask = Task { await store.refreshAll() }
 
         for _ in 0..<1_000 where !slow.didStart { await Task.yield() }
-        for _ in 0..<1_000 where store.localSnapshots[fast.0.id] == nil { await Task.yield() }
+        for _ in 0..<1_000 where store.snapshots[fast.0.id] == nil { await Task.yield() }
         XCTAssertTrue(slow.didStart)
-        XCTAssertNotNil(store.localSnapshots[fast.0.id])
+        XCTAssertNotNil(store.snapshots[fast.0.id], "a finished account shows without waiting for the pass")
+        XCTAssertTrue(ProviderSnapshotCache(userDefaults: defaults, storageKey: "snapshots")
+            .loadSnapshots(providerIDs: [fast.0.id]).isEmpty, "the pass persists once, at its end")
 
-        store.flushPendingSnapshotWork()
+        store.persistPendingSnapshots()
         let persisted = ProviderSnapshotCache(userDefaults: defaults, storageKey: "snapshots")
             .loadSnapshots(providerIDs: [fast.0.id])
         XCTAssertNotNil(persisted[fast.0.id])

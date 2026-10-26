@@ -78,6 +78,7 @@ final class RefreshSettingTests: XCTestCase {
             lines: [.progress(label: "Session", used: used, limit: 100, format: .percent)],
             refreshedAt: now.addingTimeInterval(-age)
         ))
+        cache.persistPending()
     }
 
     private func makeRuntime(used: Double) -> CountingProviderRuntime {

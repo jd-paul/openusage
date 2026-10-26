@@ -9,9 +9,9 @@ struct ProviderSnapshotCache {
     /// In-memory mirror of the persisted blob. Reads (`snapshot`, `loadSnapshots`, and the read inside
     /// `store`) hit this instead of re-decoding the whole all-providers JSON from `UserDefaults` on
     /// every call — a refresh pass otherwise paid O(N) full decodes (plus O(N) encodes) per pass on the
-    /// MainActor. The blob is decoded at most once per cache instance (first access); writes update the
-    /// mirror and persist through. Lock-backed so the value-type cache memoizes across calls and stays
-    /// safe to share.
+    /// MainActor. The blob is decoded at most once per cache instance (first access); `store` updates
+    /// the mirror and `persistPending` writes it through. Lock-backed so the value-type cache memoizes
+    /// across calls and stays safe to share.
     private let memo = OSAllocatedUnfairLock<Payload?>(initialState: nil)
 
     /// Provider IDs whose snapshot was written by `store` *during this cache instance's lifetime* (i.e.
@@ -20,7 +20,8 @@ struct ProviderSnapshotCache {
     /// but never counts as fresh, forcing one refresh on the first post-launch pass. Lock-backed for the
     /// same reason as `memo`: the value-type cache shares it across copies and stays safe. See #697.
     private let sessionWrites = OSAllocatedUnfairLock<Set<String>>(initialState: [])
-    private let hasDeferredWrites = OSAllocatedUnfairLock<Bool>(initialState: false)
+    /// Whether the mirror holds stores not yet written to `UserDefaults` (see `persistPending`).
+    private let hasPendingWrites = OSAllocatedUnfairLock<Bool>(initialState: false)
 
     private let userDefaults: UserDefaults
     private let storageKey: String
@@ -79,7 +80,9 @@ struct ProviderSnapshotCache {
         return fresh ? snapshot : nil
     }
 
-    func store(_ snapshot: ProviderSnapshot, persist: Bool = true) {
+    /// Records a successful snapshot in the mirror. It reaches disk on the next `persistPending`, so a
+    /// refresh pass of N accounts encodes the payload once instead of N times.
+    func store(_ snapshot: ProviderSnapshot) {
         guard !snapshot.lines.contains(where: \.isError) else {
             AppLog.debug(.cache, "skip write \(snapshot.providerID) (error snapshot)")
             return
@@ -87,16 +90,12 @@ struct ProviderSnapshotCache {
         AppLog.debug(.cache, "write \(snapshot.providerID)")
         // Mark this provider as written *this session* so its snapshot now satisfies the freshness gate
         // (a launch-loaded snapshot never does — see `sessionWrites`).
-        sessionWrites.withLock { $0.insert(snapshot.providerID) }
+        sessionWrites.withLock { _ = $0.insert(snapshot.providerID) }
         var payload = loadPayload()
         payload.snapshots[snapshot.providerID] = snapshot
-        if persist {
-            save(payload)
-        } else {
-            let updated = payload
-            memo.withLock { $0 = updated }
-            hasDeferredWrites.withLock { $0 = true }
-        }
+        let updated = payload
+        memo.withLock { $0 = updated }
+        hasPendingWrites.withLock { $0 = true }
     }
 
     /// Drops the stored snapshots of removed accounts and persists at once.
@@ -108,11 +107,9 @@ struct ProviderSnapshotCache {
         save(payload)
     }
 
+    /// Writes the mirror to `UserDefaults` when a `store` since the last write left it ahead of disk.
     func persistPending() {
-        guard hasDeferredWrites.withLock({ pending in
-            defer { pending = false }
-            return pending
-        }) else { return }
+        guard hasPendingWrites.withLock({ $0 }) else { return }
         save(loadPayload())
     }
 
@@ -147,6 +144,7 @@ struct ProviderSnapshotCache {
         // Update the in-memory mirror first so subsequent reads see this write even if the encode
         // below fails (the running session stays correct; only persistence is best-effort).
         memo.withLock { $0 = payload }
+        hasPendingWrites.withLock { $0 = false }
         // Fail loudly: a swallowed encode error would silently drop a snapshot from the persisted
         // cache. No behavior change (the write is still best-effort), but the failure is now visible.
         do {

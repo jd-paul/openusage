@@ -56,10 +56,8 @@ final class WidgetDataStore {
     /// is reported separately by `slowProviderRefreshThreshold`.
     static let defaultProviderRefreshTimeout: TimeInterval = 120
 
-    /// Rendered provider snapshots consumed by the UI.
+    /// The last good snapshot per account: the cached one at launch, replaced as refreshes land.
     var snapshots: [String: ProviderSnapshot] = [:]
-    /// Last-good snapshots produced on this Mac.
-    private(set) var localSnapshots: [String: ProviderSnapshot] = [:]
     /// The refresh in flight per account. Owning the task is what lets `apply` cancel a removed
     /// account's work; the keys drive the dashboard's spinners.
     private var inFlight: [String: Task<ProviderSnapshot?, Never>] = [:]
@@ -81,10 +79,6 @@ final class WidgetDataStore {
     /// Owns the quota pace-notification subsystem (dedup state, fire/deliver decision, trace). This store
     /// gathers each pass's visible bounded metrics and delegates.
     @ObservationIgnored private let notificationEvaluator = QuotaNotificationEvaluator()
-
-    @ObservationIgnored private var snapshotRebuildDeferrals = 0
-    @ObservationIgnored private var pendingSnapshotRebuild = false
-    @ObservationIgnored private var coalescedRebuildTask: Task<Void, Never>?
 
     /// Global meter style: whether every bounded tile (and the menu-bar value) renders as "used" or
     /// "left/remaining". Persisted so the choice survives relaunch; defaults to `.remaining`.
@@ -149,10 +143,7 @@ final class WidgetDataStore {
         // Stale-while-revalidate: load whatever was cached (expired included) so the menu bar and
         // dashboard show last-known values immediately at launch instead of "—"; the refresh loop
         // replaces them as soon as fresh data lands.
-        //
-        let loaded = cache.loadSnapshots(providerIDs: registry.providers.map(\.id))
-        self.localSnapshots = loaded
-        self.snapshots = loaded
+        self.snapshots = cache.loadSnapshots(providerIDs: registry.providers.map(\.id))
     }
 
     /// Adopts a new set of account runtimes in place. A removed account's refresh is cancelled and its
@@ -164,11 +155,10 @@ final class WidgetDataStore {
         let ids = Set(providersByID.keys)
         for (id, task) in inFlight where !ids.contains(id) { task.cancel() }
         inFlight = inFlight.filter { ids.contains($0.key) }
-        cache.remove(providerIDs: Set(localSnapshots.keys).subtracting(ids))
-        var next = localSnapshots.filter { ids.contains($0.key) }
+        cache.remove(providerIDs: Set(snapshots.keys).subtracting(ids))
+        var next = snapshots.filter { ids.contains($0.key) }
         let added = ids.subtracting(next.keys)
         for (cardID, snapshot) in cache.loadSnapshots(providerIDs: Array(added)) { next[cardID] = snapshot }
-        localSnapshots = next
         snapshots = next
         providerErrors = providerErrors.filter { ids.contains($0.key) }
         failureRetryAfter = failureRetryAfter.filter { ids.contains($0.key) }
@@ -178,28 +168,22 @@ final class WidgetDataStore {
     /// Everything stays MainActor-isolated; the overlap happens at the network awaits inside each
     /// provider, and the per-provider in-flight guard in `refresh` still prevents duplicate fetches.
     /// `force` bypasses the snapshot cache (the manual "refresh now" path); the periodic loop keeps
-    /// honoring it.
+    /// honoring it. The cache is persisted once at the end of the pass, not once per account.
     func refreshAll(force: Bool = false) async {
         // `Task {}` from MainActor context inherits the isolation (a task-group child can't capture
         // the non-Sendable store), so: fire one task per provider, then await them all.
         let providerIDs = registry.providers.map(\.id)
         let start = monotonicNow()
         AppLog.info(.refresh, "batch start (\(providerIDs.count) providers, force=\(force))")
-        snapshotRebuildDeferrals += 1
         let tasks = providerIDs.map { providerID in
-            Task { await self.refresh(providerID: providerID, force: force) }
+            Task { await self.refreshWithoutPersisting(providerID: providerID, force: force) }
         }
         var outcomes: [RefreshOutcome] = []
         outcomes.reserveCapacity(tasks.count)
         for task in tasks {
             outcomes.append(await task.value)
         }
-        snapshotRebuildDeferrals -= 1
-        if snapshotRebuildDeferrals == 0 {
-            coalescedRebuildTask?.cancel()
-            coalescedRebuildTask = nil
-            flushPendingSnapshotWork()
-        }
+        cache.persistPending()
         // Stamp the end of the pass so the footer countdown targets the next scheduled refresh
         // (this time + one refresh interval), mirroring the periodic loop that sleeps one interval
         // after each pass.
@@ -267,15 +251,27 @@ final class WidgetDataStore {
     /// (unknown / already in flight) so a wake-burst's suppression is visible in the logs.
     enum RefreshOutcome: Sendable { case refreshed, failed, cacheHit, skipped, backedOff }
 
+    /// Refresh one account and persist what it fetched.
     @discardableResult
     func refresh(providerID: String, force: Bool = false) async -> RefreshOutcome {
+        let outcome = await refreshWithoutPersisting(providerID: providerID, force: force)
+        cache.persistPending()
+        return outcome
+    }
+
+    /// Writes the snapshots fetched since the last persist to disk; the app calls it on quit so a
+    /// refresh pass cut short by termination keeps what it already fetched.
+    func persistPendingSnapshots() {
+        cache.persistPending()
+    }
+
+    private func refreshWithoutPersisting(providerID: String, force: Bool) async -> RefreshOutcome {
         if !force, let cached = cache.snapshot(providerID: providerID) {
             // Skip the no-op write: `@Observable` doesn't compare values, so unconditionally
             // re-assigning an unchanged snapshot would re-render the menu-bar label every pass.
             AppLog.debug(.refresh, "cache hit \(providerID)")
-            if localSnapshots[providerID] != cached {
-                localSnapshots[providerID] = cached
-                requestSnapshotRebuild()
+            if snapshots[providerID] != cached {
+                snapshots[providerID] = cached
             }
             return .cacheHit
         }
@@ -310,7 +306,7 @@ final class WidgetDataStore {
             AppLog.debug(.refresh, "dropped \(providerID) refresh; the account was removed")
             return .skipped
         }
-        guard var snapshot = result else {
+        guard let snapshot = result else {
             providerErrors[providerID] = "Refresh timed out after \(Int(providerRefreshTimeout))s"
             failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
             AppLog.warn(.refresh, "\(providerID) timed out after \(Int(providerRefreshTimeout))s")
@@ -345,9 +341,8 @@ final class WidgetDataStore {
         }
         // Recovered: drop any backoff so the provider resumes the normal cadence immediately.
         failureRetryAfter[providerID] = nil
-        localSnapshots[providerID] = snapshot
-        cache.store(snapshot, persist: snapshotRebuildDeferrals == 0)
-        requestSnapshotRebuild()
+        snapshots[providerID] = snapshot
+        cache.store(snapshot)
         AppLog.info(.refresh, "\(providerID) ok (\(durationMs)ms)")
         onRefreshOutcome?(providerID, .refreshed, force)
         return .refreshed
@@ -355,33 +350,6 @@ final class WidgetDataStore {
 
     private func durationMilliseconds(since start: TimeInterval) -> Int {
         max(0, Int((monotonicNow() - start) * 1000))
-    }
-
-    private func requestSnapshotRebuild() {
-        guard snapshotRebuildDeferrals > 0 else {
-            rebuildRenderedSnapshots()
-            return
-        }
-        pendingSnapshotRebuild = true
-        guard coalescedRebuildTask == nil else { return }
-        coalescedRebuildTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(150))
-            guard let self, !Task.isCancelled else { return }
-            self.coalescedRebuildTask = nil
-            self.flushPendingSnapshotWork()
-        }
-    }
-
-    func flushPendingSnapshotWork() {
-        if pendingSnapshotRebuild {
-            pendingSnapshotRebuild = false
-            rebuildRenderedSnapshots()
-        }
-        cache.persistPending()
-    }
-
-    private func rebuildRenderedSnapshots() {
-        snapshots = localSnapshots
     }
 
     /// The provider's latest refresh error, or `nil` when its last refresh succeeded.
