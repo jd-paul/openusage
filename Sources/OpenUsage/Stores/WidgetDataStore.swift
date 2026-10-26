@@ -89,6 +89,12 @@ final class WidgetDataStore {
         didSet { defaults.set(meterStyle.rawValue, forKey: Self.meterStyleKey) }
     }
 
+    /// Telemetry hook wired by `AppContainer`. Invoked once per *real* provider fetch (`.refreshed` or
+    /// `.failed` only, never the cache-hit/skip/backoff outcomes that the refresh timer produces in
+    /// bulk), so the recorder can roll daily usage and error counts up into one event per provider per
+    /// day. `nil` (and so a no-op) in tests and previews. Not observable UI state.
+    @ObservationIgnored var onRefreshOutcome: (@MainActor (String, RefreshOutcome, ErrorCategory?, Bool) -> Void)?
+
     /// Global reset-countdown format: relative ("Resets in 4d 17h") or absolute ("Resets tomorrow at
     /// 9:00 AM"). Persisted across relaunch; defaults to `.relative`. Toggled by clicking a reset label.
     var resetDisplayMode: ResetDisplayMode {
@@ -307,6 +313,7 @@ final class WidgetDataStore {
             providerErrors[providerID] = "Refresh timed out after \(Int(providerRefreshTimeout))s"
             failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
             AppLog.warn(.refresh, "\(providerID) timed out after \(Int(providerRefreshTimeout))s")
+            onRefreshOutcome?(providerID, .failed, .network, force)
             return .failed
         }
         // A canceled refresh may still return if a provider's underlying work is non-throwing. Never
@@ -329,6 +336,7 @@ final class WidgetDataStore {
             // Negative-cache the failure so a wake burst can't re-probe this provider in a tight loop.
             failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
             AppLog.warn(.refresh, "\(providerID) failed: \(message)")
+            onRefreshOutcome?(providerID, .failed, snapshot.errorCategory, force)
             return .failed
         }
         if providerErrors[providerID] != nil {
@@ -340,6 +348,7 @@ final class WidgetDataStore {
         cache.store(snapshot, persist: snapshotRebuildDeferrals == 0)
         requestSnapshotRebuild()
         AppLog.info(.refresh, "\(providerID) ok (\(durationMs)ms)")
+        onRefreshOutcome?(providerID, .refreshed, nil, force)
         return .refreshed
     }
 

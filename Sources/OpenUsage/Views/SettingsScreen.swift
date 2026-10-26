@@ -4,6 +4,7 @@ struct SettingsScreen: View {
     @Environment(AppContainer.self) private var container
     @Environment(LayoutStore.self) private var layout
     @Environment(WidgetDataStore.self) private var dataStore
+    @Environment(UpdaterController.self) private var updater
     @AppStorage(AppearanceSetting.key) private var appearance = AppearanceSetting.system
     @AppStorage(TimeFormatSetting.key) private var timeFormat = TimeFormatSetting.auto
     @State private var launchAtLogin = LaunchAtLoginSetting()
@@ -35,6 +36,8 @@ struct SettingsScreen: View {
                 }
                 usageDisplaySection
                 notificationsSection
+                privacySection
+                updatesSection
             }
             .padding(PanelMetrics.margin)
         }
@@ -66,6 +69,54 @@ struct SettingsScreen: View {
             notificationRow("Under 10% Remaining", isOn: $notifications.underTenPercent)
             notificationRow("Healthy Pace Changes", isOn: $notifications.healthyToClose)
             notificationRow("Near-Limit Pace Changes", isOn: $notifications.closeToRunningOut)
+        }
+    }
+
+    private var privacySection: some View {
+        section("Privacy") {
+            row("Help Make OpenUsage Better") {
+                Toggle("", isOn: Binding(
+                    get: { container.telemetry.isEnabled },
+                    set: { container.telemetry.setEnabled($0) }
+                ))
+                .settingsSwitchStyle()
+            }
+            // Daily activity and crash reports are always on; the toggle only gates extra analytics.
+            Text("Share additional anonymous usage stats that tell the team where to improve.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Visible whenever the updater is active (only the signed release build ships a feed; the dev
+    /// build and a bare `swift run`, with no feed, hide this).
+    @ViewBuilder
+    private var updatesSection: some View {
+        @Bindable var updater = updater
+        if updater.isActive {
+            section("Updates") {
+                row("Check Automatically") {
+                    Toggle("", isOn: $updater.automaticallyChecksForUpdates)
+                        .settingsSwitchStyle()
+                }
+                row("Beta Updates") {
+                    Toggle("", isOn: $updater.betaChannelEnabled)
+                        .settingsSwitchStyle()
+                }
+                // No version label here; the footer already shows it. The frame goes on the label so
+                // the glass background stretches the full row width instead of hugging the text.
+                Button { updater.checkForUpdates() } label: {
+                    Text("Check for Updates…").frame(maxWidth: .infinity)
+                }
+                .glassButtonStyle()
+                .controlSize(.regular)
+                .disabled(!updater.canCheckForUpdates)
+                .padding(.horizontal, 12)
+                .padding(.vertical, PanelMetrics.controlRowPadding)
+            }
         }
     }
 

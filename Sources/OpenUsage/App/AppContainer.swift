@@ -13,6 +13,9 @@ final class AppContainer {
     let dataStore: WidgetDataStore
     let transparency: PopoverTransparencyStore
     let renaming: AccountRenameStore
+    /// Anonymous usage telemetry (mandatory daily activity and crashes, optional provider rollups).
+    /// Exposed so Settings can toggle extra analytics and termination can flush queued events.
+    let telemetry: TelemetryRecorder
     @ObservationIgnored private var providers: [AccountProviderRuntime]
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
 
@@ -36,6 +39,29 @@ final class AppContainer {
         self.dataStore = dataStore
         self.transparency = PopoverTransparencyStore()
         self.renaming = AccountRenameStore(accounts: accounts)
+        // Telemetry state lives in its own UserDefaults suite, so the install id and the user's
+        // optional-analytics choice stay independent of any settings change. Ids are kind-scoped
+        // (`Account.kindScopedID`), so the events name providers, never accounts.
+        let telemetryStore = TelemetryStore()
+        let telemetry = TelemetryRecorder(
+            sink: PostHogTelemetrySink(enabled: telemetryStore.enabled),
+            store: telemetryStore,
+            snapshot: { [accounts, layout] in
+                var kinds: [String] = []
+                for kind in accounts.accounts.map(\.kind.rawValue) where !kinds.contains(kind) {
+                    kinds.append(kind)
+                }
+                return TelemetryConfigSnapshot(
+                    enabledProviders: kinds,
+                    enabledMetricIDs: layout.placed.map { Account.kindScopedID($0.descriptorID) },
+                    pinnedMetricIDs: layout.pinnedMetricIDs.map(Account.kindScopedID).sorted()
+                )
+            }
+        )
+        dataStore.onRefreshOutcome = { [weak telemetry] providerID, outcome, category, manual in
+            telemetry?.record(providerID: Account.kindScopedID(providerID), outcome: outcome, category: category, manual: manual)
+        }
+        self.telemetry = telemetry
         AppNotifications.shared.registerAsDelegate()
         observeAccounts()
     }
@@ -59,6 +85,9 @@ final class AppContainer {
             while !Task.isCancelled {
                 await dataStore.refreshAll()
                 await dataStore.evaluateNotifications()
+                // Day-rollover beat: emits `app_daily_active` once per local day and flushes prior-day
+                // provider rollups while optional analytics are on.
+                telemetry.tick()
                 try? await Task.sleep(for: .milliseconds(Int64(RefreshSetting.interval * 1_000)))
             }
         }

@@ -79,7 +79,7 @@ final class StatusItemController: NSObject {
     /// Token for the appearance-change observer; held to follow the documented removal pattern.
     private var appearanceObserver: NSObjectProtocol?
 
-    init(container: AppContainer) {
+    init(container: AppContainer, updater: UpdaterController) {
         self.container = container
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem = statusItem
@@ -101,6 +101,7 @@ final class StatusItemController: NSObject {
                     .environment(container.dataStore)
                     .environment(container.transparency)
                     .environment(container.renaming)
+                    .environment(updater)
             )
         )
         // The host view fills the panel. SwiftUI measures each screen and drives the panel height;

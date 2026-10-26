@@ -10,13 +10,22 @@ struct DashboardContentView: View {
     @Binding var reorderLift: ReorderLift?
     @Binding var scrollPosition: ScrollPosition
 
+    @Environment(UpdaterController.self) private var updater
     @State private var isAddingAccount = false
 
     var body: some View {
         PopoverScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                // A pending update found by a scheduled Sparkle check tops everything: it's the reminder
+                // the buried Sparkle window can't deliver for a dockless app.
+                if let updateVersion = updater.availableUpdateVersion {
+                    UpdateBannerCard(version: updateVersion)
+                        .padding(.bottom, PanelMetrics.sectionSpacing)
+                        .transition(.scale(scale: 0.95).combined(with: .opacity))
+                }
                 widgetContent
             }
+            .animation(Motion.spring, value: updater.availableUpdateVersion)
             .padding(PanelMetrics.margin)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
