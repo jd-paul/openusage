@@ -33,15 +33,6 @@ extension PaceMilestone {
         case .closeToRunningOut: return "Projected to finish before the limit resets."
         }
     }
-
-    /// One-sentence Settings tooltip (the (i) beside the row) explaining when this fires.
-    var tooltip: String {
-        switch self {
-        case .underTenPercent: return "Alert when a limit drops below 10% remaining."
-        case .healthyToClose: return "Alert when a limit is projected to finish with little left."
-        case .closeToRunningOut: return "Alert when a limit is projected to finish before it resets."
-        }
-    }
 }
 
 /// The pace-severity bucket a metric is in, derived from its `MeterState`. Only the three live-pace
