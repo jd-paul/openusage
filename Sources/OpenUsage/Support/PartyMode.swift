@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// True inside the readable "party" easter-egg mode, so leaf views (meter bars, provider marks) can
-/// join the party while staying legible. Default `false` everywhere — the windowless ShareCard export
-/// and every normal surface never opt in. (The unreadable "drunk" escalation does not set this; it just
-/// blurs everything.)
+/// True inside the "party" easter-egg mode, so the page tray, the cards and leaf views (meter bars,
+/// provider marks) can join the party while staying legible. Default `false` everywhere — the
+/// windowless ShareCard export and every normal surface never opt in.
 private struct PopoverPartyModeKey: EnvironmentKey {
     static let defaultValue = false
 }

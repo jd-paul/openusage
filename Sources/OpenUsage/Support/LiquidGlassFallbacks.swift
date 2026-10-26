@@ -11,9 +11,9 @@ import SwiftUI
 /// compile-time `#available` check, which is the intended way to back-deploy newer-SDK APIs.
 ///
 /// These gate purely on OS version. The popover backdrop is opaque by default (`PopoverBackdropView`'s
-/// opaque tray, matching `Theme.traySurface`); the opt-in Increase Transparency mode crossfades it to a
-/// behind-window vibrancy view so the desktop shows through, and the cards swap to a frosted standard
-/// material. Either way glass stays reserved for the footer chrome — its `.bar`/glass bar plus the
+/// opaque tray, matching `Theme.traySurface`); the secret-code egg crossfades it to a behind-window
+/// vibrancy view so the desktop shows through, and the cards swap to a frosted standard material.
+/// Either way glass stays reserved for the footer chrome — its `.bar`/glass bar plus the
 /// interactive glass controls — never the content cards.
 ///
 /// Keeping every `#available(macOS 26, *)` check in this one file means the views (`HeaderView`,
@@ -47,7 +47,7 @@ extension View {
     /// container, and keep the control `.buttonStyle(.plain)` so this modifier owns the surface — the
     /// system `.buttonStyle(.glass)` renders flat on a `Menu` (its own button chrome wins), and per-segment
     /// glass would split the capsule. `.interactive()` adds the hover/press shimmer + scale that reads
-    /// as Liquid Glass. In the readable translucent modes, `reinforced` adds that same adaptive frosted
+    /// as Liquid Glass. Under the secret-code party, `reinforced` adds that same adaptive frosted
     /// material and hairline under Liquid Glass so a light desktop cannot erase the capsule boundary.
     /// macOS 15 always gets the frosted material shape with a hairline border (no glass there).
     func interactiveGlass<Shape: InsettableShape>(in shape: Shape, reinforced: Bool = false) -> some View {

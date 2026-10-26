@@ -73,8 +73,8 @@ final class StatusItemController: NSObject {
         onDismiss: { [weak self] in self?.hidePanel() }
     )
     private let hostingController: NSHostingController<AnyView>
-    /// The panel's backdrop: an opaque tray by default, swapped to a behind-window vibrancy view when
-    /// the transparency style is non-opaque. Built once and toggled, so it can't race the style observer.
+    /// The panel's backdrop: an opaque tray by default, swapped to a behind-window vibrancy view while
+    /// the secret-code egg runs. Built once and toggled, so it can't race the observer.
     private let backdrop = PopoverBackdropView(cornerRadius: MenuBarPanel.cornerRadius)
     /// Token for the appearance-change observer; held to follow the documented removal pattern.
     private var appearanceObserver: NSObjectProtocol?
@@ -171,8 +171,8 @@ final class StatusItemController: NSObject {
 
         // Backdrop: by default an opaque tray so the data region never shows the desktop through it
         // (Liquid Glass stays reserved for the footer chrome, rendered in-window over this backing). The
-        // `PopoverBackdropView` also holds a behind-window vibrancy layer that the transparency style
-        // swaps in for Increase Transparency / the secret-code egg. It fills the whole window, so a
+        // `PopoverBackdropView` also holds a behind-window vibrancy layer that the secret-code egg
+        // swaps in. It fills the whole window, so a
         // screen-switch resize can't reveal a transparent strip, and any region SwiftUI leaves unpainted
         // shows the backdrop, not a raw hole. Its opaque tray is `Theme.trayNSColor` (tracks light/dark
         // and the forced appearance override) matching the SwiftUI tray (`DashboardView.PopoverSurface`).
@@ -221,41 +221,24 @@ final class StatusItemController: NSObject {
     /// shouldn't fade in from nothing).
     private var hasAppliedTransparency = false
 
-    /// Applies the resolved transparency style to the panel and re-arms on the next change. Mirrors
-    /// `StatusItemImageUpdater.update()`'s `withObservationTracking` re-arm (its `onChange` is
-    /// one-shot). Reads the
-    /// store's `effectiveStyle`, which folds in the persisted toggle, the egg state, and the system
-    /// accessibility flags — so this fires whenever any of them changes. Backdrop already exists (it's a
-    /// stored property), so the first call from `init` safely sets the initial look.
-    ///
-    /// On every change after launch the window alpha and the backdrop crossfade ease together in one
-    /// ~0.55s group, matching the SwiftUI side (`tooMuchTransparency`'s `.animation`), so toggling the
-    /// egg or Increase Transparency fades in and out instead of snapping.
+    /// Swaps the panel backdrop between the opaque tray and the behind-window vibrancy view and re-arms
+    /// on the next change. Mirrors `StatusItemImageUpdater.update()`'s `withObservationTracking` re-arm
+    /// (its `onChange` is one-shot). Reads the store's `partyActive`, which folds in the egg state and
+    /// the system accessibility flags — so this fires whenever either changes. Backdrop already exists
+    /// (it's a stored property), so the first call from `init` safely sets the initial look. After
+    /// launch the crossfade eases on the same ~0.55s as the SwiftUI side (`tooMuchTransparency`'s
+    /// `.animation`), so toggling the egg fades in and out instead of snapping.
     private func applyTransparency() {
-        let style = withObservationTracking {
-            container.transparency.effectiveStyle
+        let party = withObservationTracking {
+            container.transparency.partyActive
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.applyTransparency()
             }
         }
-        let mode: PopoverBackdropView.Mode = style.surfaceTreatment == .opaque ? .opaque : .translucent
         let shouldAnimate = hasAppliedTransparency && !ReduceAnimationsSetting.isEnabled
         hasAppliedTransparency = true
-        if shouldAnimate {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.55
-                context.allowsImplicitAnimation = true
-                panel.animator().alphaValue = style.windowAlpha
-                backdrop.setMode(mode, animated: true)
-            }
-        } else {
-            panel.alphaValue = style.windowAlpha
-            backdrop.setMode(mode, animated: false)
-        }
-        // Shadow isn't animatable; set it directly (the crossfade masks the change).
-        panel.hasShadow = style.wantsShadow
-        panel.invalidateShadow()
+        backdrop.setMode(party ? .translucent : .opaque, animated: shouldAnimate)
     }
 
     // MARK: - Show / hide

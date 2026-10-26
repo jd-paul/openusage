@@ -61,8 +61,8 @@ struct DashboardView: View {
             // clamps and the scroll views inside take the overflow.
             .frame(maxHeight: .infinity, alignment: .top)
             // Paint the page surface behind all content (and the footer). Opaque by default so the
-            // popover reads as one solid panel; under Increase Transparency / the egg it clears so the
-            // behind-window backdrop (or party gradient) shows through. Outermost so the footer, header,
+            // popover reads as one solid panel; under the egg it clears so the behind-window backdrop
+            // and party gradient show through. Outermost so the footer, header,
             // and scroll content all sit on it; separation from the footer comes from the native soft
             // scroll-edge fade (not a distinct bar).
             .background(PopoverSurface())
@@ -217,17 +217,14 @@ struct DashboardView: View {
             // sibling of `PopoverKeyReader` that only observes (never consumes), so it can't disturb
             // navigation or typing.
             .background(TooMuchTransparencyKeyReader { transparency.toggleSecretCode() })
-            // Reaches `modeBody`, the `PopoverSurface` background, and every card: drives whether surfaces
-            // paint their opaque base or clear to the behind-window vibrancy backdrop.
-            .environment(\.popoverSurfaceTreatment, transparency.surfaceTreatment)
             // The easter egg's visuals: the readable party (gradient backdrop + glowing rim, text crisp
-            // on frosted cards) for the secret code, or the woozy, barely-readable pink-glass drunk mode
-            // for "Drunk Mode". No-op for the normal/increased styles. Controls stay clickable (overlays
-            // don't hit-test), so the Settings "Drunk Mode" toggle is reachable while it's running.
-            .tooMuchTransparency(transparency.effectiveStyle)
+            // on frosted cards). Its `popoverPartyMode` flag reaches `modeBody`, the `PopoverSurface`
+            // background, and every card: it drives whether surfaces paint their opaque base or clear to
+            // the behind-window vibrancy backdrop. Controls stay clickable (overlays don't hit-test).
+            .tooMuchTransparency(active: transparency.partyActive)
             // Gate the egg's animation loops on whether the popover is on-screen. Applied OUTSIDE
-            // `.tooMuchTransparency` so it reaches both the gradient/rim/drunk layers that modifier adds
-            // and the in-content `partyPulse`. Hidden → the loops unmount their `TimelineView` clocks, so a
+            // `.tooMuchTransparency` so it reaches both the gradient/rim layers that modifier adds and
+            // the in-content `partyPulse`. Hidden → the loops unmount their `TimelineView` clocks, so a
             // left-on egg spends no CPU; a fresh mount on reopen / in-place activation starts them at once.
             // Sourced from the controller's show/hide chokepoints (`popoverShown`), not occlusion — a
             // `.canJoinAllSpaces` panel is briefly occluded mid Space-switch while still on-screen.
@@ -457,18 +454,16 @@ struct DashboardView: View {
 /// so glass stays chrome over solid content. Never hit-tests, so it can't steal clicks from the content
 /// above it.
 private struct PopoverSurface: View {
-    @Environment(\.popoverSurfaceTreatment) private var treatment
+    @Environment(\.popoverPartyMode) private var party
 
     var body: some View {
         Group {
-            switch treatment {
-            case .opaque:
-                Theme.traySurface
-            case .translucent:
-                // Clear so what's behind the page shows through: the behind-window vibrancy backdrop —
-                // the blurred desktop for increased/drunk, and the same desktop tinted by the party
-                // gradient for party mode.
+            if party {
+                // Clear so what's behind the page shows through: the behind-window vibrancy backdrop,
+                // the blurred desktop tinted by the party gradient.
                 Color.clear
+            } else {
+                Theme.traySurface
             }
         }
         .allowsHitTesting(false)

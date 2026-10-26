@@ -9,7 +9,7 @@ import SwiftUI
 ///
 /// The capsule is a `.buttonStyle(.plain)` `Menu` with one `interactiveGlass(in: Capsule())` treatment
 /// behind it — the system `.buttonStyle(.glass)` renders flat on a `Menu` (its own button chrome wins),
-/// so the treatment goes on the container. Increase Transparency adds an adaptive frosted base beneath
+/// so the treatment goes on the container. The secret-code party adds an adaptive frosted base beneath
 /// the glass for contrast; macOS 15 uses that frosted capsule as its fallback. The menu renders in its
 /// own `NSMenu`-backed window, which the panel's outside-click policy keeps the popover open for.
 ///
@@ -47,7 +47,7 @@ struct HeaderView: View {
                 .fixedSize()
                 .interactiveGlass(
                     in: Capsule(),
-                    reinforced: transparency.effectiveStyle.needsChromeLegibilityBacking
+                    reinforced: transparency.partyActive
                 )
         }
     }

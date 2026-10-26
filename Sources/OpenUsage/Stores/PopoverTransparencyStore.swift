@@ -1,32 +1,16 @@
 import AppKit
 import Observation
 
-/// Single source of truth for the popover's transparency: the persisted "Increase Transparency"
-/// preference, the ephemeral secret-code easter-egg state, and the live macOS accessibility flags that
-/// both the proper toggle and the egg must yield to. Both SwiftUI (via `surfaceTreatment`) and the AppKit panel
-/// (`StatusItemController`, via `effectiveStyle`) read this one store, so the SwiftUI surface and the
-/// window can't drift apart.
+/// Single source of truth for the popover's transparency: the panel is opaque unless the secret-code
+/// easter egg is on, and the egg yields to the live macOS accessibility flags. Both SwiftUI (via
+/// `partyActive`) and the AppKit panel (`StatusItemController`) read this one store, so the SwiftUI
+/// surface and the window can't drift apart.
 @MainActor
 @Observable
 final class PopoverTransparencyStore {
-    static let key = "increaseTransparency"
-
-    /// The persisted preference (default off). Stored here rather than as a view-local `@AppStorage` so
-    /// the AppKit panel honors exactly the value the Settings toggle writes. The no-op guard avoids a
-    /// redundant defaults write (and the firehose `UserDefaults.didChangeNotification` it would emit).
-    var increaseTransparency: Bool {
-        didSet {
-            guard increaseTransparency != oldValue else { return }
-            defaults.set(increaseTransparency, forKey: Self.key)
-        }
-    }
-
     /// Ephemeral easter-egg state. Never persisted: it clears on quit, but survives panel open/close
     /// within a run, so the only way out is re-typing the code.
     private(set) var secretCodeActive = false
-    /// "Drunk Mode" — escalates the party into the woozy, barely-readable state. Only meaningful while
-    /// `secretCodeActive`; cleared whenever the egg turns off.
-    var drunkMode = false
 
     /// Whether the popover is currently on-screen (ordered-on). Runtime-transient like `secretCodeActive`
     /// — never persisted. Set by `StatusItemController` at its `showPanel`/`hidePanel` chokepoints (the
@@ -42,16 +26,12 @@ final class PopoverTransparencyStore {
     private(set) var reduceTransparency: Bool
     private(set) var increaseContrast: Bool
 
-    @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var accessibilityObservation: Task<Void, Never>?
 
     init(
-        defaults: UserDefaults = .standard,
         reduceTransparency: Bool = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency,
         increaseContrast: Bool = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
     ) {
-        self.defaults = defaults
-        self.increaseTransparency = defaults.bool(forKey: Self.key)
         // The flags default to the live `NSWorkspace` values (production) but are injectable so tests can
         // pin them and exercise the accessibility clamp deterministically, independent of the test host.
         self.reduceTransparency = reduceTransparency
@@ -62,37 +42,26 @@ final class PopoverTransparencyStore {
     deinit { accessibilityObservation?.cancel() }
 
     /// Toggled by `TooMuchTransparencyKeyReader` when the full code is entered — so a second entry turns
-    /// the egg off. Exiting drops back to the base state (Normal / Increase Transparency): the persisted
-    /// `increaseTransparency` is preserved untouched (its Settings toggle is disabled while the egg runs),
-    /// so the resolver returns to whichever base the user was in before. Leaving the egg always clears
-    /// Drunk Mode (state 4 → base, never a dangling drunk-without-party).
+    /// the egg off.
     func toggleSecretCode() {
         secretCodeActive.toggle()
-        if !secretCodeActive { drunkMode = false }
         AppLog.info(.statusItem, "Too-much-transparency egg \(secretCodeActive ? "enabled" : "disabled")")
     }
 
     /// Flips the on-screen flag from `StatusItemController`'s show/hide chokepoints. Guards on change so a
-    /// redundant set doesn't churn observers. Orthogonal to `effectiveStyle` (it never enters `resolve`),
-    /// so toggling it re-renders only the SwiftUI egg's mount gate, never the AppKit backdrop crossfade.
+    /// redundant set doesn't churn observers. Orthogonal to `partyActive`, so toggling it re-renders only
+    /// the SwiftUI egg's mount gate, never the AppKit backdrop crossfade.
     func setPopoverShown(_ shown: Bool) {
         guard shown != popoverShown else { return }
         popoverShown = shown
     }
 
-    /// The resolved level both the panel and the SwiftUI surface render.
-    var effectiveStyle: PopoverTransparencyStyle {
-        PopoverTransparencyStyle.resolve(
-            increaseTransparency: increaseTransparency,
-            secretCodeActive: secretCodeActive,
-            drunkMode: drunkMode,
-            reduceTransparency: reduceTransparency,
-            increaseContrast: increaseContrast
-        )
+    /// Whether the panel and the SwiftUI surface render the party. Reduce Transparency and Increase
+    /// Contrast are accessibility *needs*, not preferences, so they clamp the panel to opaque first: the
+    /// egg being a hidden, user-invoked cheat code doesn't make overriding an accessibility setting safe.
+    var partyActive: Bool {
+        secretCodeActive && !reduceTransparency && !increaseContrast
     }
-
-    /// SwiftUI surface treatment derived from the resolved style.
-    var surfaceTreatment: PopoverSurfaceTreatment { effectiveStyle.surfaceTreatment }
 
     /// Accessibility display options post to `NSWorkspace`'s OWN notification center (never `.default`).
     /// The notification carries no payload, so we ignore it and re-read the flags on the main actor —
