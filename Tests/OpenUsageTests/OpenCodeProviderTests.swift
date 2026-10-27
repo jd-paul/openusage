@@ -35,9 +35,9 @@ final class OpenCodeProviderTests: XCTestCase {
         let reloaded = AccountStore(defaults: defaults, vault: InMemoryCredentialVault())
         XCTAssertEqual(reloaded.accounts.map(\.label), ["OpenCode", "Go Work"], "the new name isn't saved")
 
-        let provider = Provider(id: store.accounts[0].cardID, displayName: "OpenCode", icon: .providerMark("opencode"), accountLabel: store.accounts[0].label)
+        let provider = Provider(id: store.accounts[0].cardID, displayName: "OpenCode", icon: "opencode", accountLabel: store.accounts[0].label)
         let family = DashboardFamily(id: "opencode", provider: provider, accounts: [DashboardAccount(provider: provider, lines: [])])
-        XCTAssertEqual(family.headerTitle, "OpenCode")
+        XCTAssertNil(family.namedSoleAccount, "the header would read \"OpenCode — \(provider.accountLabel ?? "")\"")
     }
 
     func testRefreshTagsTheAccountWithTheGoPlan() async throws {
