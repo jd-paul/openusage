@@ -57,9 +57,8 @@ extension LayoutStore {
         metricOrder(for: providerID).compactMap { registry.descriptor(id: $0) }
     }
 
-    /// Pinned metrics grouped by provider, in the user's Customize order (provider order, then each
-    /// provider's metric order). A temporarily disabled provider is excluded from the rendered groups
-    /// but keeps its pins. Drives the menu-bar strip.
+    /// Pinned metrics grouped by provider, in the user's saved order (provider order, then each
+    /// provider's metric order). Drives the menu-bar strip.
     var pinnedGroups: [ProviderMetrics] {
         orderedProviders().compactMap { provider in
             let metrics = orderedSupportedMetrics(for: provider.id).filter { pinnedMetricIDs.contains($0.id) }

@@ -1,20 +1,20 @@
 import Foundation
 
-/// Everything a tile needs to render one metric.
+/// Everything a row needs to render one metric.
 ///
-/// A metric with a `limit` has a beginning and an end, so it renders as a capsule meter row.
-/// Without a `limit` it's an unbounded amount → a single right-aligned text line.
+/// A metric with a `limit` has a beginning and an end, so it renders as a bar with its value.
+/// Without a `limit` it's an unbounded amount: a single right-aligned value.
 struct WidgetData: Hashable {
-    /// Headline shown on a placed tile with no real backing metric (em dash, U+2014).
-    static let noDataHeadline = "—"
-    /// Subtitle shown on a placed tile with no real backing metric. Copy is intentionally exact.
-    static let noDataSubtitle = "No data"
+    /// The value a row shows when no real metric backs it (em dash, U+2014).
+    static let noDataValue = "—"
+    /// The detail an unbounded row shows when no real metric backs it.
+    static let noDataDetail = "No data"
 
     let title: String          // "Claude 5h", "Cursor credits"
     let icon: String
     let kind: MetricKind
     let used: Double
-    var limit: Double?         // nil => unbounded (number tile); cleared when a .values line resolves
+    var limit: Double?         // nil => unbounded; cleared when a .values line resolves
     var displayMode: WidgetDisplayMode = .used
     /// Global relative/absolute reset display, stamped by `WidgetDataStore` (like `displayMode`).
     var resetDisplayMode: ResetDisplayMode = .relative
@@ -31,15 +31,15 @@ struct WidgetData: Hashable {
     var valueTextOverride: String?
     /// Fixed trailing word for an unbounded row, e.g. "left" for an extra balance.
     var unboundedValueWord: String?
-    /// False when no real provider metric backs this tile. The view then shows a "No data" state
+    /// False when no real provider metric backs this row. The view then shows a "No data" state
     /// instead of the descriptor's placeholder template numbers. True for real data and direct fixtures.
     var hasData: Bool = true
     /// Raw numbers for an unbounded `.values` row (empty for meters). The view
     /// formats these at render time instead of reading a baked string — see `unboundedDetail`.
     var values: [MetricValue] = []
-    /// A tray-only unit word appended after this tile's menu-bar value for an unbounded count (e.g. Codex
-    /// Rate Limit Resets → "2 resets"). Set by the descriptor, so renaming the tile can't silently drop
-    /// the suffix — replaces matching on the tile's title. `nil` for tiles that show the bare value.
+    /// A tray-only unit word appended after this row's menu-bar value for an unbounded count (e.g. Codex
+    /// Rate Limit Resets → "2 resets"). Set by the descriptor, so renaming the row can't silently drop
+    /// the suffix — replaces matching on the row's title. `nil` for rows that show the bare value.
     var traySuffix: String?
     /// Session-window meters (Claude/OpenCode rolling 5-hour pools, Antigravity's pools) that show a full
     /// bar and no reset while the window hasn't begun — the value names the signal that detects that state,
@@ -150,10 +150,10 @@ struct WidgetData: Hashable {
     }
 
     /// Primary value string for the menu bar and unbounded rows. Returns the no-data
-    /// marker when no real metric backs the tile, so no surface can print the descriptor's placeholder
+    /// marker when no real metric backs the row, so no surface can print the descriptor's placeholder
     /// sample numbers as if they were measured usage.
     var valueText: String {
-        guard hasData else { return Self.noDataHeadline }
+        guard hasData else { return Self.noDataValue }
         if let valueTextOverride { return valueTextOverride }
         // A `.values` row's primary reading is its first value; meters fall through to the
         // bounded/`used` formatting.
@@ -193,7 +193,7 @@ struct WidgetData: Hashable {
     /// `unboundedValueWord` when set (extras always read "1,503 left", spend rows "$12.34 spent");
     /// otherwise it falls back to the global left/used mode word.
     var unboundedDetail: String {
-        guard hasData else { return Self.noDataSubtitle }
+        guard hasData else { return Self.noDataDetail }
         if let valueTextOverride { return valueTextOverride }
         if !values.isEmpty {
             // One value: a lone dollar amount takes the widget's trailing word ("$4.08 spent",

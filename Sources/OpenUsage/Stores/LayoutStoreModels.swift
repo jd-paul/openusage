@@ -13,14 +13,14 @@ struct ProviderMetrics: Identifiable {
     var id: String { provider.id }
 }
 
-/// Tone for the transient in-Customize pill (`LayoutStore.customizationNotice`): green success or
+/// Tone for the Accounts screen's transient pill (`LayoutStore.customizationNotice`): green success or
 /// orange denial.
 enum CustomizationNoticeTone {
     case positive
     case notice
 }
 
-/// The message + tone carried by the Customize pill's `TransientNotice`, so its two fields clear together.
+/// The message + tone carried by the Accounts pill's `TransientNotice`, so its two fields clear together.
 struct CustomizationNoticeContent {
     var message: String
     var tone: CustomizationNoticeTone

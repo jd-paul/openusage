@@ -10,7 +10,6 @@ import Foundation
 /// - `.values` — one or more typed, unbounded numbers.
 /// - `.badge` — a short status pill (e.g. "Disabled", or a pay-as-you-go cap). Use for state, not a number
 ///   to fill a bar with.
-/// - `.text` — a short provider notice.
 ///
 /// On failure, return `ProviderSnapshot.error(provider:error:)` with a typed provider error.
 @MainActor

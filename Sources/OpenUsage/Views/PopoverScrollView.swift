@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The scroll container shared by the popover's three full-height screens (dashboard, Customize,
+/// The scroll container shared by the popover's three full-height screens (dashboard, Accounts,
 /// Settings). Each one fills the region the pinned footer leaves and keeps the native scroll edge
 /// effect alive while hiding the scrollbar.
 ///

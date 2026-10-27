@@ -3,7 +3,7 @@ import SwiftUI
 @testable import OpenUsage
 
 @MainActor
-final class ReduceAnimationsSettingTests: XCTestCase {
+final class ScreenTransitionTests: XCTestCase {
     func testRootTransactionOnlyDisablesAnimationsWhenReduced() {
         for reduced in [false, true] {
             var transaction = Transaction(animation: .linear(duration: 1))

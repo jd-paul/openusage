@@ -43,20 +43,19 @@ final class LayoutStore {
     /// Placed widget being drag-reordered (transient). `PlacedWidget.id`, never persisted.
     var draggingID: UUID?
     /// Persisted provider display order (provider IDs). Drives both the dashboard groups and the
-    /// Customize sections, so the user can drag whole providers into the order they want.
+    /// Accounts list, so the user can drag whole providers into the order they want.
     var providerOrder: [String] = []
     /// Persisted metric order within each provider. Toggle switches do not mutate this, so turning a metric on
-    /// or off never makes rows jump around in Customize.
+    /// or off never makes rows jump around in Accounts.
     var metricOrderByProvider: [String: [String]] = [:]
 
     /// Descriptor ids pinned to the menu bar. Membership only — display order is derived from the
-    /// provider + metric order above, so pins follow the same sequence shown in Customize. Capped via
+    /// provider + metric order above, so pins follow the same sequence shown in Accounts. Capped via
     /// `canPin` to at most `maxPinsPerProvider` per provider (the strip stacks a provider's values in pairs).
     private(set) var pinnedMetricIDs: Set<String> = []
 
-    /// The three transient popover pills, each an auto-clearing `TransientNotice` (was three copy-pasted
-    /// value+trigger+clearTask machines). The public `pinLimitNotice`/`shareConfirmation`/
-    /// `customizationNotice` surface below forwards to these, so call sites are unchanged.
+    /// The three transient popover pills, each an auto-clearing `TransientNotice`. The public
+    /// `pinLimitNotice`/`shareConfirmation`/`customizationNotice` surface below forwards to these.
     private let pinNotice = TransientNotice<String?>(clearedValue: nil, timeout: .seconds(3))
     private let shareNotice = TransientNotice<Bool>(clearedValue: false, timeout: .seconds(2.5))
     private let customizeNotice = TransientNotice<CustomizationNoticeContent?>(clearedValue: nil, timeout: .seconds(2.5))
@@ -72,12 +71,11 @@ final class LayoutStore {
     /// Bumped on every successful share so the pill replays its pop-in even on a repeat copy.
     var shareConfirmationTrigger: Int { shareNotice.trigger }
 
-    /// Transient in-Customize notice (e.g. "Starred for menu bar", or the orange cap denial).
+    /// Transient notice on the Accounts screen (e.g. "Starred for menu bar", or the orange cap denial).
     var customizationNotice: String? { customizeNotice.value?.message }
     /// The notice's tone: `.positive` (green checkmark) or `.notice` (orange denial). Falls back to
     /// `.positive` once cleared (tone is only read while `customizationNotice` is non-nil, so the
-    /// snap-back is unobservable — message and tone now clear atomically, which the old split state
-    /// machine couldn't guarantee).
+    /// snap-back is unobservable: message and tone clear atomically).
     var customizationNoticeTone: CustomizationNoticeTone { customizeNotice.value?.tone ?? .positive }
     /// Bumped on every present so the pill replays its pop-in even when the same notice repeats.
     var customizationNoticeTrigger: Int { customizeNotice.trigger }
@@ -157,10 +155,10 @@ final class LayoutStore {
         syncPlacedOrder(persistChanges: initial.shouldPersistPlaced)
     }
 
-    // MARK: - Customize mutations
+    // MARK: - Layout mutations
 
-    /// Toggle a metric on (add to the placed list) or off (remove it). The single seam the Customize
-    /// switches drive, so on/off goes through the same add/remove path the rest of the app uses.
+    /// Toggle a metric on (add to the placed list) or off (remove it). The single seam the Accounts
+    /// screen's switches drive, so on/off goes through the same add/remove path the rest of the app uses.
     func setMetricEnabled(_ descriptorID: String, _ enabled: Bool) {
         recordingUndoStep {
             if enabled {
@@ -180,8 +178,7 @@ final class LayoutStore {
 
     // MARK: - Undo
 
-    /// Whether there's at least one customization step to walk back. Drives the Customize Undo button's
-    /// presence and the app-wide ⌘Z handler's no-op guard.
+    /// Whether there's at least one layout step to walk back: the app-wide ⌘Z handler's no-op guard.
     var canUndo: Bool { undoHistory.canUndo }
 
     /// A snapshot of the current undoable layout state.
@@ -213,9 +210,9 @@ final class LayoutStore {
         return result
     }
 
-    /// Walk back the most recent customization step, restoring the layout to its state just before that
+    /// Walk back the most recent layout step, restoring the layout to its state just before that
     /// action. A no-op (returns `false`) when there's nothing to undo. Repeated calls step further back.
-    /// Available app-wide (dashboard context menus and Customize alike), not just on one screen.
+    /// Available app-wide (the dashboard's menus and the Accounts screen alike), not just on one screen.
     @discardableResult
     func undo() -> Bool {
         guard let snapshot = undoHistory.popLast() else { return false }
@@ -291,14 +288,14 @@ final class LayoutStore {
         shareNotice.clear()
     }
 
-    /// Show a transient in-Customize pill (the floating confirmation above the Customize content).
+    /// Show a transient pill on the Accounts screen (the floating confirmation above its content).
     /// `tone` picks the green success style or the orange denial style. Auto-clears after a couple of
     /// seconds; also cleared on popover close via `clearCustomizationNotice`.
     func presentCustomizationNotice(_ message: String, tone: CustomizationNoticeTone = .positive) {
         customizeNotice.present(CustomizationNoticeContent(message: message, tone: tone))
     }
 
-    /// Clear any showing Customize pill and cancel its auto-clear task. Called when the popover closes
+    /// Clear any showing Accounts pill and cancel its auto-clear task. Called when the popover closes
     /// so a pill mid-countdown can't reappear stale on the next open.
     func clearCustomizationNotice() {
         customizeNotice.clear()

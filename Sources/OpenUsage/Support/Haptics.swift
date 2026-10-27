@@ -18,7 +18,7 @@ enum Haptics {
     /// `.alignment` is imperceptible, and anything stronger means private APIs.
     /// Minimum spacing between taps: rapid slot-crossings during a fast drag would otherwise
     /// run pulses together into a buzz. With the floor, every snap renders identically
-    /// everywhere — reorder on the dashboard, reorder in Customize.
+    /// everywhere — reorder on the dashboard, reorder in Accounts.
     private static let minimumSnapInterval: TimeInterval = 0.12
     private static var lastSnapAt: TimeInterval = 0
 

@@ -1,9 +1,9 @@
 import SwiftUI
 import os
 
-/// Drives the host panel's height on SwiftUI's animation clock. This is the "single clock" that fixes
-/// the old stutter and the diagonal jank: instead of AppKit running its own `setFrame` animation
-/// alongside SwiftUI's screen-slide (two clocks fighting), the window is a passive follower of one
+/// Drives the host panel's height on SwiftUI's animation clock, the one clock for the window and the
+/// screen slide: instead of AppKit running its own `setFrame` animation alongside SwiftUI's (two
+/// clocks fighting, a stutter and a diagonal jank), the window is a passive follower of one
 /// SwiftUI-owned, animated value.
 ///
 /// `animatableData == height` is the per-frame interpolation hook: during a `withAnimation`, the

@@ -71,7 +71,7 @@ final class WidgetDataStore {
     /// gathers each pass's visible bounded metrics and delegates.
     @ObservationIgnored private let notificationEvaluator = QuotaNotificationEvaluator()
 
-    /// Global meter style: whether every bounded tile (and the menu-bar value) renders as "used" or
+    /// Global meter style: whether every bounded row (and the menu-bar value) renders as "used" or
     /// "left/remaining". Persisted so the choice survives relaunch; defaults to `.remaining`.
     var meterStyle: WidgetDisplayMode {
         didSet { defaults.set(meterStyle.rawValue, forKey: Self.meterStyleKey) }
@@ -194,9 +194,9 @@ final class WidgetDataStore {
     /// Almost Out, but not pace-based milestones. A no-op when notifications are unconfigured
     /// (tests/previews) or all triggers are off.
     ///
-    /// State for metrics not visited this pass (e.g. a provider the user just disabled, or a metric
-    /// removed from the layout) is pruned, so re-enabling/re-adding starts fresh rather than carrying a
-    /// stale "already fired" flag.
+    /// State for metrics not visited this pass (an account the user removed, or a metric hidden from
+    /// the layout) is pruned, so adding it back starts fresh rather than carrying a stale "already
+    /// fired" flag.
     func evaluateNotifications(now: Date = Date()) async {
         guard let settingsProvider = notificationSettings else { return }
         let toggles = settingsProvider().toggles
@@ -332,8 +332,8 @@ final class WidgetDataStore {
            let data = resolve(line, descriptor: descriptor) {
             result = data
         } else {
-            // No real metric line backs this placed tile, so the sample's numbers are placeholders.
-            // Flag it as no-data; the tile renders "No data" instead of inventing usage.
+            // No real metric line backs this placed row, so the sample's numbers are placeholders.
+            // Flag it as no-data; the row renders "No data" instead of inventing usage.
             result = descriptor.sample
             result.hasData = false
         }

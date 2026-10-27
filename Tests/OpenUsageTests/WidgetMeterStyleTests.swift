@@ -64,10 +64,10 @@ final class WidgetMeterStyleTests: XCTestCase {
         )
 
         XCTAssertFalse(store.data(for: descriptor).hasData)
-        XCTAssertEqual(store.data(for: descriptor).valueText, WidgetData.noDataHeadline)
+        XCTAssertEqual(store.data(for: descriptor).valueText, WidgetData.noDataValue)
 
         store.meterStyle = .used
-        XCTAssertEqual(store.data(for: descriptor).valueText, WidgetData.noDataHeadline)
+        XCTAssertEqual(store.data(for: descriptor).valueText, WidgetData.noDataValue)
     }
 
     func testUnboundedTileIdenticalUnderBothModes() async {

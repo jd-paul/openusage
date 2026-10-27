@@ -263,7 +263,7 @@ struct DashboardView: View {
     /// Why an offset and not a SwiftUI `.transition`: the cards' fill is translucent `.quaternary`
     /// glass. Any transition carrying `.opacity` composites a screen into a transparency layer where
     /// that material has no vibrant backdrop to sample and resolves to its opaque near-white base — a
-    /// white flash across the grey cards (the regression this removes; it has no clean SwiftUI fix).
+    /// white flash across the grey cards, which no SwiftUI transition avoids.
     /// A pure offset never touches opacity, so the glass keeps sampling the live popover backdrop. The
     /// pages are a `ForEach` keyed by screen, so the incoming page keeps its identity (and scroll
     /// position) when the slide collapses back to one page. Settings lives in a sibling overlay after

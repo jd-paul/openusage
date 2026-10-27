@@ -2,7 +2,7 @@ import XCTest
 @testable import OpenUsage
 
 /// Covers the menu-bar pin model on `LayoutStore`: the ≤2-per-provider rendering cap, denial
-/// reasons/notices, order derivation from the Customize order, and persistence across relaunch.
+/// reasons/notices, order derivation from the saved layout order, and persistence across relaunch.
 @MainActor
 final class MenuBarPinTests: XCTestCase {
     func testNoPinsByDefault() {
@@ -36,7 +36,7 @@ final class MenuBarPinTests: XCTestCase {
         XCTAssertFalse(store.isPinned("a.m3"))
         XCTAssertEqual(store.pinnedCount(forProvider: "a"), 2)
 
-        // An already-pinned id stays pinnable so its toggle can still unpin it.
+        // An already-pinned id can still be pinned, so its toggle can unpin it.
         XCTAssertTrue(store.canPin("a.m1"))
 
         store.setPinned(false, for: "a.m1")

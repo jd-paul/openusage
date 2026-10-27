@@ -3,10 +3,8 @@ import AppKit
 @testable import OpenUsage
 
 /// Guards the popover's core invariant: the backdrop and card surfaces are fully opaque, so the data
-/// region never shows the desktop through it. This is the regression from `a234aeb` ("restore
-/// translucent footer with behind-window glass"), which swapped the opaque tray for a behind-window
-/// vibrancy view and shipped translucent in v0.7.0-beta.13. Glass is reserved for the footer chrome;
-/// the tray and cards themselves must stay solid in both appearances.
+/// region never shows the desktop through it. Glass is reserved for the footer chrome; the tray and
+/// cards themselves stay solid in both appearances.
 final class PopoverSurfaceOpacityTests: XCTestCase {
     private let appearances: [NSAppearance.Name] = [.aqua, .darkAqua]
 

@@ -1,8 +1,8 @@
 import XCTest
 @testable import OpenUsage
 
-/// Pins the timer semantics all three popover pills now share (pin-denial, share confirmation,
-/// Customize notice): present bumps the replay trigger and re-arms the auto-clear; a re-present
+/// Pins the timer semantics all three popover pills share (pin-denial, share confirmation, the
+/// Accounts screen's star notice): present bumps the replay trigger and re-arms the auto-clear; a re-present
 /// cancels the earlier timer so the newer value gets its full stay; `clear()` resets immediately.
 /// Margins are generous (sleeps only ever run long) to stay calm on a loaded CI machine.
 @MainActor

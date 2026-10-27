@@ -131,15 +131,15 @@ final class WidgetDataStoreTests: XCTestCase {
         XCTAssertNotNil(reset, "a meter with a reset date shows its countdown")
     }
 
-    func testDonutFractionMatchesRoundedHeadline() {
-        for (used, headline, fraction) in [
+    func testBarFractionMatchesRoundedValue() {
+        for (used, value, fraction) in [
             (0.3915, "0%", 0.0), (0.6, "1%", 0.01), (99.6, "100%", 1.0)
         ] {
             let data = WidgetData(
                 title: "Total usage", icon: "cursor", kind: .percent,
                 used: used, limit: 100
             )
-            XCTAssertEqual(data.valueText, headline)
+            XCTAssertEqual(data.valueText, value)
             XCTAssertEqual(data.fraction, fraction, accuracy: 0.0001)
         }
     }

@@ -1,8 +1,8 @@
 import Observation
 
 /// A small auto-clearing UI notice — the "shown for a couple of seconds, then it clears itself" pill
-/// behind the pin-denial notice, the "Copied to clipboard" share confirmation, and the Customize action
-/// notice: a value, a replay-trigger counter and a clear `Task`.
+/// behind the pin-denial notice, the "Copied to clipboard" share confirmation, and the Accounts screen's
+/// star notice: a value, a replay-trigger counter and a clear `Task`.
 ///
 /// `present(_:)` sets the value, bumps `trigger` (so a view keyed on it replays its pop-in even when the
 /// value is unchanged — e.g. the same denial twice in a row), and (re)starts the auto-clear timer.

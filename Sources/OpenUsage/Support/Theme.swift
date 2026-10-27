@@ -96,7 +96,7 @@ extension View {
             .overlay { Theme.cardShape.strokeBorder(.separator, lineWidth: 0.5) }
     }
 
-    /// The trailing on/off switch styling shared by every settings + Customize row toggle: no inline
+    /// The trailing on/off switch styling shared by every settings + Accounts row toggle: no inline
     /// label (the row's leading text is the label), the native switch style, small control size.
     func settingsSwitchStyle() -> some View {
         labelsHidden()

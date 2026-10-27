@@ -28,8 +28,7 @@ struct MenuBarContent: Equatable {
     /// (no orphan icon) — so the strip never renders "—" placeholders.
     let groups: [Group]
 
-    /// Nothing is pinned, every pinned provider is disabled, or no pinned metric has data yet — the
-    /// menu bar falls back to the app icon.
+    /// Nothing is pinned, or no pinned metric has data yet — the menu bar falls back to the app icon.
     var isEmpty: Bool { groups.isEmpty }
 
     /// VoiceOver summary for the rendered strip image, e.g.
@@ -46,9 +45,9 @@ struct MenuBarContent: Equatable {
 @MainActor
 enum MenuBarContentBuilder {
     /// Resolve pinned provider groups into menu-bar content. `groups` is `LayoutStore.pinnedGroups`
-    /// (already ordered, disabled providers excluded); `data` resolves each descriptor to its live
-    /// `WidgetData` (i.e. `WidgetDataStore.data(for:)`), so the values follow the global meter style
-    /// just like the dashboard tiles.
+    /// (already ordered); `data` resolves each descriptor to its live `WidgetData` (i.e.
+    /// `WidgetDataStore.data(for:)`), so the values follow the global meter style just like the
+    /// dashboard rows.
     ///
     /// The strip is dynamic: a pinned metric without data is dropped (one of two pins renders alone at
     /// full size), and a provider with no data-carrying pins contributes no icon at all. Pins are

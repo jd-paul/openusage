@@ -2,8 +2,7 @@ import XCTest
 @testable import OpenUsage
 
 /// The one number→text place. `.tray` is the menu-bar form (shortest), `.row` the popover form
-/// (abbreviated but money keeps cents). These cases pin the behavior the old `WidgetData.format`,
-/// `MenuBarContent.compactValue`, and `formatTokens` each had.
+/// (abbreviated but money keeps cents).
 final class MetricFormatterTests: XCTestCase {
     func testDollarsAbbreviateAboveAThousandPerStyle() {
         // Tray: whole dollars under $1k (decimals round away), abbreviated above.

@@ -12,12 +12,12 @@ final class WidgetNoDataTests: XCTestCase {
         let blank = store.data(for: missing)
         XCTAssertFalse(blank.hasData)
         XCTAssertEqual(blank.dashboardRow().mark, .value("No data"))
-        XCTAssertEqual(blank.valueText, WidgetData.noDataHeadline)
+        XCTAssertEqual(blank.valueText, WidgetData.noDataValue)
 
         let real = store.data(for: present)
         XCTAssertTrue(real.hasData)
         XCTAssertEqual(real.dashboardRow().mark, .bar(fill: 0.6, severity: .normal, value: "60%", reset: nil))
-        XCTAssertNotEqual(real.valueText, WidgetData.noDataHeadline)
+        XCTAssertNotEqual(real.valueText, WidgetData.noDataValue)
     }
 
     // Menu-bar ordering / no-data-skip / fallback are exercised on the real tray path

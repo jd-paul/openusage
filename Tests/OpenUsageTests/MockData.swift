@@ -12,21 +12,21 @@ enum MockData {
 
     static let providers: [Provider] = [claude, codex, cursor]
 
-    // MARK: - Registered widgets (limit => donut; no limit => number)
+    // MARK: - Registered widgets (limit => bar; no limit => value)
     static let descriptors: [WidgetDescriptor] = [
-        // Claude — percent limits (donuts) + dollar amounts (numbers)
+        // Claude — percent limits (bars) + dollar amounts (values)
         percent(id: "claude.session", provider: claude, title: "Session", used: 0),
         percent(id: "claude.weekly", provider: claude, title: "Weekly", used: 34),
         amount(id: "claude.extra", provider: claude, title: "Extra usage", used: 217.59),
         amount(id: "claude.today", provider: claude, title: "Today", used: 64.20),
 
-        // Codex — percent limits (donuts), credits as a counted limit (donut), dollars (number)
+        // Codex — percent limits (bars), credits as a counted limit (bar), dollars (value)
         percent(id: "codex.session", provider: codex, title: "Session", used: 80),
         percent(id: "codex.weekly", provider: codex, title: "Weekly", used: 20),
         countBounded(id: "codex.credits", provider: codex, title: "Extra Usage", used: 320, limit: 1000),
         amount(id: "codex.today", provider: codex, title: "Today", used: 569.09),
 
-        // Cursor — usage % (donut), credits balance (number), requests count with cap (donut), dollars (number)
+        // Cursor — usage % (bar), credits balance (value), requests count with cap (bar), dollars (value)
         percent(id: "cursor.usage", provider: cursor, title: "Usage", used: 98),
         amount(id: "cursor.credits", provider: cursor, title: "Credits", used: 12.48),
         countBounded(id: "cursor.requests", provider: cursor, title: "Requests", used: 412, limit: 500),

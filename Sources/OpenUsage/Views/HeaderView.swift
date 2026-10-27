@@ -1,11 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// The dashboard footer's trailing control: a single **Options ⌄** menu button in Liquid Glass. The
-/// earlier split button (a screen button + separate chevron) confused people — two tap targets in one
-/// capsule read as one — so everything now lives in one obvious menu: Accounts / Settings / Report an
-/// Issue / About / Quit. Accounts leads because it's the screen users reach for most; Settings stays
-/// one click away (and always via ⌘,).
+/// The dashboard footer's trailing control: a single **Options ⌄** menu button in Liquid Glass, one
+/// tap target holding one menu: Accounts / Settings / Report an Issue / About / Quit. Accounts leads
+/// because it's the screen users reach for most; Settings stays one click away (and always via ⌘,).
 ///
 /// The capsule is a `.buttonStyle(.plain)` `Menu` with one `interactiveGlass(in: Capsule())` treatment
 /// behind it — the system `.buttonStyle(.glass)` renders flat on a `Menu` (its own button chrome wins),

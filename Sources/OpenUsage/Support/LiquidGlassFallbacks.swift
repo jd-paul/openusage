@@ -81,7 +81,7 @@ extension View {
         }
     }
 
-    /// Pins a bar above scrolling content (the Customize / Settings back nav bar). On macOS 26 this
+    /// Pins a bar above scrolling content (the Accounts / Settings back nav bar). On macOS 26 this
     /// uses `safeAreaBar`, which also feeds the native scroll-edge blur as content passes under it; on
     /// macOS 15 it uses `safeAreaInset` (macOS 12+), which pins the bar identically but without the blur.
     @ViewBuilder
