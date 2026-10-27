@@ -42,7 +42,10 @@ enum LayoutBootstrap {
             defaults: defaults
         )
 
-        let providerOrder = persistence.loadProviderOrder() ?? registry.providers.map(\.id)
+        // No saved order means no account has been placed yet; `WidgetRegistry.orderedProviderIDs` then
+        // puts each account after the last of its provider, so a second account joins its provider
+        // without the user ever having dragged.
+        let providerOrder = persistence.loadProviderOrder() ?? []
         let metricOrderByProvider = persistence.loadMetricOrder().map {
             LayoutOrdering.normalizedMetricOrder($0, registry: registry)
         } ?? LayoutOrdering.defaultMetricOrder(registry: registry)

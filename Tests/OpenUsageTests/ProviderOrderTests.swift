@@ -38,6 +38,27 @@ final class ProviderOrderTests: XCTestCase {
         ])
     }
 
+    /// Claude A, Codex B, Claude C added without a drag: C joins A on the Accounts screen and the
+    /// dashboard alike, and still does after a relaunch. Before any drag there is no saved order, and
+    /// the whole registry standing in for one left C below B on the Accounts screen while the dashboard
+    /// grouped it under Claude.
+    func testASecondAccountJoinsItsProviderWithoutADrag() {
+        let app = makeApp()
+        let firstClaude = app.add(.claude)
+        let codex = app.add(.codex)
+        let secondClaude = app.add(.claude)
+
+        let accounts = [firstClaude.cardID, secondClaude.cardID, codex.cardID]
+        let dashboard = [["claude": [firstClaude.cardID, secondClaude.cardID]], ["codex": [codex.cardID]]]
+        XCTAssertEqual(app.accountsScreen, accounts)
+        XCTAssertEqual(app.dashboard, dashboard)
+
+        app.relaunch()
+
+        XCTAssertEqual(app.accountsScreen, accounts)
+        XCTAssertEqual(app.dashboard, dashboard)
+    }
+
     func testProviderRemovedAndAddedBackGoesToTheBottom() {
         let app = makeApp()
         let claude = app.add(.claude)
