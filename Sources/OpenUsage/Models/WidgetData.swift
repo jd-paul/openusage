@@ -65,6 +65,12 @@ struct WidgetData: Hashable {
     }
     var isBounded: Bool { limit != nil }
 
+    /// Whether the row's value is a Used/Left reading a click can flip: a bounded reading with data, not
+    /// a badge's text.
+    var hasMeterStyleToggle: Bool {
+        hasData && isBounded && valueTextOverride == nil
+    }
+
     var displayedValue: Double {
         guard displayMode == .remaining, let limit else { return used }
         return max(0, limit - used)

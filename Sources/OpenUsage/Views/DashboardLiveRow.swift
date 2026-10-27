@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// A metric row on the live dashboard. Rows with a clock re-render every 30 s so their reset stays live,
-/// and a click on the reset flips every row between countdown and exact time (`onToggleResetDisplay`);
+/// A metric row on the live dashboard. Rows with a clock re-render every 30 s so their reset stays live;
+/// a click on the value flips every row between used and left (`onToggleMeterStyle`, on a Used/Left
+/// reading) and a click on the reset between countdown and exact time (`onToggleResetDisplay`);
 /// nothing on a row reacts to the pointer — except the Limit Resets row, whose count is the one hover
 /// on the dashboard: the figure lights on a quaternary chip the moment the pointer arrives, the resets timeline opens below it after the hover dwell, anchored on the figure,
 /// and closes once the pointer has left both the figure and the popover (with a short grace to travel
@@ -10,6 +11,8 @@ struct DashboardLiveRow: View {
     let line: DashboardLine
     /// The Limit Resets row's claim seam, `nil` where resets can't be claimed.
     var resetClaim: ResetClaimService?
+    /// Flips the global Used/Left meter style, from the dashboard's data store.
+    var onToggleMeterStyle: (() -> Void)?
     /// Flips the global countdown/exact-time reset display, from the dashboard's data store.
     var onToggleResetDisplay: (() -> Void)?
 
@@ -36,10 +39,11 @@ struct DashboardLiveRow: View {
 
     @ViewBuilder
     private func row(now: Date) -> some View {
+        let flipStyle = line.data.hasMeterStyleToggle ? onToggleMeterStyle : nil
         if line.data.showsResetExpiries {
-            DashboardMetricRow(model: line.data.dashboardRow(now: now), onToggleResetDisplay: onToggleResetDisplay, figure: { AnyView(resetsTrigger($0)) })
+            DashboardMetricRow(model: line.data.dashboardRow(now: now), onToggleMeterStyle: flipStyle, onToggleResetDisplay: onToggleResetDisplay, figure: { AnyView(resetsTrigger($0)) })
         } else {
-            DashboardMetricRow(model: line.data.dashboardRow(now: now), onToggleResetDisplay: onToggleResetDisplay)
+            DashboardMetricRow(model: line.data.dashboardRow(now: now), onToggleMeterStyle: flipStyle, onToggleResetDisplay: onToggleResetDisplay)
         }
     }
 
