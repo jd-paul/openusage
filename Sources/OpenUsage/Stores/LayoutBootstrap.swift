@@ -50,11 +50,17 @@ enum LayoutBootstrap {
             LayoutOrdering.normalizedMetricOrder($0, registry: registry)
         } ?? LayoutOrdering.defaultMetricOrder(registry: registry)
 
-        // An existing value — including an empty array from a user who unpinned everything — wins. Only
-        // shown metrics keep a star: a layout saved before hiding unstarred loses the stars of its
-        // hidden metrics, and the fix is saved.
+        // A saved value — including an empty array from a user who unpinned everything — is the user's
+        // choice for the accounts it was made on; an account seen for the first time still gets its
+        // default stars, keyed on the default metrics this load seeds for the first time. Only shown
+        // metrics keep a star: a layout saved before hiding unstarred loses the stars of its hidden
+        // metrics, and the fix is saved.
         let savedPins = persistence.loadPins()
-        let knownPins = Set((savedPins ?? defaults.pinnedMetricIDs).filter { registry.descriptor(id: $0) != nil })
+        let defaultPins = Set(defaults.pinnedMetricIDs)
+        let startingPins = savedPins.map { Set($0).union(defaultPins.intersection(seededResult.newlySeededDefaults)) }
+            ?? defaultPins
+        let knownPins = startingPins.filter { registry.descriptor(id: $0) != nil }
+        let knownSavedPins = Set(savedPins ?? []).filter { registry.descriptor(id: $0) != nil }
         let placedIDs = Set(seededResult.placed.map(\.descriptorID))
         let pinnedMetricIDs = knownPins.intersection(placedIDs)
 
@@ -64,7 +70,7 @@ enum LayoutBootstrap {
             metricOrderByProvider: metricOrderByProvider,
             pinnedMetricIDs: pinnedMetricIDs,
             shouldPersistPlaced: seededResult.shouldPersistPlaced,
-            shouldPersistPins: savedPins != nil && pinnedMetricIDs != knownPins,
+            shouldPersistPins: savedPins != nil && pinnedMetricIDs != knownSavedPins,
             seededDefaultsToPersist: seededResult.shouldPersistSeededDefaults
                 ? seededResult.seededDefaults
                 : nil
@@ -74,6 +80,9 @@ enum LayoutBootstrap {
     private struct SeededDefaultsResult {
         let placed: [PlacedWidget]
         let seededDefaults: Set<String>
+        /// The default metrics this load seeds for the first time: a new account's, or every account's
+        /// on a fresh install.
+        let newlySeededDefaults: Set<String>
         let shouldPersistPlaced: Bool
         let shouldPersistSeededDefaults: Bool
     }
@@ -112,6 +121,7 @@ enum LayoutBootstrap {
         return SeededDefaultsResult(
             placed: placed + toAdd.map { PlacedWidget(descriptorID: $0) },
             seededDefaults: nextSeededDefaults,
+            newlySeededDefaults: knownDefaultSet.subtracting(seededDefaults),
             shouldPersistPlaced: !toAdd.isEmpty,
             shouldPersistSeededDefaults: shouldPersistSeededDefaults
         )
