@@ -266,3 +266,22 @@ extension AntigravityError: CategorizedError {
         }
     }
 }
+
+extension KimiAuthError: CategorizedError {
+    var errorCategory: ErrorCategory {
+        switch self {
+        case .notLoggedIn: .notLoggedIn
+        case .sessionExpired, .refreshRejected: .authExpired
+        }
+    }
+}
+
+extension KimiUsageError: CategorizedError {
+    var errorCategory: ErrorCategory {
+        switch self {
+        case .connectionFailed: .network
+        case .invalidResponse: .decoding
+        case .requestFailed(let status): ErrorCategory.http(status)
+        }
+    }
+}

@@ -42,6 +42,8 @@ enum DefaultLayout {
         "grok.weekly", "grok.trend",
         "grok.payAsYouGo", "grok.today", "grok.yesterday", "grok.last30",
 
+        "kimi.session", "kimi.weekly",
+
         "ollama.session", "ollama.weekly", "ollama.monthly", "ollama.purchasedCredits",
 
         "opencode.session", "opencode.weekly", "opencode.monthly", "opencode.trend",
@@ -82,6 +84,7 @@ enum DefaultLayout {
         "codex.session", "codex.weekly",
         "cursor.auto", "cursor.api",
         "copilot.premium",
+        "kimi.session", "kimi.weekly",
         // Ollama: Monthly is the current plans' meter. Legacy plans' Session and Weekly stay unpinned so
         // they don't spend the two-star cap on rows a current plan never shows.
         "ollama.monthly",
