@@ -44,7 +44,7 @@ should start in the menu bar to `DefaultLayout.pinnedMetricIDs`. Confirm both wi
 ## 5. Test
 
 Add focused tests under `Tests/OpenUsageTests/`: the mapper against recorded response bodies (success,
-an empty plan, an error body), and the login's response parsing. Run `swift test --filter <Name>`.
+an empty plan, an error body), and the login's response parsing. Run `script/test_quiet.sh --filter <Name>`.
 
 ## 6. Document
 

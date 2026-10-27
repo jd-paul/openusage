@@ -71,9 +71,13 @@ owner before choosing — never pick silently:
 
 ```sh
 swift build
-swift test
+script/test_quiet.sh [--filter <Suite>]
 ./script/build_and_run.sh verify
 ```
+
+`script/test_quiet.sh` is the only way to run the tests on a Mac someone is using: the suite hosts real
+windows, and the script runs it niced, keeps it from taking the keyboard or the screen, and fails the
+run if a test process ever came to the front.
 
 There is no hot reload. The app is a long-lived menu-bar process, so **every code change requires a
 full rebuild and restart of the running app** to take effect. The development bundle identifier is

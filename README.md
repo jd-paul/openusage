@@ -82,9 +82,11 @@ For working on the code, see [architecture](docs/architecture.md),
 
 ```sh
 swift build                 # debug build
-swift test                  # run the test suite
+script/test_quiet.sh        # run the test suite without it taking the keyboard or the screen
 ./script/build_and_run.sh   # build and launch the dev app from dist/ (no install)
 ```
+
+`script/test_quiet.sh` takes `swift test` arguments such as `--filter`.
 
 The dev app is staged as `dist/OpenUsage.app` with the bundle identifier
 `com.robinebers.openusage.dev`, so it runs beside an installed OpenUsage and never checks for updates.

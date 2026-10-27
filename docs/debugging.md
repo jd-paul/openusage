@@ -36,6 +36,9 @@ is written, which masks tokens, keys, `account=` values, and home paths.
 ## Tests
 
 ```sh
-swift test
-swift test --filter CursorTokenRefreshTests
+script/test_quiet.sh
+script/test_quiet.sh --filter CursorTokenRefreshTests
 ```
+
+The script runs the suite niced without letting it take the keyboard or show a window, and fails the
+run if a test process ever came to the front.
