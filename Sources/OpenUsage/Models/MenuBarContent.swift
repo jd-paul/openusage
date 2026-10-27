@@ -74,11 +74,8 @@ return MenuBarContent(groups: badgedGroups)
     private static func badged(_ groups: [MenuBarContent.Group], names: [String: String]) -> [MenuBarContent.Group] {
         let families = Dictionary(grouping: groups.indices) { DashboardFamily.familyID(of: groups[$0].providerID) }
         var result = groups
-        for indices in families.values where indices.count > 1 {
-            let tags = AccountInitials.tags(for: indices.map { names[groups[$0].providerID] ?? "" })
-            for (index, tag) in zip(indices, tags) {
-                result[index].badge = tag
-            }
+        for index in families.values.filter({ $0.count > 1 }).joined() {
+            result[index].badge = AccountInitials.tag(for: names[groups[index].providerID] ?? "")
         }
         return result
     }

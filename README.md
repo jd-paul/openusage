@@ -50,7 +50,7 @@ what each one shows and what each sign-in grants.
 ## Features
 
 - **Menu bar stars.** Star up to two metrics per provider. When more than one account of a provider is
-  starred, each mark carries a two-character tag from the account's name.
+  starred, each mark carries the account name's initials.
 - **Dashboard.** A header and a card per provider. The header shows the provider's logo and name, and
   inside the card every account, even when it is the only one, has a caption with its name and plan
   above its rows. One row per metric: label, bar, value, and reset. With a reset window the bar's colour is where your pace lands at the

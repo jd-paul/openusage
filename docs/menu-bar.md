@@ -26,9 +26,8 @@ account stack as a labelled pair. The strip only renders real data: a starred me
 fetched yet is skipped, and an account whose stars all lack data disappears from the strip. When
 nothing has data, the strip shows the app icon.
 
-When the strip shows more than one account of a provider, each mark carries a two-character tag from
-the account's name. The tag keeps the account's number, so "Attention Machine 1" and "Attention
-Machine 2" read A1 and A2. Names that would share a tag show the first letter that differs, such as
-WO and WE for Work and Web.
+When the strip shows more than one account of a provider, each mark carries the account name's
+initials: the first letter of its first word and of its last, so "Personal" reads P and "Attention
+Machine 1" reads A1. Two accounts named alike share a tag; rename one to tell them apart.
 
 Stars follow your dashboard order.
