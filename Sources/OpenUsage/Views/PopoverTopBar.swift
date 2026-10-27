@@ -20,7 +20,7 @@ struct PopoverTopBar: View {
                 navigationBar(back: accountsBack) {
                     AccountTitle(provider: provider)
                 } trailing: {
-                    resetButton(for: providerID)
+                    providerMark(for: provider)
                 }
             } else {
                 navigationBar(back: accountsBack) {
@@ -86,20 +86,12 @@ struct PopoverTopBar: View {
         .accessibilityLabel("Back")
     }
 
-    private func resetButton(for providerID: String) -> some View {
-        Button {
-            withAnimation(Motion.spring) { layout.resetProvider(providerID) }
-        } label: {
-            Image(systemName: "arrow.counterclockwise")
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 16, height: 16)
-                .contentShape(Rectangle())
-        }
-        .glassButtonStyle()
-        .buttonBorderShape(.circle)
-        .controlSize(.large)
-        .hoverTooltip("Reset Metrics")
-        .accessibilityLabel("Reset Metrics")
+    /// The account's provider mark, filling the back button's footprint on the other side so the
+    /// title stays centred. Decoration only: the title already names the account.
+    private func providerMark(for provider: Provider) -> some View {
+        ProviderIcon(id: provider.icon, side: 22, inset: 0.04)
+            .frame(width: 28, height: 28)
+            .accessibilityHidden(true)
     }
 
     /// Opens the account list's Add Account sheet.

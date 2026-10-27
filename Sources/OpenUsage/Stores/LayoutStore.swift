@@ -351,40 +351,6 @@ final class LayoutStore {
         if pinnedMetricIDs.remove(descriptorID) != nil { persistPins() }
     }
 
-    /// Reset a single provider's customization to default — its enabled metrics, metric order, and
-    /// pins — while leaving every other provider, and the overall provider order, untouched. No-op for
-    /// an unknown provider.
-    func resetProvider(_ providerID: String) {
-        guard registry.provider(id: providerID) != nil else { return }
-        cancelDrag()
-        // A reset is its own action, not an undoable edit. Snapshots are whole-layout, so there's no
-        // per-provider trim to do — clear the stack so undo can't restore into the pre-reset layout.
-        undoHistory.clear()
-
-        // This provider's descriptor universe — the membership sets below are all scoped to it.
-        let owned = Set(registry.descriptors(for: providerID).map(\.id))
-        func defaults(_ ids: [String]) -> [String] {
-            ids.filter { owned.contains($0) && registry.descriptor(id: $0) != nil }
-        }
-
-        // Enabled metrics: drop this provider's placed widgets, re-seed its default-on set. Other
-        // providers' widgets keep their identity and position; `syncPlacedOrder` re-sorts the whole
-        // list by provider + metric order at the end.
-        placed = placed.filter { !owned.contains($0.descriptorID) }
-            + defaults(defaultMetricIDs).map { PlacedWidget(descriptorID: $0) }
-
-        // Metric order back to registry order for this provider only.
-        metricOrderByProvider[providerID] = registry.descriptors(for: providerID).map(\.id)
-        persistMetricOrder()
-
-        // Pins: swap this provider's entries for its defaults, leaving other providers' pins intact.
-        pinnedMetricIDs.subtract(owned)
-        pinnedMetricIDs.formUnion(defaults(defaultPinnedMetricIDs).filter(isMetricEnabled))
-        persistPins()
-
-        syncPlacedOrder() // persists `placed`
-    }
-
     func cancelDrag() {
         draggingID = nil
     }
