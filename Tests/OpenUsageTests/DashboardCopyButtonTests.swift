@@ -81,7 +81,7 @@ final class DashboardCopyButtonTests: QuietWindowTestCase {
     /// On the dashboard, the button copies what the menu's Share Screenshot copies, through the same
     /// path: the provider's share card lands on the clipboard as a PNG and the Copied pill shows.
     func testTheDashboardsButtonCopiesTheShareCard() async throws {
-        let suite = "OpenUsageTests.DashboardCopyButton.\(UUID().uuidString)"
+        let suite = "OpenUsageTests.CopyButton.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
         let descriptor = WidgetDescriptor(
