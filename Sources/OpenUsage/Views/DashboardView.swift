@@ -42,6 +42,11 @@ struct DashboardView: View {
     /// id, a freshly-started transition pins to the outgoing screen so the first frame never flashes
     /// the destination.
     @State private var animatedSlideID = 0
+    /// The `layout.screenSlideID` whose slide has ended. Until the store's id lands here the pager keeps
+    /// both screens mounted, so the outgoing one slides away with its chrome. `slideProgress` can't
+    /// tell: its model value is 1 from the moment the spring starts, so a pager keyed on it would drop
+    /// the outgoing screen on the slide's first frame and leave it fading in place over the incoming one.
+    @State private var settledSlideID = 0
     /// Reset to the top whenever the popover closes, so it never reopens mid-scroll.
     @State private var dashboardScrollPosition = ScrollPosition(edge: .top)
     /// Settings is expensive to mount because each menu picker creates an `NSPopUpButton`. Keep its
@@ -161,6 +166,7 @@ struct DashboardView: View {
                     // frame would pair the destination header with the outgoing screen; scheduling the
                     // spring would also keep that stale structure alive until its delayed completion.
                     animatedSlideID = id
+                    settledSlideID = id
                     slideProgress = 1
                     if let target = heightCoordinator.target(for: layout.screen) {
                         didEstablishHeight = true
@@ -178,15 +184,18 @@ struct DashboardView: View {
                     // render), so we morph to its ideal. If it ISN'T measured yet and the height was
                     // never established (animatedHeight still the 0 sentinel — e.g. opening Settings
                     // straight from the status-item menu), we must NOT morph to a clamped zero, which
-                    // floors to minPanelHeight and wrongly shrinks the panel: leave the height alone and
-                    // let the completion / measurement establish it once a real ideal lands.
+                    // the clamp floors at the screen's minimum and wrongly shrinks the panel: leave the
+                    // height alone and let the completion / measurement establish it once a real ideal lands.
                     let coTarget: CGFloat? = heightCoordinator.target(for: destination)
                         ?? (animatedHeight > 0 ? animatedHeight : nil)
                     if coTarget != nil { didEstablishHeight = true }
-                    withAnimation(Motion.spring, completionCriteria: .logicallyComplete) {
+                    // `.removed`: the pager collapses to one page only once the spring has settled, so
+                    // the outgoing screen is off the panel by then and the incoming one never snaps.
+                    withAnimation(Motion.spring, completionCriteria: .removed) {
                         slideProgress = 1
                         if let coTarget { animatedHeight = coTarget }
                     } completion: {
+                        settledSlideID = id
                         guard let target = heightCoordinator.target(for: layout.screen) else { return }
                         if !didEstablishHeight {
                             didEstablishHeight = true
@@ -276,7 +285,7 @@ struct DashboardView: View {
                         slideOffset: pagerOffset,
                         pageWidth: PanelMetrics.width
                     ))
-                    .allowsHitTesting(layout.screen == .settings && !isSliding)
+                    .allowsHitTesting(layout.screen == .settings)
                     .accessibilityHidden(layout.screen != .settings)
             }
         }
@@ -320,13 +329,12 @@ struct DashboardView: View {
         pages.contains(.settings)
     }
 
-    /// True from the moment `layout.screen` changes until the slide reaches the incoming screen.
+    /// True from the moment `layout.screen` changes until the slide's spring has settled.
     private var isSliding: Bool {
         Self.screenTransitionIsActive(
             reduceAnimations: reduceAnimations,
             screenSlideID: layout.screenSlideID,
-            animatedSlideID: animatedSlideID,
-            slideProgress: slideProgress
+            settledSlideID: settledSlideID
         )
     }
 
@@ -335,12 +343,11 @@ struct DashboardView: View {
     static func screenTransitionIsActive(
         reduceAnimations: Bool,
         screenSlideID: Int,
-        animatedSlideID: Int,
-        slideProgress: CGFloat
+        settledSlideID: Int
     ) -> Bool {
         !reduceAnimations
             && screenSlideID != 0
-            && (screenSlideID != animatedSlideID || slideProgress < 1)
+            && screenSlideID != settledSlideID
     }
 
     /// One page at rest (the current screen); the two involved screens in left-to-right rank order
