@@ -29,13 +29,17 @@ here.
 | Codex | `openid profile email offline_access` | Plain OpenID Connect: the email names the account and `offline_access` is the refresh token. The usage endpoint reads the account id from the token itself. |
 | Cursor | none (Cursor's own sign-in, no scopes) | Cursor's login returns a dashboard session; there is no scope to narrow. |
 | Antigravity | `cloud-platform`, `userinfo.email` | Cloud Code's quota API is a Google Cloud API and takes `cloud-platform`; the email names the account. Every Cloud Code client, Gemini CLI included, asks for `cloud-platform`; none is known to work without it. The Antigravity app also asks for `userinfo.profile`, `cclog`, and `experimentsandconfigs`; the card never uses them. |
-| Copilot | `read:user` | `/copilot_internal/user` takes a plain user token; `read:user` is the narrowest grant that still names the account. |
+| Copilot | `read:user` | The scope Copilot's own sign-in asks for, and the one known to read `/copilot_internal/user`. It reads your GitHub profile and nothing else; whether the quota read works with no scope at all is unverified. |
 | Grok | `openid profile email offline_access grok-cli:access api:access` | The set the Grok CLI itself requests. The settings and billing reads go through the Grok CLI proxy, which every known client reaches with this set; xAI publishes no narrower set for this client, so the card asks for the same. |
 
 A narrower grant applies the next time you add an account. An account you added before keeps its
 token and keeps working; remove it and add it again if you want the smaller grant now. Claude is the
 exception: its refresh asks for `user:profile` only, so a refreshed Claude access token carries only
 that whatever the original sign-in granted.
+
+Spending a Claude reset has not been tried with a `user:profile`-only sign-in; every other client that
+spends one uses Claude Code's wider grant. If Anthropic refuses the claim for that reason, the resets
+popover says this sign-in can't use resets, and you can spend the reset in Claude Code instead.
 
 ## Claude
 
