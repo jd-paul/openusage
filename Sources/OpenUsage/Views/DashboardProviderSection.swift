@@ -3,11 +3,15 @@ import SwiftUI
 /// One provider on the dashboard: its header above its card. Every card is drawn the same way, however
 /// many accounts it holds: the header is the provider's logo and name, and each account in the card is
 /// captioned with its name, status glyph and plan over its rows. Static but for the captions' status
-/// tooltips: the dashboard adds menus and drags around it, and the share image draws it as it is.
+/// tooltips and the header's copy button, which only the dashboard supplies: it adds menus and drags
+/// around the section, and the share image draws the section as it is.
 struct DashboardProviderSection<Account: View>: View {
     let family: DashboardFamily
     /// Wraps the header, so the dashboard can attach the provider's drag gesture to it.
     var handle: (AnyView) -> AnyView = { $0 }
+    /// Copies a picture of the card, from the header's hover-revealed button; nil leaves the header
+    /// without one, as in the share image and the drag previews.
+    var onCopyScreenshot: (() -> Bool)?
     /// An account's block in the card: its caption over its rows.
     @ViewBuilder var account: (DashboardAccount) -> Account
 
@@ -24,14 +28,18 @@ struct DashboardProviderSection<Account: View>: View {
     }
 
     var header: DashboardProviderHeader {
-        DashboardProviderHeader(provider: family.provider)
+        DashboardProviderHeader(provider: family.provider, onCopyScreenshot: onCopyScreenshot)
     }
 }
 
 /// The line above a provider's card: the logo where the rows' labels start, then 8 pt to the provider's
-/// name, centred on the line.
+/// name, centred on the line. With `onCopyScreenshot`, a Copy Screenshot button sits at the trailing
+/// edge, where the rows' resets end, revealed while the pointer rests on the header.
 struct DashboardProviderHeader: View {
     let provider: Provider
+    var onCopyScreenshot: (() -> Bool)?
+
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -40,11 +48,20 @@ struct DashboardProviderHeader: View {
             Text(provider.displayName)
                 .font(DashboardGrid.headerFont)
                 .lineLimit(1)
+            if let onCopyScreenshot {
+                Spacer(minLength: DashboardGrid.columnGap)
+                CopyFeedbackButton(
+                    accessibilityLabel: "Copy \(provider.displayName) Screenshot",
+                    isRevealed: isHovered,
+                    action: onCopyScreenshot
+                )
+            }
         }
         .padding(.horizontal, DashboardGrid.cardPadding + DashboardGrid.inset)
         .frame(height: DashboardGrid.headerHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
     }
 }
 

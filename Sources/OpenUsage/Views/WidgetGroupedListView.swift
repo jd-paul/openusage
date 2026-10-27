@@ -10,9 +10,10 @@ import SwiftUI
 /// A double-click on an account's name on its caption renames it, the same as the menu's Rename.
 ///
 /// Right-click a provider's header or card, an account's caption, or a metric row for its menu
-/// (`DashboardMenus`). Share Screenshot there is the one way to copy a picture: the provider's with all
-/// its accounts, or one account's. Everything reorders by dragging: a provider by its header, an account
-/// by its caption within its card, a metric row within its account.
+/// (`DashboardMenus`). Share Screenshot there copies a picture: the provider's with all its accounts, or
+/// one account's; the copy button a provider's header reveals on hover copies the same picture of the
+/// provider. Everything reorders by dragging: a provider by its header, an account by its caption
+/// within its card, a metric row within its account.
 struct WidgetGroupedListView: View {
     @Environment(AppContainer.self) private var container
     @Environment(LayoutStore.self) private var layout
@@ -67,11 +68,12 @@ struct WidgetGroupedListView: View {
 
     // MARK: - Sections
 
-    /// A provider with its drag on the header; the whole section takes its right-click menu.
+    /// A provider with its drag and copy button on the header; the whole section takes its right-click menu.
     private func section(_ family: DashboardFamily) -> some View {
         DashboardProviderSection(
             family: family,
-            handle: { AnyView($0.highPriorityGesture(familyDragGesture(for: family))) }
+            handle: { AnyView($0.highPriorityGesture(familyDragGesture(for: family))) },
+            onCopyScreenshot: { shareScreenshot(family.accounts.map(\.id)) }
         ) { account in
             accountSection(account, in: family)
         }
@@ -150,12 +152,7 @@ struct WidgetGroupedListView: View {
         case .editAccount(let accountID):
             openAccounts(accountID)
         case .shareScreenshot(let accountIDs):
-            ShareCardRenderer.share(
-                groups: layout.displayGroups.filter { accountIDs.contains($0.provider.id) },
-                dataStore: dataStore,
-                layout: layout,
-                appearance: colorScheme
-            )
+            shareScreenshot(accountIDs)
         case .showHiddenMetrics(let accountID):
             layout.showMetrics(hiddenMetricIDs(for: accountID))
         case .toggleStar(let descriptorID):
@@ -167,6 +164,18 @@ struct WidgetGroupedListView: View {
         case .hide(let descriptorID):
             layout.setMetricEnabled(descriptorID, false)
         }
+    }
+
+    /// Copies a picture of these accounts' card to the clipboard: the menu's Share Screenshot and the
+    /// header's copy button, through one path.
+    @discardableResult
+    private func shareScreenshot(_ accountIDs: [String]) -> Bool {
+        ShareCardRenderer.share(
+            groups: layout.displayGroups.filter { accountIDs.contains($0.provider.id) },
+            dataStore: dataStore,
+            layout: layout,
+            appearance: colorScheme
+        )
     }
 
     /// Opens the Accounts screen, on one account's page when `providerID` is set.

@@ -21,9 +21,9 @@ struct DashboardMenuItem: Equatable {
 }
 
 /// The dashboard's right-click menus, one per thing you can click: a provider's header or card, an
-/// account's caption, and a metric row. Each is a list of sections that render with dividers between them. Apart from the
-/// Limit Resets row's popover, right-click is the only way to act on the dashboard, and Share Screenshot
-/// here the only way to copy a picture of it.
+/// account's caption, and a metric row. Each is a list of sections that render with dividers between
+/// them. Apart from the Limit Resets row's popover and the copy button on a provider's header,
+/// right-click is the only way to act on the dashboard.
 enum DashboardMenus {
     typealias Sections = [[DashboardMenuItem]]
 

@@ -62,9 +62,10 @@ what each one shows and what each sign-in grants.
   Right-click a header, a card, an account, or a row for its actions. Drag to reorder.
 - **Resets.** Claude and Codex accounts show a Limit Resets row with the number of available rate-limit
   resets. Rest the pointer on the count to see when each expires, and spend one from there.
-- **Share.** Right-click a provider and choose Share Screenshot to copy a PNG of its header and card,
-  with every account, to the clipboard; from an account, that account alone. The picture uses the
-  account's name when you have set one and leaves an email out.
+- **Share.** Rest the pointer on a provider's header and click the copy button at its right, or
+  right-click the provider and choose Share Screenshot, to copy a PNG of its header and card, with
+  every account, to the clipboard; from an account's right-click, that account alone. The picture uses
+  the account's name when you have set one and leaves an email out.
 - **Notifications.** Optional alerts when a limit falls under 10% or your pace changes.
 - **Global shortcut.** Toggle the panel from anywhere.
 - **[Command line](docs/cli.md).** Install the `openusage` command from Settings; it prints the usage
