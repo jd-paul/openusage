@@ -5,13 +5,11 @@ each a header above a card.
 
 ## Providers and accounts
 
-The header names the provider, and the account too when it has one with a name of its own
-("Codex — Sunstory") that fits the line, with the account's plan at the right end of the line and the
-provider's logo after it. Nothing on the line is ever cut short: a name that does not fit goes inside
-the card with its plan, the way several accounts are shown, and an account named like its provider
-reads as the provider alone, its plan on the header. The card holds every metric that has data, in the
-order you set, one row each. When a provider has several accounts, each is named inside the card above
-its rows, with its plan at the right.
+The header starts with the provider's logo, and one rule names the rest: a provider with one account
+puts that account's name on the header, with its plan at the right end of the line, and a provider
+with several accounts puts its own name on the header and each account's name and plan inside the card
+above its rows. Nothing on the line is ever cut short. The card holds every metric that has data, in
+the order you set, one row each.
 
 When you have no accounts, the dashboard shows **Add Account**, which opens the provider chooser.
 
@@ -80,12 +78,12 @@ name selected. Return or a click elsewhere saves; Esc cancels.
 
 ## Share
 
-Right-click a provider and choose **Share Screenshot** to copy a PNG of its header and card to the
-clipboard; on an account inside a card of several, **Share Screenshot** copies that account alone under
-the provider's header. The footer shows **Copied to clipboard** for a moment. The image shows the
-header and card at rest, follows your light or dark appearance, and carries a small OpenUsage mark at
-the bottom. An account named by its email reads as its provider alone, so the email never leaves the
-panel.
+Right-click a provider and choose **Share Screenshot** to copy a PNG of its header and card, with every
+account, to the clipboard; on an account inside a card of several, **Share Screenshot** copies that
+account alone under the provider's header. The footer shows **Copied to clipboard** for a moment. The
+image shows the header and card at rest, follows your light or dark appearance, and carries a small
+OpenUsage mark at the bottom. It uses the account's name when you have set one and leaves an email
+out.
 
 ## Update banner
 
