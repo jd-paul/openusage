@@ -87,7 +87,11 @@ final class AppContainer {
         }
     }
 
-    func startRefreshing() {
+    /// Runs a pass every `RefreshSetting.interval` while the user is at the Mac or the popover is open,
+    /// and every `RefreshSetting.idleInterval` once the Mac has been idle for `RefreshSetting.idleAfter`.
+    /// The wait rechecks every `RefreshSetting.loopCheck`, so coming back to an idle Mac brings the next
+    /// pass within a minute.
+    func startRefreshing(secondsSinceInput: @escaping () -> TimeInterval = RefreshSetting.secondsSinceLastInput) {
         guard refreshTask == nil else { return }
         refreshTask = Task {
             while !Task.isCancelled {
@@ -96,9 +100,22 @@ final class AppContainer {
                 // Day-rollover beat: emits `app_daily_active` once per local day and flushes prior-day
                 // provider rollups while optional analytics are on.
                 telemetry.tick()
-                try? await Task.sleep(for: .milliseconds(Int64(RefreshSetting.interval * 1_000)))
+                let passEnded = ContinuousClock.now
+                repeat {
+                    try? await Task.sleep(for: .seconds(RefreshSetting.loopCheck))
+                } while !Task.isCancelled && passEnded.duration(to: .now) < .seconds(RefreshSetting.passInterval(
+                    secondsSinceInput: secondsSinceInput(),
+                    popoverOpen: layout.popoverShown
+                ))
             }
         }
+    }
+
+    /// Opening the popover refreshes every account whose numbers are older than
+    /// `RefreshSetting.popoverStaleAge`, so after an idle stretch the user sees current numbers. Accounts
+    /// waiting out a backoff stay waiting.
+    func popoverDidOpen() {
+        Task { await dataStore.refreshStale(olderThan: RefreshSetting.popoverStaleAge) }
     }
 
     /// Runs synchronously inside every `AccountStore` change. A removed account's runtime leaves

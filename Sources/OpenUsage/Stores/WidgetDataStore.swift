@@ -170,6 +170,16 @@ final class WidgetDataStore {
         }
     }
 
+    /// Refreshes every account whose numbers are older than `age`, or that has none, honouring the cache
+    /// and every backoff like a scheduled pass.
+    func refreshStale(olderThan age: TimeInterval) async {
+        let stale = registry.providers.map(\.id).filter { id in
+            snapshots[id].map { now().timeIntervalSince($0.refreshedAt) > age } ?? true
+        }
+        guard !stale.isEmpty else { return }
+        await refresh(providerIDs: stale, force: false)
+    }
+
     private func refreshPass(_ providerIDs: [String], force: Bool) async {
         let start = monotonicNow()
         AppLog.info(.refresh, "batch start (\(providerIDs.count) providers, force=\(force))")

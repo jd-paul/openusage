@@ -1,0 +1,90 @@
+import XCTest
+@testable import OpenUsage
+
+/// Passes run every 5 minutes while the user is active or the popover is open, every 15 once the Mac
+/// has had no input for 10 minutes; opening the popover refreshes only accounts whose numbers are more
+/// than 5 minutes old, and never one waiting out a backoff.
+@MainActor
+final class IdleCadenceTests: XCTestCase {
+    private let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+    func testCadenceFollowsInputAndThePopover() {
+        XCTAssertEqual(RefreshSetting.passInterval(secondsSinceInput: 0, popoverOpen: false), 5 * 60)
+        XCTAssertEqual(RefreshSetting.passInterval(secondsSinceInput: 10 * 60 - 1, popoverOpen: false), 5 * 60)
+        XCTAssertEqual(RefreshSetting.passInterval(secondsSinceInput: 10 * 60, popoverOpen: false), 15 * 60)
+        XCTAssertEqual(RefreshSetting.passInterval(secondsSinceInput: 3 * 3600, popoverOpen: false), 15 * 60)
+        XCTAssertEqual(RefreshSetting.passInterval(secondsSinceInput: 3 * 3600, popoverOpen: true), 5 * 60)
+    }
+
+    func testOpeningThePopoverRefreshesOnlyAccountsOlderThanFiveMinutes() async {
+        let clock = TestClock(start)
+        let stale = ClockRuntime(id: "stale", clock: clock)
+        let recent = ClockRuntime(id: "recent", clock: clock)
+        let store = makeStore([stale, recent], clock: clock)
+        await store.refreshAll()
+
+        clock.set(start.addingTimeInterval(4 * 60))
+        await store.refreshManually(providerIDs: ["recent"])
+        clock.set(start.addingTimeInterval(9 * 60))
+        await store.refreshStale(olderThan: RefreshSetting.popoverStaleAge)
+
+        XCTAssertEqual(stale.refreshCount, 2, "9 minutes old: refreshed on open")
+        XCTAssertEqual(recent.refreshCount, 2, "5 minutes old: left alone")
+    }
+
+    func testOpeningThePopoverRespectsABackoff() async {
+        let clock = TestClock(start)
+        let provider = Provider(id: "limited", displayName: "Limited", icon: "claude")
+        let limited = ClockRuntime(id: "limited", clock: clock, failure: .error(provider: provider, error: ProviderError.rateLimited(retryAfter: 3600)))
+        let store = makeStore([limited], clock: clock)
+        await store.refreshAll()
+
+        clock.set(start.addingTimeInterval(20 * 60))
+        await store.refreshStale(olderThan: RefreshSetting.popoverStaleAge)
+        XCTAssertEqual(limited.refreshCount, 1)
+    }
+
+    // MARK: - Helpers
+
+    private func makeStore(_ runtimes: [ClockRuntime], clock: TestClock) -> WidgetDataStore {
+        let suiteName = "OpenUsageTests.IdleCadence.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return WidgetDataStore(
+            registry: WidgetRegistry(providers: runtimes.map(\.provider), descriptors: runtimes.flatMap(\.widgetDescriptors)),
+            providers: runtimes,
+            cache: ProviderSnapshotCache(userDefaults: defaults, storageKey: "snapshots", now: { clock.now }),
+            defaults: defaults,
+            now: { clock.now }
+        )
+    }
+}
+
+/// Answers each refresh with numbers fetched at the test clock's now, or with `failure`.
+@MainActor
+private final class ClockRuntime: ProviderRuntime {
+    let provider: Provider
+    let widgetDescriptors: [WidgetDescriptor]
+    private let clock: TestClock
+    private let failure: ProviderSnapshot?
+    private(set) var refreshCount = 0
+
+    init(id: String, clock: TestClock, failure: ProviderSnapshot? = nil) {
+        provider = Provider(id: id, displayName: id, icon: "codex")
+        widgetDescriptors = [WidgetDescriptor(
+            id: "\(id).weekly", providerID: id, metricLabel: "Weekly quota",
+            sample: WidgetData(title: "Weekly", icon: "codex", kind: .percent, used: 0, limit: 100)
+        )]
+        self.clock = clock
+        self.failure = failure
+    }
+
+    func refresh() async -> ProviderSnapshot {
+        refreshCount += 1
+        return failure ?? ProviderSnapshot(
+            providerID: provider.id, displayName: provider.displayName,
+            lines: [.progress(label: "Weekly quota", used: 12, limit: 100, format: .percent)],
+            refreshedAt: clock.now
+        )
+    }
+}

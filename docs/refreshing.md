@@ -2,8 +2,12 @@
 
 ## When data updates
 
-- Every account refreshes together: once at launch, then every 5 minutes. There is no setting for the
-  interval. Opening the panel does not start another pass.
+- Every account refreshes together: once at launch, then every 5 minutes while you use the Mac or the
+  panel is open. Once the Mac has had no keyboard, mouse or trackpad input for 10 minutes, passes run
+  every 15 minutes instead; the first pass after you come back runs within a minute. There is no
+  setting for these intervals.
+- Opening the panel refreshes every account whose values are more than 5 minutes old. An account
+  waiting out a failure or a provider's rate limit keeps waiting.
 - Accounts fetch in parallel, so a fast provider never waits for a slow one. Results that land close
   together are grouped so a burst shows as one update and is saved once.
 - A new account refreshes as soon as you add it.
