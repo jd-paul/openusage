@@ -13,7 +13,7 @@ shows only what each provider's API reports for the accounts you sign in to.
 - iCloud sync of settings and layout.
 - The log file and the Log Level setting. The app logs through unified logging only
   (`log stream --predicate 'subsystem == "OpenUsage"'`).
-- The command-line interface and the local HTTP API.
+- The local HTTP API.
 - The proxy setting.
 - The Devin and Pi providers, which have no account sign-in.
 - The welcome screen, provider enable/disable switches, and the On Demand metric tier. Metrics are on
@@ -31,6 +31,7 @@ shows only what each provider's API reports for the accounts you sign in to.
   banner.
 - Anonymous telemetry and crash reporting through PostHog, with the same opt-out in Settings.
 - Notifications, menu-bar stars, keyboard shortcuts, Launch at Login, and the appearance settings.
+- The `openusage` command, which now prints what the app last fetched and nothing computed.
 
 ## v0.7.16
 
