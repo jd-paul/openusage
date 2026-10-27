@@ -86,7 +86,8 @@ renders the menu-bar strip with `MenuBarStripRenderer`. `PanelHeightController` 
 its content.
 
 `DashboardView` switches between the dashboard (`DashboardContentView` → `WidgetGroupedListView` →
-`DashboardProviderSection` → `DashboardAccountRows` → `DashboardLiveRow`), Accounts
+`DashboardProviderSection` → `DashboardLiveRow` → `DashboardMetricRow`; the share image and the drag
+previews draw the same rows through the static `DashboardAccountRows`), Accounts
 (`AccountsView` → `AccountListView` and `AccountDetailView`), and `SettingsScreen`. Right-click
 menus are declared as data in `DashboardMenus` and rendered by `ClosureMenuItem`.
 `ShareCardRenderer` renders a provider card into the branded PNG behind **Share Screenshot**.
