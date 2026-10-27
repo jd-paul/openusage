@@ -19,6 +19,9 @@ final class WidgetDataStore {
     private let slowProviderRefreshThreshold: TimeInterval
     /// See `defaultProviderRefreshTimeout`. Injected so tests can drive the deadline in milliseconds.
     private let providerRefreshTimeout: TimeInterval
+    /// The cadence expected after a fetch, stamped on each good snapshot as `nextRefreshAt`. Injected so
+    /// tests don't read this Mac's idle time.
+    private let expectedRefreshInterval: () -> TimeInterval
     /// Quota-notification preferences (three independent triggers). Injected; `nil` disables
     /// notifications entirely (tests and previews that don't wire it).
     private let notificationSettings: (@MainActor () -> NotificationSettingsStore)?
@@ -98,7 +101,8 @@ final class WidgetDataStore {
         slowProviderRefreshThreshold: TimeInterval = WidgetDataStore.defaultSlowProviderRefreshThreshold,
         providerRefreshTimeout: TimeInterval = WidgetDataStore.defaultProviderRefreshTimeout,
         notificationSettings: (@MainActor () -> NotificationSettingsStore)? = nil,
-        postNotification: (@MainActor (String, String, String, String) async -> Bool)? = nil
+        postNotification: (@MainActor (String, String, String, String) async -> Bool)? = nil,
+        expectedRefreshInterval: @escaping () -> TimeInterval = { RefreshSetting.interval }
     ) {
         precondition(slowProviderRefreshThreshold >= 0)
         precondition(providerRefreshTimeout > 0)
@@ -111,6 +115,7 @@ final class WidgetDataStore {
         self.monotonicNow = monotonicNow
         self.slowProviderRefreshThreshold = slowProviderRefreshThreshold
         self.providerRefreshTimeout = providerRefreshTimeout
+        self.expectedRefreshInterval = expectedRefreshInterval
         self.notificationSettings = notificationSettings
         self.postNotification = postNotification
             ?? { idPrefix, title, subtitle, body in
@@ -302,7 +307,7 @@ final class WidgetDataStore {
             AppLog.debug(.refresh, "dropped \(providerID) refresh; the account was removed")
             return .skipped
         }
-        guard let snapshot = result else {
+        guard var snapshot = result else {
             let message = "Refresh timed out after \(Int(providerRefreshTimeout))s"
             return recordFailure(RefreshFailure(message: message, kind: .refused), providerID: providerID, force: force)
         }
@@ -327,6 +332,7 @@ final class WidgetDataStore {
         }
         // Recovered: drop any backoff so the account resumes the normal cadence immediately.
         if backoffs[providerID] != nil { backoffs[providerID] = nil }
+        snapshot.nextRefreshAt = snapshot.refreshedAt.addingTimeInterval(expectedRefreshInterval())
         snapshots[providerID] = snapshot
         cache.store(snapshot)
         AppLog.info(.refresh, "\(providerID) ok (\(durationMs)ms)")

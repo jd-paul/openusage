@@ -44,6 +44,31 @@ final class IdleCadenceTests: XCTestCase {
         XCTAssertEqual(limited.refreshCount, 1)
     }
 
+    func testASavedSnapshotExpiresWhenTheNextPassIsDue() async throws {
+        XCTAssertEqual(RefreshSetting.expectedInterval(secondsSinceInput: 0), 5 * 60)
+        XCTAssertEqual(RefreshSetting.expectedInterval(secondsSinceInput: 5 * 60 - 1), 5 * 60)
+        XCTAssertEqual(RefreshSetting.expectedInterval(secondsSinceInput: 5 * 60), 15 * 60, "idle by the next pass")
+
+        let clock = TestClock(start)
+        let runtime = ClockRuntime(id: "idle", clock: clock)
+        let suiteName = "OpenUsageTests.IdleCadence.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let cache = ProviderSnapshotCache(userDefaults: defaults, storageKey: "snapshots", now: { clock.now })
+        let store = WidgetDataStore(
+            registry: WidgetRegistry(providers: [runtime.provider], descriptors: runtime.widgetDescriptors),
+            providers: [runtime],
+            cache: cache,
+            defaults: defaults,
+            now: { clock.now },
+            expectedRefreshInterval: { RefreshSetting.idleInterval }
+        )
+        await store.refreshAll()
+
+        let saved = try XCTUnwrap(cache.loadSnapshots(providerIDs: ["idle"])["idle"])
+        XCTAssertEqual(saved.nextRefreshAt, start.addingTimeInterval(15 * 60))
+    }
+
     // MARK: - Helpers
 
     private func makeStore(_ runtimes: [ClockRuntime], clock: TestClock) -> WidgetDataStore {

@@ -39,6 +39,13 @@ enum RefreshSetting {
         popoverOpen || secondsSinceInput < idleAfter ? interval : idleInterval
     }
 
+    /// The cadence after a fetch made now: the one the loop will be on at its next pass if no input
+    /// arrives before then. It leaves the popover out, so an account fetched while the popover is open on
+    /// an idle Mac reads fresh longer than it needs to, never stale early.
+    static func expectedInterval(secondsSinceInput: TimeInterval) -> TimeInterval {
+        passInterval(secondsSinceInput: secondsSinceInput + interval, popoverOpen: false)
+    }
+
     /// Seconds since the last keyboard, mouse or trackpad event in this login session. Reading it needs
     /// no permission (unlike an event tap).
     static func secondsSinceLastInput() -> TimeInterval {

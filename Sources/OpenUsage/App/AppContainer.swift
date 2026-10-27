@@ -43,7 +43,10 @@ final class AppContainer {
             cache: ProviderSnapshotCache(userDefaults: defaults),
             defaults: defaults,
             orderedDescriptors: { [layout] in layout.visiblePlaced.compactMap { layout.descriptor(for: $0) } },
-            notificationSettings: { notificationSettings }
+            notificationSettings: { notificationSettings },
+            expectedRefreshInterval: {
+                RefreshSetting.expectedInterval(secondsSinceInput: RefreshSetting.secondsSinceLastInput())
+            }
         )
         self.providers = providers
         self.notificationSettings = notificationSettings
