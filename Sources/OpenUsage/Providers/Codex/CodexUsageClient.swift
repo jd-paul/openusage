@@ -56,7 +56,7 @@ struct CodexUsageClient: Sendable {
         // token — surface the status. A 2xx whose body carries no usable access token is treated as a
         // dead session (re-login is the right remedy).
         guard (200..<300).contains(response.statusCode) else {
-            throw ProviderError.requestFailed(response.statusCode)
+            throw ProviderError.failed(response)
         }
         guard let body = ProviderParse.jsonObject(response.body),
               let accessToken = body["access_token"] as? String,

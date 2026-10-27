@@ -118,7 +118,7 @@ final class AccountProviderRuntime: ProviderRuntime {
         guard case .oauth(var tokens) = credential else { throw LoginError.invalidResponse }
         if tokens.expiresAt.map({ $0 <= now() }) == true, let refreshToken = tokens.refreshToken {
             let response = try await ClaudeUsageClient(httpClient: http).refreshToken(refreshToken, config: Self.claudeConfig)
-            guard (200..<300).contains(response.statusCode) else { throw ProviderError.requestFailed(response.statusCode) }
+            guard (200..<300).contains(response.statusCode) else { throw ProviderError.failed(response) }
             let refreshed = try JSONDecoder().decode(ClaudeRefreshResponse.self, from: response.body)
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
@@ -194,7 +194,7 @@ final class AccountProviderRuntime: ProviderRuntime {
         if tokens.expiresAt.map({ $0 <= Date() }) == true, let refreshToken = tokens.refreshToken {
             let response = try await client.refreshToken(refreshToken, clientID: GrokLogin.clientID)
             guard (200..<300).contains(response.statusCode), let refreshed = client.decodeRefreshResponse(response) else {
-                throw ProviderError.requestFailed(response.statusCode)
+                throw ProviderError.failed(response)
             }
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }

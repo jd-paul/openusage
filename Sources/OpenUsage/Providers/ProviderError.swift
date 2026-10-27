@@ -9,6 +9,8 @@ enum ProviderError: Error, LocalizedError, Equatable {
     case connectionFailed
     case invalidResponse
     case requestFailed(Int)
+    /// The provider answered 429. `retryAfter` is the wait its Retry-After header named, if it named one.
+    case rateLimited(retryAfter: TimeInterval?)
     /// The provider answered, but has nothing to meter for this account; the message says why.
     case unavailable(String)
 
@@ -18,7 +20,14 @@ enum ProviderError: Error, LocalizedError, Equatable {
         case .connectionFailed: "Connection failed. Check your internet connection and try again."
         case .invalidResponse: "The provider returned an invalid response."
         case .requestFailed(let status): "The provider request failed (HTTP \(status))."
+        case .rateLimited: "The provider asked OpenUsage to wait before asking again."
         case .unavailable(let message): message
         }
+    }
+
+    /// The error for a non-2xx answer that isn't a sign-in problem: a 429 is a rate limit carrying the
+    /// wait the provider named, anything else a failure with its status.
+    static func failed(_ response: HTTPResponse, now: Date = Date()) -> ProviderError {
+        response.statusCode == 429 ? .rateLimited(retryAfter: response.retryAfter(now: now)) : .requestFailed(response.statusCode)
     }
 }

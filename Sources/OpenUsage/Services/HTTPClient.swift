@@ -16,6 +16,23 @@ struct HTTPResponse: Sendable {
     func header(_ name: String) -> String? {
         headers[name.lowercased()]
     }
+
+    /// The wait a `Retry-After` header names, in seconds from `now`: delay-seconds or an HTTP date.
+    /// `nil` when the header is absent or unreadable, or names no wait at all.
+    func retryAfter(now: Date = Date()) -> TimeInterval? {
+        guard let value = header("Retry-After")?.trimmingCharacters(in: .whitespaces) else { return nil }
+        let seconds = TimeInterval(value) ?? Self.httpDateFormatter.date(from: value).map { $0.timeIntervalSince(now) }
+        guard let seconds, seconds.isFinite, seconds > 0 else { return nil }
+        return seconds
+    }
+
+    private static let httpDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "GMT")
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        return formatter
+    }()
 }
 
 protocol HTTPClient: Sendable {

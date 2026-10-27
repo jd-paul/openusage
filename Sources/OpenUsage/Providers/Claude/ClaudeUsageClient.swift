@@ -151,7 +151,7 @@ struct ClaudeUsageClient: Sendable {
     /// Decodes a 2xx profile body; a non-2xx status or an undecodable body throws the matching usage error.
     static func decodeProfile(_ response: HTTPResponse) throws -> ClaudeAccountProfile {
         guard (200..<300).contains(response.statusCode) else {
-            throw ProviderError.requestFailed(response.statusCode)
+            throw ProviderError.failed(response)
         }
         guard let profile = try? JSONDecoder().decode(ClaudeAccountProfile.self, from: response.body) else {
             throw ProviderError.invalidResponse

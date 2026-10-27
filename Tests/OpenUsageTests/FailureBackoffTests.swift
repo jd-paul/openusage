@@ -1,10 +1,10 @@
 import XCTest
 @testable import OpenUsage
 
-/// Covers the per-provider failure backoff: a refresh that fails is negatively cached for a short
-/// window, so an over-eager refresh loop (e.g. a wake burst) can't re-probe a broken provider — the
-/// logged-out Devin/Grok case — in a tight subprocess/network loop. The normal heartbeat and the manual
-/// `force` refresh still retry as expected.
+/// Covers the per-provider failure backoff: a refresh that fails is negatively cached for one refresh
+/// interval after a first failure, so the loop can't re-probe a broken provider before then. The normal
+/// heartbeat and the manual `force` refresh still retry as expected. `RefreshBackoffTests` covers how
+/// the wait grows and the provider-set waits.
 @MainActor
 final class FailureBackoffTests: XCTestCase {
     func testFailedProviderIsNotReprobedWithinBackoffWindow() async {
@@ -24,8 +24,8 @@ final class FailureBackoffTests: XCTestCase {
         await store.refreshAll()
         XCTAssertEqual(runtime.refreshCount, 1)
 
-        // Once the window elapses, the normal cadence retries.
-        clock = clock.addingTimeInterval(60)
+        // Once the window (one refresh interval after a first failure) elapses, the normal cadence retries.
+        clock = clock.addingTimeInterval(RefreshSetting.failureBackoffBase)
         await store.refreshAll()
         XCTAssertEqual(runtime.refreshCount, 2)
     }
@@ -65,7 +65,7 @@ final class FailureBackoffTests: XCTestCase {
         )
         let store = makeStore(provider: provider, descriptor: descriptor, runtime: runtime, clock: { clock })
 
-        await store.refreshAll()                       // pass 1: fails → backoff until +60s
+        await store.refreshAll()                       // pass 1: fails → backoff until +5m
         XCTAssertEqual(runtime.refreshCount, 1)
 
         clock = clock.addingTimeInterval(1)
@@ -73,7 +73,7 @@ final class FailureBackoffTests: XCTestCase {
         XCTAssertEqual(runtime.refreshCount, 2)
         XCTAssertNil(store.errorMessage(for: provider.id))
 
-        // Pass 3 is still inside the original 60s window: had the success NOT cleared the backoff, this
+        // Pass 3 is still inside the original 5-minute window: had the success NOT cleared the backoff, this
         // would be suppressed (count stays 2). It probes, proving the backoff was cleared on recovery.
         clock = clock.addingTimeInterval(1)
         await store.refreshAll()

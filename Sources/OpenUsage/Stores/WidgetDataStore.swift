@@ -11,7 +11,7 @@ final class WidgetDataStore {
     /// The user's widget order that drives the menu-bar value. Injected
     /// so the store reads `LayoutStore.visiblePlaced` without owning it; defaults to registry order.
     private let layoutOrderedDescriptors: (@MainActor () -> [WidgetDescriptor])?
-    /// Clock for the failure-backoff window. Injected so tests can advance time deterministically.
+    /// Clock for the failure backoff and staleness. Injected so tests can advance time deterministically.
     private let now: () -> Date
     /// Monotonic clock for refresh durations, kept separate from wall time so a clock adjustment cannot
     /// produce a negative or wildly inflated provider timing. Tests inject exact ticks.
@@ -30,14 +30,6 @@ final class WidgetDataStore {
 
     private static let meterStyleKey = "meterStyle"
     private static let resetDisplayModeKey = "resetDisplayMode"
-    /// How long a failed account refresh is skipped before the loop probes it again. A failed
-    /// refresh isn't cached, so — unlike a success, which the snapshot cache gates for an interval —
-    /// nothing else stops the loop from re-probing a broken account on every wake, making network calls
-    /// in a tight loop. This negative-cache caps a
-    /// failing provider to one probe per window. Shorter than the refresh interval, so the normal
-    /// 5-minute heartbeat always retries; it only suppresses the sub-interval re-probes a wake burst
-    /// would cause. The manual `force` refresh (⌘R) always bypasses it.
-    private static let failureRetryBackoff: TimeInterval = 60
     static let defaultSlowProviderRefreshThreshold: TimeInterval = 10
     /// Hard deadline for a single account's `refresh()` call. If it hasn't returned by then
     /// the refresh is cancelled, the spinner stops, and the failure is surfaced like any other error.
@@ -63,9 +55,10 @@ final class WidgetDataStore {
     /// displaying (stale-while-revalidate) instead of being replaced by dead "No data" rows.
     var providerErrors: [String: String] = [:]
 
-    /// Per-provider earliest next-probe time after a failure (see `failureRetryBackoff`). Not part of
-    /// observable UI state, so it's excluded from `@Observable` tracking.
-    @ObservationIgnored private var failureRetryAfter: [String: Date] = [:]
+    /// The wait after a failed refresh, per account (see `RefreshBackoff`). A failed refresh isn't
+    /// cached, so this is what keeps a broken account from being asked on every pass. Observed, because
+    /// the account's clock glyph names the time a provider-set wait ends.
+    private(set) var backoffs: [String: RefreshBackoff] = [:]
 
     /// Owns the quota pace-notification subsystem (dedup state, fire/deliver decision, trace). This store
     /// gathers each pass's visible bounded metrics and delegates.
@@ -144,14 +137,14 @@ final class WidgetDataStore {
         for (cardID, snapshot) in cache.loadSnapshots(providerIDs: Array(added)) { next[cardID] = snapshot }
         snapshots = next
         providerErrors = providerErrors.filter { ids.contains($0.key) }
-        failureRetryAfter = failureRetryAfter.filter { ids.contains($0.key) }
+        backoffs = backoffs.filter { ids.contains($0.key) }
     }
 
     /// Refresh every account, concurrently — one slow provider never delays the rest.
     /// Everything stays MainActor-isolated; the overlap happens at the network awaits inside each
     /// provider, and the per-provider in-flight guard in `refresh` still prevents duplicate fetches.
-    /// `force` bypasses the snapshot cache (the manual "refresh now" path); the periodic loop keeps
-    /// honoring it.
+    /// `force` bypasses the snapshot cache and the client's own failure backoff (the manual "refresh now"
+    /// path), never a wait the provider set; the periodic loop honors all three.
     func refreshAll(force: Bool = false) async {
         let providerIDs = registry.providers.map(\.id)
         let start = monotonicNow()
@@ -226,8 +219,8 @@ final class WidgetDataStore {
 
     /// What a single provider's refresh actually did this pass, so `refreshAll` can summarize the batch
     /// from real outcomes rather than cumulative error state. `.backedOff` is a probe deliberately skipped
-    /// because the provider failed within the last `failureRetryBackoff` — distinct from `.skipped`
-    /// (unknown / already in flight) so a wake-burst's suppression is visible in the logs.
+    /// because the account is waiting out a `RefreshBackoff` — distinct from `.skipped` (unknown /
+    /// already in flight) so the suppression is visible in the logs.
     enum RefreshOutcome: Sendable { case refreshed, failed, cacheHit, skipped, backedOff }
 
     /// Refresh one account; a fetched snapshot is cached as it lands.
@@ -244,10 +237,11 @@ final class WidgetDataStore {
         }
         if !force { AppLog.debug(.refresh, "cache miss \(providerID)") }
 
-        // A provider that just failed isn't cached, so nothing else stops the loop from re-probing it on
-        // every wake. Hold off until its backoff expires; the manual `force` refresh ignores the backoff.
-        if !force, let retryAfter = failureRetryAfter[providerID], now() < retryAfter {
-            AppLog.debug(.refresh, "backoff skip \(providerID) (failed <\(Int(Self.failureRetryBackoff))s ago)")
+        // A failed account isn't cached, so nothing else stops the loop from asking it again on every
+        // pass. Hold off until its backoff ends. The manual `force` refresh skips the client's own
+        // backoff but never asks before a wait the provider set.
+        if let backoff = backoffs[providerID], now() < backoff.retryAt, backoff.providerAsked || !force {
+            AppLog.debug(.refresh, "backoff skip \(providerID) (\(Int(backoff.retryAt.timeIntervalSince(now())))s left)")
             return .backedOff
         }
 
@@ -274,11 +268,8 @@ final class WidgetDataStore {
             return .skipped
         }
         guard let snapshot = result else {
-            providerErrors[providerID] = "Refresh timed out after \(Int(providerRefreshTimeout))s"
-            failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
-            AppLog.warn(.refresh, "\(providerID) timed out after \(Int(providerRefreshTimeout))s")
-            onRefreshOutcome?(providerID, .failed, force)
-            return .failed
+            let message = "Refresh timed out after \(Int(providerRefreshTimeout))s"
+            return recordFailure(RefreshFailure(message: message, kind: .refused), providerID: providerID, force: force)
         }
         // A canceled refresh may still return if a provider's underlying work is non-throwing. Never
         // publish that potentially partial snapshot; keep the last-good state exactly as it was.
@@ -293,26 +284,33 @@ final class WidgetDataStore {
                 "\(providerID) slow refresh (\(durationMs)ms, threshold=\(Int(slowProviderRefreshThreshold * 1000))ms)"
             )
         }
-        if let message = snapshot.errorMessage {
-            // Failed refresh: surface the error but keep the last good snapshot on screen rather than
-            // collapsing every row to "No data". The provider error string is already user-safe.
-            providerErrors[providerID] = message
-            // Negative-cache the failure so a wake burst can't re-probe this provider in a tight loop.
-            failureRetryAfter[providerID] = now().addingTimeInterval(Self.failureRetryBackoff)
-            AppLog.warn(.refresh, "\(providerID) failed: \(message)")
-            onRefreshOutcome?(providerID, .failed, force)
-            return .failed
+        if let failure = snapshot.failure {
+            return recordFailure(failure, providerID: providerID, force: force)
         }
         if providerErrors[providerID] != nil {
             providerErrors[providerID] = nil
         }
-        // Recovered: drop any backoff so the provider resumes the normal cadence immediately.
-        failureRetryAfter[providerID] = nil
+        // Recovered: drop any backoff so the account resumes the normal cadence immediately.
+        if backoffs[providerID] != nil { backoffs[providerID] = nil }
         snapshots[providerID] = snapshot
         cache.store(snapshot)
         AppLog.info(.refresh, "\(providerID) ok (\(durationMs)ms)")
         onRefreshOutcome?(providerID, .refreshed, force)
         return .refreshed
+    }
+
+    /// A failed refresh keeps the last good snapshot on screen rather than collapsing every row to
+    /// "No data", and backs the account off. A wait the provider set shows as the clock glyph with the
+    /// time it ends; any other failure raises the warning with the provider's user-safe message.
+    private func recordFailure(_ failure: RefreshFailure, providerID: String, force: Bool) -> RefreshOutcome {
+        let backoff = RefreshBackoff.after(failure.kind, previous: backoffs[providerID], now: now())
+        backoffs[providerID] = backoff
+        let notice = backoff.providerAsked ? nil : failure.message
+        if providerErrors[providerID] != notice { providerErrors[providerID] = notice }
+        let wait = Int(backoff.retryAt.timeIntervalSince(now()))
+        AppLog.warn(.refresh, "\(providerID) failed: \(failure.message) Next try in \(wait)s.")
+        onRefreshOutcome?(providerID, .failed, force)
+        return .failed
     }
 
     private func durationMilliseconds(since start: TimeInterval) -> Int {
@@ -366,7 +364,14 @@ final class WidgetDataStore {
     /// fossilized-cache problem: a failing-refresh loop keeps the last good plan/limits on screen, and
     /// without this nothing told the user that data was stale. Reads the store's injected clock, which
     /// tests pin to a fixed value.
+    ///
+    /// While the provider has asked OpenUsage to wait (a 429), the glyph says so and names the time the
+    /// account is asked again, whatever the numbers' age.
     func stalenessHint(for providerID: String) -> String? {
+        if let backoff = backoffs[providerID], backoff.providerAsked, now() < backoff.retryAt {
+            let name = providersByID[providerID]?.provider.displayName ?? "The provider"
+            return "\(name) asked OpenUsage to wait. Retrying at \(Formatters.compactClock(backoff.retryAt, now: now()))."
+        }
         guard let refreshedAt = snapshots[providerID]?.refreshedAt else { return nil }
         let age = now().timeIntervalSince(refreshedAt)
         guard age >= Self.stalenessThreshold, let duration = Formatters.compactDuration(age) else {

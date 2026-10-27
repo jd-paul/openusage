@@ -5,13 +5,11 @@ enum ProviderAuthRetry {
         response.statusCode == 401 || response.statusCode == 403
     }
 
-    /// Triages a non-2xx: 401/403 means the sign-in expired, anything else is a request failure that
-    /// carries its status.
+    /// Triages a non-2xx: 401/403 means the sign-in expired, 429 a rate limit, anything else a request
+    /// failure that carries its status.
     static func requireSuccess(_ response: HTTPResponse, kind: ProviderKind) throws {
         if isAuthFailure(response) { throw ProviderError.signInExpired(kind) }
-        guard (200..<300).contains(response.statusCode) else {
-            throw ProviderError.requestFailed(response.statusCode)
-        }
+        guard (200..<300).contains(response.statusCode) else { throw ProviderError.failed(response) }
     }
 
     /// Sends a request. On a 401/403 it refreshes the token once and retries with the new one. The
