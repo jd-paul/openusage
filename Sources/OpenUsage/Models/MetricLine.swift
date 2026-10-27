@@ -17,11 +17,6 @@ enum ProgressFormat: Hashable, Sendable, Codable {
             return .count
         }
     }
-
-    var countSuffix: String? {
-        if case .count(let suffix) = self { return suffix }
-        return nil
-    }
 }
 
 /// Provider output normalized into a small app-owned vocabulary. Cached as JSON with its snapshot

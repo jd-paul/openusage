@@ -180,7 +180,6 @@ final class WidgetMeterStyleTests: XCTestCase {
                 kind: format.metricKind,
                 used: used,
                 limit: limit,
-                countSuffix: format.countSuffix,
                 displayMode: sampleDisplayMode
             )
         )

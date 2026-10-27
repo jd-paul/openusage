@@ -23,13 +23,13 @@ enum MockData {
         // Codex — percent limits (donuts), credits as a counted limit (donut), dollars (number)
         percent(id: "codex.session", provider: codex, title: "Session", used: 80),
         percent(id: "codex.weekly", provider: codex, title: "Weekly", used: 20),
-        countBounded(id: "codex.credits", provider: codex, title: "Extra Usage", used: 320, limit: 1000, suffix: "credits"),
+        countBounded(id: "codex.credits", provider: codex, title: "Extra Usage", used: 320, limit: 1000),
         amount(id: "codex.today", provider: codex, title: "Today", used: 569.09),
 
         // Cursor — usage % (donut), credits balance (number), requests count with cap (donut), dollars (number)
         percent(id: "cursor.usage", provider: cursor, title: "Usage", used: 98),
         amount(id: "cursor.credits", provider: cursor, title: "Credits", used: 12.48),
-        countBounded(id: "cursor.requests", provider: cursor, title: "Requests", used: 412, limit: 500, suffix: "requests"),
+        countBounded(id: "cursor.requests", provider: cursor, title: "Requests", used: 412, limit: 500),
         amount(id: "cursor.today", provider: cursor, title: "Today", used: 12.48)
     ]
 
@@ -49,13 +49,8 @@ enum MockData {
         )
     }
 
-    private static func countBounded(id: String, provider: Provider, title: String, used: Double, limit: Double, suffix: String) -> WidgetDescriptor {
-        descriptor(
-            id,
-            provider,
-            title,
-            WidgetData(title: title, icon: provider.icon, kind: .count, used: used, limit: limit, countSuffix: suffix)
-        )
+    private static func countBounded(id: String, provider: Provider, title: String, used: Double, limit: Double) -> WidgetDescriptor {
+        descriptor(id, provider, title, WidgetData(title: title, icon: provider.icon, kind: .count, used: used, limit: limit))
     }
 
     private static func amount(id: String, provider: Provider, title: String, used: Double) -> WidgetDescriptor {

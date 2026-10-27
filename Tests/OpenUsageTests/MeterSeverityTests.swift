@@ -103,10 +103,10 @@ final class MeterSeverityTests: XCTestCase {
         XCTAssertEqual(severity(dollars), .critical) // $5 of $50 left = 10%
 
         let counts = WidgetData(title: "Requests", icon: "codex", kind: .count,
-                                used: 375, limit: 500, countSuffix: "requests")
+                                used: 375, limit: 500)
         XCTAssertEqual(severity(counts), .warning) // 75% used, a quarter left
         XCTAssertEqual(severity(WidgetData(title: "Requests", icon: "codex", kind: .count,
-                                           used: 370, limit: 500, countSuffix: "requests")), .normal) // 74% used
+                                           used: 370, limit: 500)), .normal) // 74% used
     }
 
     func testUnboundedAndZeroLimitMetricsStayNormal() {

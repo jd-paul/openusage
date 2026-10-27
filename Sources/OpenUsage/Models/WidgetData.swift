@@ -15,7 +15,6 @@ struct WidgetData: Hashable {
     let kind: MetricKind
     let used: Double
     var limit: Double?         // nil => unbounded (number tile); cleared when a .values line resolves
-    var countSuffix: String?   // e.g. "credits", "requests"
     var displayMode: WidgetDisplayMode = .used
     /// Global relative/absolute reset display, stamped by `WidgetDataStore` (like `displayMode`).
     var resetDisplayMode: ResetDisplayMode = .relative
@@ -187,9 +186,7 @@ struct WidgetData: Hashable {
             return MetricFormatter.string(for: first, style: .tray)
         }
         if let valueTextOverride { return valueTextOverride }
-        let number = MetricFormatter.number(displayedValue, kind: kind, style: .tray)
-        if kind == .count, let countSuffix { return "\(number) \(countSuffix)" }
-        return number
+        return MetricFormatter.number(displayedValue, kind: kind, style: .tray)
     }
 
     /// Right-aligned descriptive line for an unbounded row (no bar): just "<value> <word>". The word is
@@ -211,12 +208,7 @@ struct WidgetData: Hashable {
             }
             return values.map { MetricFormatter.string(for: $0, style: .row) }.joined(separator: " · ")
         }
-        // Fallback for an unbounded row without typed values: "<value> <suffix> <word>".
-        let word = unboundedValueWord ?? displayMode.label.lowercased()
-        if kind == .count, let countSuffix {
-            return "\(valueText) \(countSuffix) \(word)"
-        }
-        return "\(valueText) \(word)"
+        return "\(valueText) \(unboundedValueWord ?? displayMode.label.lowercased())"
     }
 
     /// Color bands for reset-credit expiries: blue normally, orange under a week, red under 48 hours.

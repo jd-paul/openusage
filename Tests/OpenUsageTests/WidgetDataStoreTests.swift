@@ -266,7 +266,6 @@ final class WidgetDataStoreTests: XCTestCase {
             provider: provider,
             title: "Requests",
             limit: 500,
-            suffix: "requests",
             periodDurationMs: CursorUsageMapper.billingPeriodMs
         )
         let runtime = TestProviderRuntime(
@@ -380,21 +379,6 @@ final class WidgetDataStoreTests: XCTestCase {
         // An exhausted/negative balance clamps to a real, measured zero, not "No data".
         data.values = CodexUsageMapper.creditValues(remaining: -5)
         XCTAssertEqual(data.unboundedDetail, "0 credits")
-    }
-
-    func testCreditsRenderUpToOneDecimalPlace() {
-        let credits = WidgetData(
-            title: "Extra Usage",
-            icon: "codex",
-            kind: .count,
-            used: 820.55,
-            limit: nil,
-            countSuffix: "credits",
-            unboundedValueWord: "left"
-        )
-
-        XCTAssertEqual(credits.valueText, "820.6")
-        XCTAssertEqual(credits.unboundedDetail, "820.6 credits left")
     }
 
     func testUsesFreshCachedSnapshotInsteadOfRefreshingProvider() async {

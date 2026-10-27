@@ -74,7 +74,7 @@ final class AccountProviderRuntime: ProviderRuntime {
                                 limit: 100, valueWord: "spent"),
                 .percent(id: "\(prefix).grokBot", provider: provider, title: "Grok Bot", metricLabel: "Grok Bot usage"),
                 .boundedCount(id: "\(prefix).requests", provider: provider, title: "Requests", limit: 500,
-                              suffix: "requests", periodDurationMs: CursorUsageMapper.billingPeriodMs),
+                              periodDurationMs: CursorUsageMapper.billingPeriodMs),
                 .dollarBalance(id: "\(prefix).credits", provider: provider, title: "Credits", valueWord: "left")
             ]
         case .antigravity:
@@ -91,8 +91,8 @@ final class AccountProviderRuntime: ProviderRuntime {
             [
                 .percent(id: "\(prefix).premium", provider: provider, title: "Credits", metricLabel: "Credits"),
                 .values(id: "\(prefix).extra", provider: provider, title: "Extra Usage"),
-                .boundedCount(id: "\(prefix).chat", provider: provider, title: "Chat", limit: 0, suffix: "messages"),
-                .boundedCount(id: "\(prefix).completions", provider: provider, title: "Completions", limit: 0, suffix: "completions")
+                .boundedCount(id: "\(prefix).chat", provider: provider, title: "Chat", limit: 0),
+                .boundedCount(id: "\(prefix).completions", provider: provider, title: "Completions", limit: 0)
             ]
         case .grok:
             [
@@ -123,7 +123,7 @@ final class AccountProviderRuntime: ProviderRuntime {
             [
                 .percent(id: "\(prefix).session", provider: provider, title: "Session"),
                 .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly"),
-                .boundedCount(id: "\(prefix).webSearches", provider: provider, title: "Web Searches", limit: 0, suffix: "searches")
+                .boundedCount(id: "\(prefix).webSearches", provider: provider, title: "Web Searches", limit: 0)
             ]
         }
     }

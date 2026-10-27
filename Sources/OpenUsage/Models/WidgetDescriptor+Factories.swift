@@ -44,12 +44,11 @@ extension WidgetDescriptor {
         title: String,
         metricLabel: String? = nil,
         limit: Double,
-        suffix: String,
         periodDurationMs: Int? = nil
     ) -> WidgetDescriptor {
         make(id: id, provider: provider, metricLabel: metricLabel ?? title,
              sample: WidgetData(title: title, icon: provider.icon,
-                                kind: .count, used: 0, limit: limit, countSuffix: suffix,
+                                kind: .count, used: 0, limit: limit,
                                 periodDurationMs: periodDurationMs))
     }
 

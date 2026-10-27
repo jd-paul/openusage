@@ -401,7 +401,6 @@ final class WidgetDataStore {
                 kind: format.metricKind,
                 used: normalizedUsed,
                 limit: limit,
-                countSuffix: format.countSuffix,
                 resetsAt: resetsAt,
                 periodDurationMs: periodDurationMs
             )
