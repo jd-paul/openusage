@@ -3,9 +3,9 @@ import XCTest
 
 /// A refresh that keeps failing leaves the last good snapshot on screen (stale-while-revalidate by
 /// design), so the user must be told how old that data is or the fossilized plan/limits look current.
-/// The store exposes a per-provider hint once the displayed snapshot ages
-/// past its freshness window: a short "Outdated" label the dashboard header renders, plus a tooltip
-/// ("Last updated 3h ago") that carries the precise age.
+/// The store exposes a per-provider hint once the displayed snapshot ages past its freshness window:
+/// its age ("Last updated 3h ago"), which puts the clock glyph after the account's name and opens its
+/// right-click menu.
 @MainActor
 final class StalenessLabelTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -18,11 +18,10 @@ final class StalenessLabelTests: XCTestCase {
         }
     }
 
-    func testStaleSnapshotSurfacesOutdatedHint() {
+    func testStaleSnapshotSurfacesItsAge() {
         let store = makeStore()
         store.snapshots["devin"] = snapshot(refreshedAt: now.addingTimeInterval(-3 * 60 * 60))
-        XCTAssertEqual(store.stalenessHint(for: "devin"),
-                       StalenessHint(label: "Outdated", tooltip: "Last updated 3h ago"))
+        XCTAssertEqual(store.stalenessHint(for: "devin"), "Last updated 3h ago")
     }
 
     func testSnapshotExactlyAtThresholdIsStale() {
@@ -35,7 +34,7 @@ final class StalenessLabelTests: XCTestCase {
     func testVeryStaleSnapshotFormatsTooltipInDays() {
         let store = makeStore()
         store.snapshots["devin"] = snapshot(refreshedAt: now.addingTimeInterval(-3 * 24 * 60 * 60))
-        XCTAssertEqual(store.stalenessHint(for: "devin")?.tooltip, "Last updated 3d 0h ago")
+        XCTAssertEqual(store.stalenessHint(for: "devin"), "Last updated 3d 0h ago")
     }
 
     func testMissingSnapshotHasNoStalenessLabel() {
@@ -70,8 +69,7 @@ final class StalenessLabelTests: XCTestCase {
         XCTAssertEqual(runtime.refreshCount, 1)
         XCTAssertEqual(store.plan(for: "devin"), "Team 5x", "stale-while-revalidate keeps the last good snapshot")
         XCTAssertNotNil(store.errorMessage(for: "devin"), "the failed refresh still raises the warning")
-        XCTAssertEqual(store.stalenessHint(for: "devin"),
-                       StalenessHint(label: "Outdated", tooltip: "Last updated 3h ago"),
+        XCTAssertEqual(store.stalenessHint(for: "devin"), "Last updated 3h ago",
                        "the fossil is now visibly labelled as old")
     }
 

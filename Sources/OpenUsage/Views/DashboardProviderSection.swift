@@ -140,7 +140,8 @@ struct AccountName: View {
 struct AccountStatus {
     var refreshing = false
     var notice: String?
-    var staleness: StalenessHint?
+    /// How old the reading is, once it is stale.
+    var staleness: String?
 
     @ViewBuilder
     var glyph: some View {
@@ -156,7 +157,7 @@ struct AccountStatus {
             Image(systemName: "clock")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.tertiary)
-                .accessibilityLabel(staleness.tooltip)
+                .accessibilityLabel(staleness)
         }
     }
 }

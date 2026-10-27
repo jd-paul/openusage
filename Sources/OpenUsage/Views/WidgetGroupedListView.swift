@@ -149,7 +149,7 @@ struct WidgetGroupedListView: View {
 
     /// Why the account shows a warning or stale icon.
     private func statusReason(for accountID: String) -> String? {
-        dataStore.headerNotice(for: accountID) ?? dataStore.stalenessHint(for: accountID)?.tooltip
+        dataStore.headerNotice(for: accountID) ?? dataStore.stalenessHint(for: accountID)
     }
 
     private func canShare(_ accountID: String) -> Bool {

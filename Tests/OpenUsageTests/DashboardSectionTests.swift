@@ -75,7 +75,7 @@ final class DashboardSectionTests: XCTestCase {
         }
         var credits = WidgetData(title: "Extra Usage", icon: "codex", kind: .count, used: 452, limit: nil)
         credits.values = [MetricValue(number: 452, kind: .count, label: "credits")]
-        let stale = DashboardAccountCaption(account: personal, plan: "Max 5x", status: AccountStatus(staleness: StalenessHint(label: "1h ago", tooltip: "Last updated 1 hour ago")))
+        let stale = DashboardAccountCaption(account: personal, plan: "Max 5x", status: AccountStatus(staleness: "Last updated 1h ago"))
 
         XCTAssertEqual(interactiveParts(section.body), [], "section")
         XCTAssertEqual(interactiveParts(section.header), [], "header")
