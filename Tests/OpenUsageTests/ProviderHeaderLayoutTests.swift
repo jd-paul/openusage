@@ -25,10 +25,8 @@ final class ProviderHeaderLayoutTests: XCTestCase {
         return section(family, plans: Dictionary(uniqueKeysWithValues: accounts.compactMap { account in plan.map { (account.id, $0) } })).header
     }
 
-    private func section(_ family: DashboardFamily, plans: [String: String] = [:]) -> DashboardProviderSection<ProviderIcon, DashboardAccountRows> {
-        DashboardProviderSection(family: family, plans: plans) {
-            ProviderIcon(id: family.provider.icon, inset: 0.04)
-        } account: { account, captioned in
+    private func section(_ family: DashboardFamily, plans: [String: String] = [:]) -> DashboardProviderSection<DashboardAccountRows> {
+        DashboardProviderSection(family: family, plans: plans) { account, captioned in
             DashboardAccountRows(account: account, plan: plans[account.id], captioned: captioned)
         }
     }

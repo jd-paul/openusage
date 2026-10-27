@@ -5,13 +5,12 @@ import XCTest
 
 /// The dashboard shows what it shows: nothing on a provider's header, a caption or a row opens on a
 /// click, no plan or name reacts to the pointer, a plan is plain text and never a badge, and a row under
-/// the pointer draws exactly as it does at rest. Five things react: resting the pointer on the Limit
+/// the pointer draws exactly as it does at rest. Four things react: resting the pointer on the Limit
 /// Resets row's count opens the resets timeline after the hover dwell, resting it on the warning or
 /// clock after an account's name opens a tooltip with the reason, a click on a row's value or reset
-/// flips the display, a double-click on an account's name renames it, on its caption or in a one-account
-/// provider's header, and the logo turns into the copy button while the pointer is on the provider.
-/// Dragging still reorders: the header drags the provider, a caption drags its account, and a row
-/// drags itself.
+/// flips the display, and a double-click on an account's name renames it, on its caption or in a
+/// one-account provider's header. Dragging still reorders: the header drags the provider, a caption
+/// drags its account, and a row drags itself.
 @MainActor
 final class DashboardSectionTests: QuietWindowTestCase {
     private final class Log {
@@ -81,9 +80,7 @@ final class DashboardSectionTests: QuietWindowTestCase {
     func testOnlyTheResetsCountTheNameAndTheCopyButtonReact() {
         let personal = account(Provider(id: "claude@1", displayName: "Claude", icon: "claude", accountLabel: "Personal"))
         let family = DashboardFamily(id: "claude", provider: personal.provider, accounts: [personal, account(work)])
-        let section = DashboardProviderSection(family: family, plans: ["claude@1": "Max 5x"], status: AccountStatus(notice: "Refresh failed")) {
-            ProviderIcon(id: family.provider.icon, inset: 0.04)
-        } account: { account, _ in
+        let section = DashboardProviderSection(family: family, plans: ["claude@1": "Max 5x"], status: AccountStatus(notice: "Refresh failed")) { account, _ in
             DashboardAccountRows(account: account, plan: "Max 5x")
         }
         var credits = WidgetData(title: "Extra Usage", icon: "codex", kind: .count, used: 452, limit: nil)
@@ -108,7 +105,6 @@ final class DashboardSectionTests: QuietWindowTestCase {
         XCTAssertEqual(interactiveParts(DashboardLiveRow(line: DashboardLine(descriptor: WidgetDescriptor(id: "extra", providerID: "codex", metricLabel: "Extra Usage", sample: credits), data: credits)).body), [], "live value row")
         XCTAssertEqual(interactiveParts(DashboardLiveRow(line: resets).body), [], "the resets row itself")
         XCTAssertEqual(interactiveParts(DashboardLiveRow(line: resets).resetsTrigger(AnyView(Text("2 available")))), ["Hover", "Popover"], "the resets count")
-        XCTAssertEqual(interactiveParts(DashboardCopyButton(provider: personal.provider, active: true, copy: { true }).body), ["Hover", "Button", "Tooltip"], "copy button")
     }
 
     /// Resting the pointer on a metric row, on its label or on the caption's name opens nothing and
@@ -148,9 +144,7 @@ final class DashboardSectionTests: QuietWindowTestCase {
         let notice = "Refresh failed: the token has expired."
         let (renaming, provider) = storedAccount(label: "Work")
         let family = DashboardFamily(id: "claude", provider: provider, accounts: [account(provider)])
-        let section = DashboardProviderSection(family: family, status: AccountStatus(notice: notice)) {
-            ProviderIcon(id: provider.icon, inset: 0.04)
-        } account: { account, captioned in
+        let section = DashboardProviderSection(family: family, status: AccountStatus(notice: notice)) { account, captioned in
             DashboardAccountRows(account: account, captioned: captioned)
         }
         let (window, host) = hostView(section, renaming: renaming)
@@ -178,7 +172,7 @@ final class DashboardSectionTests: QuietWindowTestCase {
     func testAPlanIsNeverABadge() {
         let personal = account(Provider(id: "claude@1", displayName: "Claude", icon: "claude", accountLabel: "Personal"))
         let family = DashboardFamily(id: "claude", provider: personal.provider, accounts: [personal])
-        let header = DashboardProviderHeader(provider: family.provider, account: personal, plan: "Max 20x") { EmptyView() }
+        let header = DashboardProviderHeader(provider: family.provider, account: personal, plan: "Max 20x")
         for (name, body) in [("header", String(reflecting: type(of: header.body))),
                              ("caption", String(reflecting: type(of: DashboardAccountCaption(account: personal, plan: "Max 20x").body)))] {
             for badge in ["Capsule", "Background", "RoundedRectangle"] {
@@ -292,9 +286,7 @@ final class DashboardSectionTests: QuietWindowTestCase {
         let section = DashboardProviderSection(
             family: family, plans: [provider.id: "Max 5x"],
             handle: { AnyView($0.highPriorityGesture(DragGesture(minimumDistance: 4).onChanged { _ in log.headerDrags += 1 })) }
-        ) {
-            ProviderIcon(id: provider.icon, inset: 0.04)
-        } account: { account, captioned in
+        ) { account, captioned in
             DashboardAccountRows(account: account, captioned: captioned)
         }
         let (window, host) = hostView(section, renaming: renaming)
@@ -378,9 +370,7 @@ final class DashboardSectionTests: QuietWindowTestCase {
     private func hostWithRenaming(log: Log, lines: [DashboardLine]? = nil) -> Hosted {
         let (renaming, provider) = storedAccount(label: "Personal")
         let family = DashboardFamily(id: "claude", provider: provider, accounts: [account(provider, lines: lines), account(work)])
-        let view = DashboardProviderSection(family: family) {
-            ProviderIcon(id: provider.icon, inset: 0.04)
-        } account: { account, _ in
+        let view = DashboardProviderSection(family: family) { account, _ in
             VStack(alignment: .leading, spacing: 0) {
                 DashboardAccountCaption(account: account, plan: "Max 5x")
                     .highPriorityGesture(DragGesture(minimumDistance: 4).onChanged { _ in log.accountDrags += 1 })

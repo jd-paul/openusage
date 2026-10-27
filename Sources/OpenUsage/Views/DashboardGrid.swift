@@ -45,7 +45,7 @@ enum DashboardGrid {
     static let headerHeight = lineHeight(headerNSFont)
     /// A caption is one line of its type.
     static let captionHeight = lineHeight(planNSFont)
-    /// The provider's logo, and the copy button in its place: as tall as the header's line.
+    /// The provider's logo: as tall as the header's line.
     static let iconSize = headerHeight
 
     /// The height of one line of `font`, in whole points.

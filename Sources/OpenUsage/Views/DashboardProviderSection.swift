@@ -6,9 +6,9 @@ import SwiftUI
 /// per metric, the caption left out when the header names the account. Nothing on the line is ever
 /// cut or shrunk: a sole account whose "Provider — name" and plan don't fit beside the logo reads as a
 /// card of several accounts would, the provider alone above, the name and plan on the caption. Static
-/// but for the status glyph's tooltip: the dashboard adds hover, menus and drags around it, and the
-/// share image draws it as it is.
-struct DashboardProviderSection<Trailing: View, Account: View>: View {
+/// but for the status glyph's tooltip: the dashboard adds menus and drags around it, and the share
+/// image draws it as it is.
+struct DashboardProviderSection<Account: View>: View {
     let family: DashboardFamily
     /// The plan of an account, by its id.
     var plans: [String: String] = [:]
@@ -18,8 +18,6 @@ struct DashboardProviderSection<Trailing: View, Account: View>: View {
     var width: CGFloat = DashboardGrid.cardWidth
     /// Wraps the header, so the dashboard can attach the provider's drag gesture to it.
     var handle: (AnyView) -> AnyView = { $0 }
-    /// What ends the header line: the provider's logo, or the copy button in its place.
-    @ViewBuilder var trailing: () -> Trailing
     /// An account's block in the card: with its caption when `captioned`, or its rows alone.
     @ViewBuilder var account: (DashboardAccount, _ captioned: Bool) -> Account
 
@@ -41,8 +39,7 @@ struct DashboardProviderSection<Trailing: View, Account: View>: View {
             provider: family.provider,
             account: account?.name == family.provider.displayName ? nil : account,
             plan: account.flatMap { plans[$0.id] },
-            status: account == nil ? AccountStatus() : status,
-            trailing: trailing
+            status: account == nil ? AccountStatus() : status
         )
     }
 
@@ -76,13 +73,14 @@ enum DashboardHeaderLine {
 
 /// The line above a provider's card: the provider, or "Provider — account" when the account's name fits
 /// (`DashboardHeaderLine.fits`), the plan 8 pt before the logo, both centred on the line, nothing cut.
-struct DashboardProviderHeader<Trailing: View>: View {
+struct DashboardProviderHeader: View {
     let provider: Provider
     /// The account named after the provider, or `nil` for the provider alone.
     var account: DashboardAccount?
     var plan: String?
     var status = AccountStatus()
-    @ViewBuilder var trailing: () -> Trailing
+
+    @Environment(\.popoverPartyMode) private var partyMode
 
     var body: some View {
         HStack(spacing: 0) {
@@ -106,7 +104,8 @@ struct DashboardProviderHeader<Trailing: View>: View {
                     .fixedSize()
                     .padding(.trailing, DashboardGrid.columnGap)
             }
-            trailing()
+            ProviderIcon(id: provider.icon, inset: 0.04)
+                .partyPulse(partyMode)
                 .frame(width: DashboardGrid.iconSize, height: DashboardGrid.iconSize)
         }
         .padding(.horizontal, DashboardGrid.cardPadding + DashboardGrid.inset)

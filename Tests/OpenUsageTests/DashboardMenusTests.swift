@@ -1,8 +1,9 @@
 import XCTest
 @testable import OpenUsage
 
-/// Apart from the copy button and the Limit Resets row's popover, right-click is the only way to act on
-/// the dashboard.
+/// Apart from the Limit Resets row's popover, right-click is the only way to act on the dashboard, and
+/// its Share Screenshot the only way to copy a picture: a provider's header shares all its accounts, an
+/// account's caption that account.
 @MainActor
 final class DashboardMenusTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -27,22 +28,23 @@ final class DashboardMenusTests: XCTestCase {
         return DashboardAccount(provider: claude, lines: lines)
     }
 
-    func testTheProviderMenuRefreshesManagesAndOpensTheLinks() {
+    func testTheProviderMenuRefreshesManagesSharesEveryAccountAndOpensTheLinks() {
         let other = Provider(id: "claude@2", displayName: "Claude", icon: "claude", accountLabel: "AM 1")
         let family = DashboardFamily(id: "claude", provider: claude, accounts: [account(), DashboardAccount(provider: other, lines: [])])
 
         XCTAssertEqual(commands(DashboardMenus.provider(family)), [
             [.refresh(["claude@1", "claude@2"])],
             [.manageAccounts],
+            [.shareScreenshot(["claude@1", "claude@2"])],
             claudeLinks,
         ])
     }
 
     func testThePlainAccountMenu() {
-        let menu = DashboardMenus.account(account(), status: nil, canShare: true, hasHiddenMetrics: false)
+        let menu = DashboardMenus.account(account(), status: nil, hasHiddenMetrics: false)
         XCTAssertEqual(commands(menu), [
             [.refresh(["claude@1"]), .rename("claude@1"), .editAccount("claude@1")],
-            [.shareScreenshot("claude@1")],
+            [.shareScreenshot(["claude@1"])],
         ])
     }
 
@@ -52,7 +54,6 @@ final class DashboardMenusTests: XCTestCase {
         let menu = DashboardMenus.account(
             account(resetExpiries: [now.addingTimeInterval(6 * 86_400)]),
             status: "Couldn't refresh. Check your connection.",
-            canShare: true,
             hasHiddenMetrics: true
         )
 
@@ -60,7 +61,7 @@ final class DashboardMenusTests: XCTestCase {
         XCTAssertEqual(commands(menu), [
             [nil],
             [.refresh(["claude@1"]), .rename("claude@1"), .editAccount("claude@1")],
-            [.shareScreenshot("claude@1")],
+            [.shareScreenshot(["claude@1"])],
             [.showHiddenMetrics("claude@1")],
         ])
     }
@@ -71,7 +72,6 @@ final class DashboardMenusTests: XCTestCase {
         let menu = DashboardMenus.soleAccount(
             account(),
             status: "Couldn't refresh. Check your connection.",
-            canShare: true,
             hasHiddenMetrics: true
         )
 
@@ -79,13 +79,13 @@ final class DashboardMenusTests: XCTestCase {
             [nil],
             [.refresh(["claude@1"])],
             [.rename("claude@1"), .editAccount("claude@1"), .manageAccounts],
-            [.shareScreenshot("claude@1")],
+            [.shareScreenshot(["claude@1"])],
             [.showHiddenMetrics("claude@1")],
             claudeLinks,
         ])
         XCTAssertEqual(
-            commands(DashboardMenus.soleAccount(account(), status: nil, canShare: true, hasHiddenMetrics: false)),
-            [[.refresh(["claude@1"])], [.rename("claude@1"), .editAccount("claude@1"), .manageAccounts], [.shareScreenshot("claude@1")], claudeLinks]
+            commands(DashboardMenus.soleAccount(account(), status: nil, hasHiddenMetrics: false)),
+            [[.refresh(["claude@1"])], [.rename("claude@1"), .editAccount("claude@1"), .manageAccounts], [.shareScreenshot(["claude@1"])], claudeLinks]
         )
     }
 

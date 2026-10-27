@@ -54,8 +54,8 @@ menu starts with the reason too.
 
 ## Right-click menus
 
-- A provider's card: **Refresh**, **Manage Accounts…**, and the provider's links, such as
-  **Status Page** and **Usage Dashboard**.
+- A provider's card: **Refresh**, **Manage Accounts…**, **Share Screenshot**, and the provider's links,
+  such as **Status Page** and **Usage Dashboard**.
 - An account: **Refresh**, **Rename**, **Edit Account…**, and **Share Screenshot**. If the account
   shows a warning or stale icon, the menu starts with the reason. **Show Hidden Metrics** appears when
   you have hidden any.
@@ -80,11 +80,12 @@ name selected. Return or a click elsewhere saves; Esc cancels.
 
 ## Share
 
-Copy a PNG of one provider's header and card to the clipboard: while the pointer is on the provider,
-its logo becomes a camera button; click it, or right-click and choose **Share Screenshot**. The image
-shows the header and card at rest, follows your light or dark appearance, and carries a small OpenUsage
-mark at the bottom. An account named by its email reads as its provider alone, so the email never
-leaves the panel.
+Right-click a provider and choose **Share Screenshot** to copy a PNG of its header and card to the
+clipboard; on an account inside a card of several, **Share Screenshot** copies that account alone under
+the provider's header. The footer shows **Copied to clipboard** for a moment. The image shows the
+header and card at rest, follows your light or dark appearance, and carries a small OpenUsage mark at
+the bottom. An account named by its email reads as its provider alone, so the email never leaves the
+panel.
 
 ## Update banner
 

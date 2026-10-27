@@ -132,9 +132,7 @@ final class DashboardLabelFitTests: XCTestCase {
     /// The header, naming the account when `naming` whether or not that fits.
     private func header(kind: ProviderKind, name: String, plan: String, naming: Bool = false) -> some View {
         let account = account(kind, name)
-        return DashboardProviderHeader(provider: account.provider, account: naming ? account : nil, plan: plan) {
-            ProviderIcon(id: account.provider.icon, inset: 0.04)
-        }
+        return DashboardProviderHeader(provider: account.provider, account: naming ? account : nil, plan: plan)
     }
 
     private func meter(left: Double, limit: Double) -> WidgetData {

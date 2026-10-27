@@ -60,8 +60,8 @@ what each one shows.
   account, or a row for its actions. Drag to reorder.
 - **Resets.** Claude and Codex accounts show a Limit Resets row with the number of available rate-limit
   resets. Rest the pointer on the count to see when each expires, and spend one from there.
-- **Share.** Copy a PNG of any provider's header and card to the clipboard from the camera button that
-  takes its logo's place while the pointer is on it.
+- **Share.** Right-click a provider or an account and choose Share Screenshot to copy a PNG of its
+  header and card to the clipboard.
 - **Notifications.** Optional alerts when a limit falls under 10% or your pace changes.
 - **Global shortcut.** Toggle the panel from anywhere.
 - **[Automatic updates](docs/updates.md).** Signed, notarized in-app updates, with an optional beta
