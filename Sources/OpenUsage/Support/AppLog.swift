@@ -32,12 +32,12 @@ enum LogTag: String, Sendable {
 /// on a hot path (`[cache]`, `[http]`) costs nothing there; a debug build keeps them.
 enum AppLog {
     private enum Level {
-        case error, warn, info, debug
+        case error, warn, notice, info, debug
 
         var osType: OSLogType {
             switch self {
             case .error: .error
-            case .warn: .default
+            case .warn, .notice: .default
             case .info: .info
             case .debug: .debug
             }
@@ -67,6 +67,10 @@ enum AppLog {
     static func error(_ tag: LogTag, _ message: @autoclosure () -> String) { error(tag.rawValue, message()) }
     static func warn(_ tag: LogTag, _ message: @autoclosure () -> String) { warn(tag.rawValue, message()) }
     static func info(_ tag: LogTag, _ message: @autoclosure () -> String) { info(tag.rawValue, message()) }
+    /// Unified logging keeps info lines in memory only, so `log show` an hour later misses them; a
+    /// notice is written to disk. For the lines read after the fact to check what the app did, such as
+    /// each refresh pass's start and end.
+    static func notice(_ tag: LogTag, _ message: @autoclosure () -> String) { emit(.notice, tag.rawValue, message) }
     static func debug(_ tag: LogTag, _ message: @autoclosure () -> String) {
         #if DEBUG
         emit(.debug, tag.rawValue, message)

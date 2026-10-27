@@ -182,7 +182,7 @@ final class WidgetDataStore {
 
     private func refreshPass(_ providerIDs: [String], force: Bool) async {
         let start = monotonicNow()
-        AppLog.info(.refresh, "batch start (\(providerIDs.count) providers, force=\(force))")
+        AppLog.notice(.refresh, "batch start (\(providerIDs.count) providers, force=\(force))")
         let outcomes = await refresh(providerIDs: providerIDs, force: force)
         // Stamp the end of the pass so the footer countdown targets the next scheduled refresh
         // (this time + one refresh interval), mirroring the periodic loop that sleeps one interval
@@ -195,7 +195,7 @@ final class WidgetDataStore {
         let failed = outcomes.count { $0 == .failed }
         let cached = outcomes.count { $0 == .cacheHit }
         let backedOff = outcomes.count { $0 == .backedOff }
-        AppLog.info(.refresh, "batch end (\(durationMs)ms, \(refreshed) ok / \(failed) failed / \(cached) cached / \(backedOff) backed off)")
+        AppLog.notice(.refresh, "batch end (\(durationMs)ms, \(refreshed) ok / \(failed) failed / \(cached) cached / \(backedOff) backed off)")
     }
 
     /// Refreshes these accounts side by side, so a slow one never holds the others behind its deadline.

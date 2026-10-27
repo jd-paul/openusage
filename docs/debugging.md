@@ -26,6 +26,14 @@ log stream --info --predicate 'subsystem == "OpenUsage" AND category == "refresh
 log show --last 1h --info --predicate 'subsystem == "OpenUsage"'
 ```
 
+macOS keeps info lines in memory only, so `log show` finds them for a few minutes at most. Each
+refresh pass's `batch start` and `batch end` lines are notices, which it writes to disk, so this lists
+every pass after the fact:
+
+```sh
+log show --last 2h --predicate 'subsystem == "OpenUsage" AND category == "refresh"'
+```
+
 Console.app shows the same lines; filter by subsystem. Debug-level lines exist in debug builds only
 (`CONFIG=debug ./script/build_and_run.sh`) and need `--debug` instead of `--info`.
 
