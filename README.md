@@ -32,9 +32,9 @@ Either way, the app updates itself in place through signed, notarized
 ## Accounts
 
 Open **Accounts** from the panel's **Options** menu (or press Return), click **+**, and click a
-provider to start its sign-in. Browser sign-in shows **Open Browser** and **Copy Link**, so you can
-pick the browser. Device-code sign-in shows the code to enter. API-key sign-in links to the page where
-you create the key. You can add several accounts for the same provider. See
+provider to start its sign-in. Browser sign-in opens your browser; **Open Browser** opens it again and
+**Copy Link** lets you pick another browser. Device-code sign-in shows the code to enter. API-key
+sign-in links to the page where you create the key. You can add several accounts for the same provider. See
 [Accounts](docs/accounts.md) for renaming and removing accounts.
 
 Account names and settings live in the app's own preferences. OAuth tokens and API keys live in the

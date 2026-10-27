@@ -8,16 +8,17 @@ Open it from the panel's **Options** menu or press Return on the dashboard.
 1. Click **+** at the top of the Accounts screen.
 2. Click a provider, or select it with the arrow keys and press Return. The sign-in starts at once.
 3. Finish the sign-in:
-   - **Browser** (Claude, Codex, Cursor, Antigravity): click **Open Browser**, or **Copy Link** to
-     open the link in another browser. The sheet closes when you are signed in. If your browser shows
-     a code instead, paste it into the sheet and click **Continue**.
-   - **Device code** (Copilot, Grok): the sheet shows a code and a link. **Copy Code**, open the link,
+   - **Browser** (Claude, Codex, Cursor, Antigravity): your browser opens on its own. **Open Browser**
+     opens it again, and **Copy Link** lets you open the link in another browser. The sheet closes
+     when you are signed in. If your browser shows a code instead, paste it into the sheet and click
+     **Continue**.
+   - **Device code** (Copilot, Grok): the sheet shows a code. **Copy Code**, click **Open Browser**,
      and enter the code. The sheet closes when the provider confirms.
    - **API key** (Ollama, OpenCode, OpenRouter, Z.ai): create a key on the page the sheet links to,
      paste it, and click **Add Account**.
 
-If a sign-in fails, **Try Again** starts it over. **Cancel** on a sign-in step goes back to the
-provider list; **Cancel** on the list closes the sheet.
+If a sign-in fails, **Try Again** starts it over. The close button in a sign-in step's corner (or Esc)
+goes back to the provider list; **Cancel** on the list closes the sheet.
 
 You can add several accounts for the same provider. A new account goes to the bottom of its
 provider's accounts and starts refreshing right away.
