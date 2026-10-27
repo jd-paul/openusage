@@ -56,9 +56,10 @@ what each one shows and what each sign-in grants.
   above its rows. One row per metric: label, bar, value, and reset. With a reset window the bar's colour is where your pace lands at the
   reset: blue on course, orange inside the last 10%, red with a flame before the value when you would
   run out first; without one, blue, orange once 75% is used, red once 90% is. Click a value to flip
-  every row between used and left, a reset between countdown and exact time. A warning or clock after
-  an account's name explains itself when you rest the pointer on it. Right-click a header, a card, an
-  account, or a row for its actions. Drag to reorder.
+  every row between used and left, a reset between countdown and exact time. Rest the pointer on a bar
+  to read where your pace lands at the reset, on a value to read its other side, on a reset to read
+  the other format, and on the warning or clock after an account's name to read why it is there.
+  Right-click a header, a card, an account, or a row for its actions. Drag to reorder.
 - **Resets.** Claude and Codex accounts show a Limit Resets row with the number of available rate-limit
   resets. Rest the pointer on the count to see when each expires, and spend one from there.
 - **Share.** Right-click a provider and choose Share Screenshot to copy a PNG of its header and card,

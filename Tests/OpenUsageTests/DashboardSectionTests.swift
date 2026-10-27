@@ -5,9 +5,10 @@ import XCTest
 
 /// The dashboard shows what it shows: nothing on a provider's header, a caption or a row opens on a
 /// click, no plan or name reacts to the pointer, and a row under the pointer draws exactly as it does
-/// at rest. Four things react: resting the pointer on the Limit
+/// at rest. Five things react: resting the pointer on the Limit
 /// Resets row's count opens the resets timeline after the hover dwell, resting it on the warning or
-/// clock after an account's name opens a tooltip with the reason, a click on a row's value or reset
+/// clock after an account's name opens a tooltip with the reason, resting it on a row's bar, value or
+/// reset opens a tooltip with the figure the row doesn't show, a click on a row's value or reset
 /// flips the display, and a double-click on an account's name on its caption renames it. The header,
 /// the provider's logo and name, reacts to nothing, over one account as over several.
 /// Dragging still reorders: the header drags the provider, a caption drags its account, and a row
@@ -62,31 +63,47 @@ final class DashboardSectionTests: QuietWindowTestCase {
         DashboardAccount(provider: provider, lines: lines ?? self.lines)
     }
 
-    /// Resting the pointer on a metric row, on its label or on the caption's name opens nothing and
-    /// changes nothing on the panel: no highlight, no text swap, no height. Only the Limit Resets row's
-    /// count opens the resets timeline after the hover dwell, with no click, and the panel keeps its
-    /// height.
+    /// Resting the pointer on the caption's name or on a row's label opens nothing and changes nothing
+    /// on the panel: no highlight, no text swap, no height. A row's bar, value and reset each open a
+    /// tooltip with the one figure the row doesn't show (where the pace lands at reset, the other
+    /// reading, the other format), and the row under the pointer still draws as at rest. Only the Limit
+    /// Resets row's count opens the resets timeline after the hover dwell, with no click, and the panel
+    /// keeps its height.
     func testOnlyTheResetsCountOpensAPopoverAndEveryOtherRowDrawsAsAtRest() throws {
         let log = Log()
         let hosted = hostWithRenaming(log: log, lines: lines + [resets])
         let shown = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
-        func popoverIsOpen() -> Bool { NSApp.windows.contains { $0.isVisible && !shown.contains(ObjectIdentifier($0)) } }
+        func opened() -> [NSWindow] { NSApp.windows.filter { $0.isVisible && !shown.contains(ObjectIdentifier($0)) } }
         let height = hosted.host.fittingSize.height
         let atRest = try pixels(of: hosted.host)
         let resetsRowY = Self.firstRowY + 3 * DashboardGrid.rowHeight
         let figureX = DashboardGrid.cardPadding + DashboardGrid.inset + DashboardGrid.labelWidth + DashboardGrid.columnGap + 12
+        let trailing = hosted.host.bounds.width - DashboardGrid.cardPadding - DashboardGrid.inset
 
         for (name, point) in [("the name", CGPoint(x: Self.nameX, y: Self.captionY)),
-                              ("a row", CGPoint(x: hosted.host.bounds.width / 2, y: Self.firstRowY)),
-                              ("a row's value", CGPoint(x: hosted.host.bounds.width - DashboardGrid.cardPadding - DashboardGrid.inset - DashboardGrid.resetWidth - DashboardGrid.columnGap - 10, y: Self.firstRowY)),
+                              ("a row's label", CGPoint(x: Self.nameX, y: Self.firstRowY)),
                               ("the resets row's label", CGPoint(x: Self.nameX, y: resetsRowY))] {
             try hover(point, hosted.window, hosted.host)
-            XCTAssertFalse(popoverIsOpen(), "hovering \(name) opens something")
+            XCTAssertTrue(opened().isEmpty, "hovering \(name) opens something")
+            XCTAssertNil(HoverTooltips.visibleText, "hovering \(name) shows a tooltip")
             XCTAssertEqual(try pixels(of: hosted.host), atRest, "\(name) under the pointer draws differently from at rest")
+            try leave(hosted.window, hosted.host)
+        }
+
+        let session = lines[0].data
+        for (name, point, text) in [("the bar", CGPoint(x: hosted.host.bounds.width / 2, y: Self.firstRowY), session.paceTooltip()),
+                                    ("the value", CGPoint(x: trailing - DashboardGrid.resetWidth - DashboardGrid.columnGap - 10, y: Self.firstRowY), session.meterStyleTooltip),
+                                    ("the reset", CGPoint(x: trailing - 10, y: Self.firstRowY), session.resetTooltip())] {
+            try hover(point, hosted.window, hosted.host)
+            XCTAssertEqual(opened().count, 1, "hovering \(name) opens no tooltip")
+            XCTAssertEqual(HoverTooltips.visibleText, try XCTUnwrap(text), "the tooltip on \(name) reads something else")
+            XCTAssertEqual(try pixels(of: hosted.host), atRest, "\(name) under the pointer draws differently from at rest")
+            try leave(hosted.window, hosted.host)
+            XCTAssertTrue(opened().isEmpty, "the tooltip on \(name) stayed after the pointer left")
         }
 
         try hover(CGPoint(x: figureX, y: resetsRowY), hosted.window, hosted.host)
-        XCTAssertTrue(popoverIsOpen(), "hovering the resets count opens no popover")
+        XCTAssertFalse(opened().isEmpty, "hovering the resets count opens no popover")
         XCTAssertEqual(hosted.host.fittingSize.height, height, "the hover changed the height")
         XCTAssertEqual(log.accountDrags + log.metricDrags, 0)
         HoverPopoverState.dismissAll()

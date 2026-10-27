@@ -3,10 +3,11 @@ import SwiftUI
 
 /// The dashboard display: one provider after another (`DashboardFamily`), each a header above a card
 /// of its accounts, every account one row per metric that has data, fed by the same `WidgetDataStore`
-/// the menu bar uses. Every row shows its label, bar, value and reset at rest and reacts to nothing
-/// under the pointer; only the Limit Resets row's count opens the resets timeline after a dwell. A click
-/// on a value flips every row between used and left, a click on a reset between countdown and exact
-/// time. A double-click on an account's name on its caption renames it, the same as the menu's Rename.
+/// the menu bar uses. Every row shows its label, bar, value and reset at rest and draws the same under
+/// the pointer; resting it on the bar, the value or the reset opens a tooltip with the figure the row
+/// doesn't show, and on the Limit Resets row's count the resets timeline after a dwell. A click on a
+/// value flips every row between used and left, a click on a reset between countdown and exact time.
+/// A double-click on an account's name on its caption renames it, the same as the menu's Rename.
 ///
 /// Right-click a provider's header or card, an account's caption, or a metric row for its menu
 /// (`DashboardMenus`). Share Screenshot there is the one way to copy a picture: the provider's with all
