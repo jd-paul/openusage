@@ -62,7 +62,7 @@ struct WidgetGroupedListView: View {
     private func status(for accountID: String) -> AccountStatus {
         AccountStatus(
             refreshing: dataStore.refreshingProviderIDs.contains(accountID),
-            notice: dataStore.headerNotice(for: accountID),
+            notice: dataStore.errorMessage(for: accountID),
             staleness: dataStore.stalenessHint(for: accountID)
         )
     }
@@ -165,7 +165,7 @@ struct WidgetGroupedListView: View {
 
     /// Why the account shows a warning or stale icon.
     private func statusReason(for accountID: String) -> String? {
-        dataStore.headerNotice(for: accountID) ?? dataStore.stalenessHint(for: accountID)
+        dataStore.errorMessage(for: accountID) ?? dataStore.stalenessHint(for: accountID)
     }
 
     private func canShare(_ accountID: String) -> Bool {

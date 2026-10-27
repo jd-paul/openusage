@@ -355,7 +355,7 @@ final class AccountProviderRuntime: ProviderRuntime {
         try ProviderAuthRetry.requireSuccess(balance, kind: .ollama)
         let account = successBody(try? await client.fetchAccount(apiKey: key))
         let mapped = try OllamaUsageMapper.map(balanceBody: balance.body, accountBody: account)
-        return (mapped.plan.name, mapped.lines)
+        return (mapped.plan, mapped.lines)
     }
 
     private func refreshOpenCode(_ credential: AccountCredential) async throws -> (String?, [MetricLine]) {

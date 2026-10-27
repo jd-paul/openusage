@@ -48,7 +48,6 @@ final class ClaudeResetGrantsCadenceTests: XCTestCase {
         clock.set(Self.start.addingTimeInterval(5 * 60))
         let second = await runtime.refresh()
 
-        XCTAssertNil(first.warning)
         XCTAssertNotNil(first.line(label: "Session"))
         XCTAssertNil(resetsAvailable(first.lines))
         XCTAssertNotNil(second.line(label: "Session"))

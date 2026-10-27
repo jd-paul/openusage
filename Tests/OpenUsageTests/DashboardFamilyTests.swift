@@ -25,25 +25,20 @@ final class DashboardFamilyTests: XCTestCase {
         XCTAssertEqual(families[0].accounts.map { $0.lines.map(\.id) }, [["session", "fable"], ["fable"]])
     }
 
-    func testTheHeaderNamesASoleAccountAndTheImageLeavesItsEmailOut() {
+    func testTheImageLeavesAnAccountsEmailOut() {
         func family(_ accounts: [Provider]) -> DashboardFamily {
             DashboardFamily(id: "codex", provider: accounts[0], accounts: accounts.map { DashboardAccount(provider: $0, lines: []) })
         }
         func codex(_ label: String?) -> Provider {
             Provider(id: "codex@\(label ?? "plain")", displayName: "Codex", icon: "codex", accountLabel: label)
         }
-        // One account: the header names it, by its email when it has no name of its own, and leaves it
-        // out when it is named like its provider.
-        XCTAssertEqual(family([codex("Sunstory")]).namedSoleAccount?.name, "Sunstory")
-        XCTAssertEqual(family([codex("sam@hey.com")]).namedSoleAccount?.name, "sam@hey.com")
-        XCTAssertNil(family([codex("Codex")]).namedSoleAccount)
-        XCTAssertNil(family([codex(nil)]).namedSoleAccount)
-        // Several accounts: the provider alone; each account's name goes on its caption.
-        XCTAssertNil(family([codex("Sunstory"), codex("sam@hey.com")]).namedSoleAccount)
+        // An account is named by its email when it has no name of its own; each of several accounts'
+        // names goes on its caption.
+        XCTAssertEqual(family([codex("sam@hey.com")]).soleAccount?.name, "sam@hey.com")
         XCTAssertEqual(family([codex("Sunstory"), codex("sam@hey.com")]).accounts.map(\.name), ["Sunstory", "sam@hey.com"])
-        // The copied image keeps a custom name and drops an email, in the header and on captions.
-        XCTAssertEqual(family([codex("Sunstory")]).hidingEmails.namedSoleAccount?.name, "Sunstory")
-        XCTAssertNil(family([codex("sam@hey.com")]).hidingEmails.namedSoleAccount)
+        // The copied image keeps a custom name and reads an email as the provider alone.
+        XCTAssertEqual(family([codex("Sunstory")]).hidingEmails.soleAccount?.name, "Sunstory")
+        XCTAssertEqual(family([codex("sam@hey.com")]).hidingEmails.soleAccount?.name, "Codex")
         XCTAssertEqual(family([codex("Sunstory"), codex("sam@hey.com")]).hidingEmails.accounts.map(\.name), ["Sunstory", "Codex"])
     }
 

@@ -3,9 +3,6 @@ import Foundation
 struct ClaudeMappedUsage: Equatable, Sendable {
     var plan: String?
     var lines: [MetricLine]
-    /// Provider header notice (orange triangle + tooltip) riding along with this usage, e.g. the
-    /// rate-limited warning. `nil` for a clean fetch.
-    var warning: String?
 }
 
 enum ClaudeUsageMapper {
@@ -64,25 +61,6 @@ enum ClaudeUsageMapper {
             return (body["reason"] as? String).flatMap(outcome) ?? .failed(.refused)
         }
         return outcome(result) ?? .failed(.refused)
-    }
-
-    /// Snapshot shown when the usage endpoint rate-limits us and there is no last-good usage to fall back
-    /// on (e.g. the first fetch after launch): no live bars, just the header warning.
-    static func rateLimitedUsage(credentials: ClaudeOAuth, retryAfterSeconds: Int?) -> ClaudeMappedUsage {
-        ClaudeMappedUsage(
-            plan: formatPlan(subscriptionType: credentials.subscriptionType, rateLimitTier: credentials.rateLimitTier),
-            lines: [],
-            warning: rateLimitedWarning(retryAfterSeconds: retryAfterSeconds)
-        )
-    }
-
-    /// Provider header warning (the orange triangle + tooltip) for the rate-limited state, so the "No
-    /// data" rows come with the reason. Also warns the user off manual refreshes, which extend
-    /// Anthropic's rate limiting.
-    static func rateLimitedWarning(retryAfterSeconds: Int?) -> String {
-        let base = "Updates blocked by Anthropic. Be patient — manual refreshes will make it worse."
-        guard let retryText = retryAfterSeconds.map(formatRateLimitMinutes) else { return base }
-        return "\(base) Retrying in ~\(retryText)."
     }
 
     static func formatPlan(subscriptionType: String?, rateLimitTier: String?) -> String? {
@@ -193,11 +171,6 @@ enum ClaudeUsageMapper {
         }
         let milliseconds = abs(number) < 1e10 ? number * 1000 : number
         return Date(timeIntervalSince1970: milliseconds / 1000)
-    }
-
-    private static func formatRateLimitMinutes(_ seconds: Int) -> String {
-        guard seconds > 0 else { return "now" }
-        return "\(Int(ceil(Double(seconds) / 60)))m"
     }
 
 }

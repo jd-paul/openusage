@@ -333,23 +333,6 @@ final class WidgetDataStore {
         providerErrors[providerID]
     }
 
-    /// A soft, non-blocking notice from the provider's latest *successful* snapshot (e.g. Claude's
-    /// "Re-login for live usage" when the login lacks the `user:profile` scope). `nil` when there's no
-    /// warning. After a *failed* refresh the store keeps the last good snapshot (so this warning can
-    /// linger) while setting `providerErrors` — use `headerNotice(for:)` for the rendered triangle so a
-    /// current hard error isn't masked by a stale soft warning.
-    func warningMessage(for providerID: String) -> String? {
-        snapshots[providerID]?.warning
-    }
-
-    /// The provider header's orange-triangle notice: a hard refresh error takes precedence over a stale
-    /// soft warning from the last successful snapshot. After a failed refresh the store keeps the last
-    /// good snapshot (so `warningMessage` still returns its warning) while `errorMessage` holds the
-    /// current failure — the error must win, or a stale "Re-login for live usage" warning would hide a
-    /// real "Token expired" failure. When there's no error, the soft warning (if any) shows.
-    func headerNotice(for providerID: String) -> String? {
-        errorMessage(for: providerID) ?? warningMessage(for: providerID)
-    }
 
     func data(for descriptor: WidgetDescriptor) -> WidgetData {
         var result: WidgetData

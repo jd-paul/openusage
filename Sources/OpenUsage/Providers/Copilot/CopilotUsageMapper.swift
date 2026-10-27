@@ -3,14 +3,6 @@ import Foundation
 struct CopilotMappedUsage: Equatable, Sendable {
     var plan: String?
     var lines: [MetricLine]
-    /// True for an org-managed (token-based-billing) seat whose response carried no *percent* per-seat
-    /// meter — the signal that the real usage lives in *organization* billing, where the provider
-    /// should look next. Kept as an explicit flag so the org lookup is never gated on the incidental
-    /// shape of `lines`: a placeholder `overage_permitted` would otherwise sneak an "Extra Usage: 0" row
-    /// in and block the lookup. `lines` isn't necessarily empty when this is `true`: the same placeholder
-    /// can still carry the user's own `credits_used`, shown as a personal Credits count — the provider
-    /// must merge that with any org-billing lines rather than replace it.
-    var isOrgManagedSeat: Bool = false
 }
 
 /// Normalizes the `/copilot_internal/user` response into meters. Since 2026-06-01 every plan is on
@@ -78,11 +70,7 @@ enum CopilotUsageMapper {
             guard ProviderParse.bool(body["token_based_billing"]) == true else {
                 throw ProviderError.unavailable("Copilot usage data is unavailable for this account.")
             }
-            return CopilotMappedUsage(
-                plan: plan,
-                lines: personalCreditsLines(premium),
-                isOrgManagedSeat: true
-            )
+            return CopilotMappedUsage(plan: plan, lines: personalCreditsLines(premium))
         }
 
         return CopilotMappedUsage(plan: plan, lines: lines)

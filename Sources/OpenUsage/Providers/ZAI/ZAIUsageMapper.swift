@@ -27,11 +27,6 @@ enum ZAIUsageMapper {
         return (plan, lines)
     }
 
-    /// True when a 2xx quota body is the "valid key, but no GLM Coding Plan" signal: Z.ai answers
-    /// `{"success":false,"code":500,"msg":"…coding plan"}` with no `data`. The provider turns this into a
-    /// clear `.notAvailable` error (a header warning) instead of three blank "No data" meters that don't
-    /// say why. Matched on the structured `success:false` plus the "coding plan" phrase the message
-    /// carries (ASCII even in the localized string), so an unrelated business failure doesn't trip it.
     /// Session + weekly + web-search meters from the quota payload. Missing required values are an
     /// invalid response rather than zero usage; an explicit empty array remains a valid no-data state.
     static func mapQuota(_ body: Data) throws -> [MetricLine] {

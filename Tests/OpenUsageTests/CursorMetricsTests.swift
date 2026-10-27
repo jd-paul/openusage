@@ -91,7 +91,7 @@ final class CursorMetricsTests: XCTestCase {
             defaults: defaults
         )
         _ = await store.refresh(providerID: runtime.provider.id, force: true)
-        XCTAssertNil(store.headerNotice(for: runtime.provider.id))
+        XCTAssertNil(store.errorMessage(for: runtime.provider.id))
         var data: [String: WidgetData] = [:]
         for descriptor in runtime.widgetDescriptors {
             let widget = store.data(for: descriptor)
