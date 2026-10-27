@@ -103,6 +103,58 @@ final class WidgetDataStoreNotificationTests: XCTestCase {
         await store.evaluateNotifications(now: base)
     }
 
+    /// Two accounts of one provider name themselves in the subtitle ("Claude · Personal Session",
+    /// "Claude · Work Session"), never "Claude Session" twice.
+    func testTwoAccountsOfOneProviderNameThemselvesInTheSubtitle() async {
+        let settings = NotificationSettingsStore(defaults: makeUserDefaults("two-accounts-settings"))
+        allOn(settings)
+        let recorder = Recorder()
+        let providers = [("claude@aaaa", "Personal"), ("claude@bbbb", "Work")].map {
+            Provider(id: $0.0, displayName: "Claude", icon: "claude", accountLabel: $0.1)
+        }
+        let descriptors = providers.map { provider in
+            WidgetDescriptor(
+                id: "\(provider.id).session",
+                providerID: provider.id,
+                metricLabel: "Session",
+                sample: WidgetData(title: "Session", icon: provider.icon, kind: .percent, used: 10, limit: 100)
+            )
+        }
+        func snapshot(_ provider: Provider, used: Double) -> ProviderSnapshot {
+            ProviderSnapshot(
+                providerID: provider.id,
+                displayName: provider.displayName,
+                lines: [.progress(label: "Session", used: used, limit: 100, format: .percent,
+                                  resetsAt: resetsAt, periodDurationMs: Int(week * 1000))]
+            )
+        }
+        let runtimes = zip(providers, descriptors).map {
+            MutableRuntime(provider: $0, descriptors: [$1], snapshot: snapshot($0, used: 80))
+        }
+        let defaults = makeUserDefaults("two-accounts")
+        let store = WidgetDataStore(
+            registry: WidgetRegistry(providers: providers, descriptors: descriptors),
+            providers: runtimes,
+            cache: ProviderSnapshotCache(userDefaults: defaults, storageKey: "snapshots", ttl: 600, now: { Date() }),
+            defaults: defaults,
+            orderedDescriptors: { descriptors },
+            notificationSettings: { settings },
+            postNotification: { idPrefix, title, subtitle, body in
+                recorder.posts.append((idPrefix, title, subtitle, body))
+                return true
+            }
+        )
+        await store.refreshAll(force: true)
+        await store.evaluateNotifications(now: base)
+        XCTAssertTrue(recorder.posts.isEmpty, "healthy should not fire")
+
+        for (runtime, provider) in zip(runtimes, providers) { runtime.snapshot = snapshot(provider, used: 87) }
+        await store.refreshAll(force: true)
+        await store.evaluateNotifications(now: base)
+
+        XCTAssertEqual(recorder.posts.map(\.2), ["Claude · Personal Session", "Claude · Work Session"])
+    }
+
     func testHealthyToCloseFiresOnceThroughTheStore() async {
         let settings = NotificationSettingsStore(defaults: makeUserDefaults("h2c-settings"))
         allOn(settings)

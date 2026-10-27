@@ -221,7 +221,7 @@ final class WidgetDataStore {
             metrics: metrics,
             toggles: toggles,
             now: now,
-            providerName: { [providersByID] id in providersByID[id]?.provider.displayName ?? id },
+            providerName: { [providersByID] id in providersByID[id]?.provider.fullName ?? id },
             post: postNotification
         )
     }
