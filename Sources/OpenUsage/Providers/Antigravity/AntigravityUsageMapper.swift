@@ -2,7 +2,7 @@ import Foundation
 
 /// Turns Antigravity's quota responses into the app's metric vocabulary.
 ///
-/// The source is the `RetrieveUserQuotaSummary` RPC (`parseQuotaSummary`): the shared Gemini and
+/// The source is the `RetrieveUserQuotaSummary` RPC (`parseQuotaSummaries`): the shared Gemini and
 /// non-Gemini pools each have rolling 5-hour and weekly windows, and eligible accounts have a separate
 /// Argon weekly quota.
 enum AntigravityUsageMapper {
@@ -18,21 +18,15 @@ enum AntigravityUsageMapper {
         ("3p-weekly", AntigravityMetric.claudeWeeklyLabel, MetricPeriod.weekMs)
     ]
 
-    /// `RetrieveUserQuotaSummary` → up to five meters, ordered Session, Weekly, Argon Weekly,
-    /// Claude, Claude Weekly. Accepts both the LS envelope (`{"response": {"groups": …}}`) and the bare remote
-    /// payload (`{"groups": …}`).
+    /// `RetrieveUserQuotaSummary` bodies (one per Cloud Code host) merged by bucket id into up to five
+    /// meters, ordered Session, Weekly, Argon Weekly, Claude, Claude Weekly: the first usable bucket for
+    /// each id wins. One host can omit a whole pool (seen 2026-10-17: the daily host returned only the
+    /// Claude group), so no single body is trusted to be complete. Each body may be the LS envelope
+    /// (`{"response": {"groups": …}}`) or the bare remote payload (`{"groups": …}`).
     ///
-    /// Nil means "not a summary" (undecodable body / no `groups` anywhere). Buckets decode leniently
+    /// Nil means no body is a summary (undecodable / no `groups` anywhere). Buckets decode leniently
     /// (one malformed bucket never voids the envelope); a bucket with a missing/unusable
     /// `remainingFraction` drops its line (the row reads "No data") rather than fabricating 0% or 100%.
-    static func parseQuotaSummary(_ data: Data) -> [MetricLine]? {
-        parseQuotaSummaries([data])
-    }
-
-    /// Several `RetrieveUserQuotaSummary` bodies (one per Cloud Code host) merged by bucket id: the
-    /// first usable bucket for each id wins. One host can omit a whole pool (seen 2026-10-17: the daily
-    /// host returned only the Claude group), so no single body is trusted to be complete. Nil only when
-    /// no body is a summary; otherwise the same rules as `parseQuotaSummary` apply.
     static func parseQuotaSummaries(_ bodies: [Data]) -> [MetricLine]? {
         let groupLists = bodies.compactMap { data -> [QuotaSummaryGroup]? in
             guard let groups = summaryGroups(data) else {

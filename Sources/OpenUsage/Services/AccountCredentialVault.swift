@@ -70,36 +70,6 @@ final class KeychainCredentialVault: CredentialVault, @unchecked Sendable {
     }
 }
 
-final class InMemoryCredentialVault: CredentialVault, @unchecked Sendable {
-    private let lock = NSLock()
-    private var credentials: [UUID: AccountCredential] = [:]
-
-    func load(_ id: UUID) throws -> AccountCredential? {
-        lock.lock()
-        defer { lock.unlock() }
-        return credentials[id]
-    }
-
-    func save(_ credential: AccountCredential, for id: UUID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        credentials[id] = credential
-    }
-
-    func update(_ credential: AccountCredential, for id: UUID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        guard credentials[id] != nil else { throw CredentialVaultError.missingCredential }
-        credentials[id] = credential
-    }
-
-    func delete(_ id: UUID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        credentials.removeValue(forKey: id)
-    }
-}
-
 enum KeychainVaultError: Error {
     case status(OSStatus)
 }

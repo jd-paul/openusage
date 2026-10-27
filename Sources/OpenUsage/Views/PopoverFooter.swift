@@ -92,7 +92,7 @@ struct PopoverFooter: View {
 
     private func refreshNow() {
         guard !isUpdating else { return }
-        Task { await dataStore.refreshOnUserRequest() }
+        Task { await dataStore.refreshAll(force: true) }
     }
 
     private func updateStatusText(now: Date) -> String {

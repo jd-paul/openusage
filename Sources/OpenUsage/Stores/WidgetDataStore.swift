@@ -187,15 +187,6 @@ final class WidgetDataStore {
         return outcomes
     }
 
-    /// The user's own Refresh. It's the only refresh that lets a login they denied ask again.
-    func refreshOnUserRequest(providerID: String? = nil) async {
-        if let providerID {
-            await refresh(providerID: providerID, force: true)
-        } else {
-            await refreshAll(force: true)
-        }
-    }
-
     /// Evaluate every visible metric for a quota pace milestone and post a notification for any
     /// that just crossed one. Driven from the periodic loop *after* `refreshAll`, so it catches pace
     /// worsening from time passing (not only from a fresh fetch). Deduped per metric per reset window by
