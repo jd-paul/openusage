@@ -11,8 +11,7 @@ private extension PaceNotificationToggles {
 
 /// Covers the pure milestone logic that decides when a quota notification fires: worsening pace edges
 /// (blue→orange, orange→red), the under-10%-remaining crossing, per-window dedup, reset rollover,
-/// recovery re-arming, the no-trustworthy-pace suppression, and the toggle gates. Mirrors CodexBar's
-/// QuotaWarningNotificationLogicTests.
+/// recovery re-arming, the no-trustworthy-pace suppression, and the toggle gates.
 final class PaceNotificationLogicTests: XCTestCase {
     private let reset = Date(timeIntervalSince1970: 1_700_000_000)
 

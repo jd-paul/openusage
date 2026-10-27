@@ -6,9 +6,12 @@ each a header above a card.
 ## Providers and accounts
 
 The header names the provider, and the account too when it has one with a name of its own
-("Codex — Sunstory"), with the account's plan at the right end of the line and the provider's logo after
-it. The card holds every metric that has data, in the order you set, one row each. When a provider has
-several accounts, each is named inside the card above its rows, with its plan at the right.
+("Codex — Sunstory") that fits the line, with the account's plan at the right end of the line and the
+provider's logo after it. Nothing on the line is ever cut short: a name that does not fit goes inside
+the card with its plan, the way several accounts are shown, and an account named like its provider
+reads as the provider alone, its plan on the header. The card holds every metric that has data, in the
+order you set, one row each. When a provider has several accounts, each is named inside the card above
+its rows, with its plan at the right.
 
 When you have no accounts, the dashboard shows **Add Account**, which opens the provider chooser.
 
@@ -21,17 +24,11 @@ Used setting); the value reads `52%`, `$12`, or `320`; the reset reads `1h 26m` 
 chooses between used and left, and between countdowns and exact times. Rows with a reset tick every
 30 seconds, so countdowns stay live between refreshes.
 
-The bar's colour is a verdict on the whole window, from your current burn rate:
-
-- Blue while you are on course to finish with at least 10% to spare.
-- Orange when you are projected to land inside the last 10%.
-- Red when you are projected to run out before the reset, or to finish with nothing to spare.
-
-The value takes the bar's colour once the bar is orange or red. Bars without a reset window, and
-windows too young to project, colour by level instead: orange once 80% is used, red once 10% or less is
-left. Once a balance is spent, the bar stays red. A session window with nothing spent in it yet shows a
-full bar and no reset. The colours come from the system palette, so they follow light, dark, and
-accessibility settings.
+The bar's colour follows how much is used, never the pace: blue, orange once 80% is used, red once 90%
+is. The value takes the bar's colour once the bar is orange or red. Once a balance is spent, the bar
+stays red. A session window with nothing spent in it yet shows a full bar and no reset. The colours come
+from the system palette, so they follow light, dark, and accessibility settings. Your burn rate still
+drives the [notifications](settings.md) and the run-out mark in the resets popover.
 
 A metric without a limit (a balance, a day's spend, a status) shows its value where the bar would be,
 such as `$12.40 left`. A metric the provider has not reported is hidden.

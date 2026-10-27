@@ -52,8 +52,8 @@ what each one shows.
 - **Menu bar stars.** Star up to two metrics per provider. When more than one account of a provider is
   starred, each mark carries a two-character tag from the account's name.
 - **Dashboard.** A header and a card per provider, with the plan in the header and one row per metric:
-  label, bar, value, and reset, in pace colours (blue, orange, red). Right-click a header, a card, an
-  account, or a row for its actions. Drag to reorder.
+  label, bar, value, and reset. The bar is blue, orange once 80% is used, red once 90% is. Right-click a
+  header, a card, an account, or a row for its actions. Drag to reorder.
 - **Resets.** Rest the pointer on a row to see the account's resets, soonest first. On a Claude or Codex
   account's Limit Resets row, spend one from there.
 - **Share.** Copy a PNG of any provider's header and card to the clipboard from the camera button that
