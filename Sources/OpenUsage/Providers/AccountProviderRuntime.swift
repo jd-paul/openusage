@@ -34,7 +34,7 @@ final class AccountProviderRuntime: ProviderRuntime {
         provider = Self.provider(for: account)
     }
 
-    private static func provider(for account: Account) -> Provider {
+    static func provider(for account: Account) -> Provider {
         Provider(
             id: account.cardID,
             displayName: account.kind.displayName,
@@ -42,97 +42,6 @@ final class AccountProviderRuntime: ProviderRuntime {
             accountLabel: account.label,
             links: account.kind.links
         )
-    }
-
-    var widgetDescriptors: [WidgetDescriptor] {
-        let prefix = account.cardID
-        return switch account.kind {
-        case .claude:
-            [
-                .percent(id: "\(prefix).session", provider: provider, title: "Session", sessionStartSignal: .missingResetDate),
-                .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly"),
-                .percent(id: "\(prefix).sonnet", provider: provider, title: "Sonnet"),
-                .percent(id: "\(prefix).fable", provider: provider, title: "Fable"),
-                .boundedDollars(id: "\(prefix).extra", provider: provider, title: "Extra Usage", metricLabel: "Extra usage spent", limit: 100),
-                Self.rateLimitResets(id: "\(prefix).rateLimitResets", provider: provider)
-            ]
-        case .codex:
-            [
-                .percent(id: "\(prefix).session", provider: provider, title: "Session"),
-                .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly"),
-                .percent(id: "\(prefix).spark", provider: provider, title: "Spark"),
-                .percent(id: "\(prefix).sparkWeekly", provider: provider, title: "Spark Weekly"),
-                .values(id: "\(prefix).credits", provider: provider, title: "Extra Usage", metricLabel: "Credits"),
-                Self.rateLimitResets(id: "\(prefix).rateLimitResets", provider: provider)
-            ]
-        case .cursor:
-            [
-                .percent(id: "\(prefix).usage", provider: provider, title: "Total Usage", metricLabel: "Total usage"),
-                .percent(id: "\(prefix).auto", provider: provider, title: "Cursor Models"),
-                .percent(id: "\(prefix).api", provider: provider, title: "Other Models"),
-                .boundedDollars(id: "\(prefix).onDemand", provider: provider, title: "Extra Usage", metricLabel: "On-demand",
-                                limit: 100, valueWord: "spent"),
-                .percent(id: "\(prefix).grokBot", provider: provider, title: "Grok Bot", metricLabel: "Grok Bot usage"),
-                .boundedCount(id: "\(prefix).requests", provider: provider, title: "Requests", limit: 500,
-                              periodDurationMs: CursorUsageMapper.billingPeriodMs),
-                .dollarBalance(id: "\(prefix).credits", provider: provider, title: "Credits", valueWord: "left")
-            ]
-        case .antigravity:
-            [
-                .percent(id: "\(prefix).geminiPro", provider: provider, title: "Gemini 5h",
-                         metricLabel: AntigravityMetric.sessionLabel, sessionStartSignal: .zeroUsage),
-                .percent(id: "\(prefix).geminiWeekly", provider: provider, title: "Gemini", metricLabel: AntigravityMetric.weeklyLabel),
-                .percent(id: "\(prefix).argonWeekly", provider: provider, title: "Argon", metricLabel: AntigravityMetric.argonWeeklyLabel),
-                .percent(id: "\(prefix).claude", provider: provider, title: "Claude 5h",
-                         metricLabel: AntigravityMetric.claudeLabel, sessionStartSignal: .zeroUsage),
-                .percent(id: "\(prefix).claudeWeekly", provider: provider, title: "Claude", metricLabel: AntigravityMetric.claudeWeeklyLabel)
-            ]
-        case .copilot:
-            [
-                .percent(id: "\(prefix).premium", provider: provider, title: "Credits", metricLabel: "Credits"),
-                .values(id: "\(prefix).extra", provider: provider, title: "Extra Usage"),
-                .boundedCount(id: "\(prefix).chat", provider: provider, title: "Chat", limit: 0),
-                .boundedCount(id: "\(prefix).completions", provider: provider, title: "Completions", limit: 0)
-            ]
-        case .grok:
-            [
-                .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly", metricLabel: "Weekly limit"),
-                .badge(id: "\(prefix).payAsYouGo", provider: provider, title: "Extra Usage", metricLabel: "Pay as you go")
-            ]
-        case .ollama:
-            [
-                .percent(id: "\(prefix).session", provider: provider, title: "Session"),
-                .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly"),
-                .percent(id: "\(prefix).monthly", provider: provider, title: "Monthly"),
-                .dollarBalance(id: "\(prefix).purchasedCredits", provider: provider, title: "Extra Usage", metricLabel: "Purchased Credits", valueWord: "left")
-            ]
-        case .opencodeGo:
-            [
-                .percent(id: "\(prefix).session", provider: provider, title: "Session", sessionStartSignal: .missingResetDate),
-                .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly"),
-                .percent(id: "\(prefix).monthly", provider: provider, title: "Monthly")
-            ]
-        case .openrouter:
-            [
-                .dollarBalance(id: "\(prefix).balance", provider: provider, title: "Balance", valueWord: "left"),
-                .values(id: "\(prefix).today", provider: provider, title: "Today"),
-                .values(id: "\(prefix).week", provider: provider, title: "This Week"),
-                .values(id: "\(prefix).month", provider: provider, title: "This Month")
-            ]
-        case .zai:
-            [
-                .percent(id: "\(prefix).session", provider: provider, title: "Session"),
-                .percent(id: "\(prefix).weekly", provider: provider, title: "Weekly"),
-                .boundedCount(id: "\(prefix).webSearches", provider: provider, title: "Web Searches", limit: 0)
-            ]
-        }
-    }
-
-    /// Each Claude and Codex account's Limit Resets row, whose popover is where the account's resets are
-    /// claimed. The snapshot line keeps its "Rate Limit Resets" label.
-    private static func rateLimitResets(id: String, provider: Provider) -> WidgetDescriptor {
-        .values(id: id, provider: provider, title: "Limit Resets", metricLabel: "Rate Limit Resets",
-                traySuffix: "resets", showsResetExpiries: true)
     }
 
     /// The resets popover's claim seam for this account, or `nil` for providers without reset claims.

@@ -7,6 +7,9 @@ struct WidgetDescriptor: Identifiable, Hashable {
     let providerID: String
     let metricLabel: String
     let sample: WidgetData
+    /// The scalars this metric contributes to the `openusage` command's limits JSON; empty for
+    /// presentation-only rows.
+    var limitResources: [LimitResourceDescriptor] = []
 
     /// The metric's single display name.
     var title: String { sample.title }

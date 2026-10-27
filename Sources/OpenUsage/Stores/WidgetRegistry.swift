@@ -19,6 +19,9 @@ struct WidgetRegistry: Sendable {
     /// (a stable `filter` walk), so `descriptors(for:)` returns the exact sequence the UI metric order
     /// depends on.
     private let descriptorsByProvider: [String: [WidgetDescriptor]]
+    /// Per-provider descriptors that declare at least one limit resource, for the limits JSON.
+    let limitDescriptorsByProvider: [String: [WidgetDescriptor]]
+
     init(providers: [Provider], descriptors: [WidgetDescriptor]) {
         self.providers = providers
         self.descriptors = descriptors
@@ -35,6 +38,7 @@ struct WidgetRegistry: Sendable {
             byProvider[descriptor.providerID, default: []].append(descriptor)
         }
         self.descriptorsByProvider = byProvider
+        self.limitDescriptorsByProvider = byProvider.mapValues { $0.filter { !$0.limitResources.isEmpty } }
     }
 
     func descriptor(id: String) -> WidgetDescriptor? { descriptorsByID[id] }
