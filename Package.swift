@@ -7,7 +7,8 @@ let package = Package(
         .macOS(.v15)
     ],
     products: [
-        .executable(name: "OpenUsage", targets: ["OpenUsageApp"])
+        .executable(name: "OpenUsage", targets: ["OpenUsageApp"]),
+        .executable(name: "openusage-cli", targets: ["OpenUsageCLI"])
     ],
     dependencies: [
         // The de-facto standard recorder + global hotkey for Mac apps (System Settings-style field).
@@ -42,10 +43,26 @@ let package = Package(
                 .swiftLanguageMode(.v6)
             ]
         ),
+        .executableTarget(
+            name: "OpenUsageCLI",
+            dependencies: ["OpenUsage"],
+            path: "Sources/OpenUsageCLI",
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
+            ]
+        ),
         .testTarget(
             name: "OpenUsageTests",
             dependencies: ["OpenUsage"],
             path: "Tests/OpenUsageTests",
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
+            ]
+        ),
+        .testTarget(
+            name: "OpenUsageCLITests",
+            dependencies: ["OpenUsageCLI"],
+            path: "Tests/OpenUsageCLITests",
             swiftSettings: [
                 .swiftLanguageMode(.v6)
             ]

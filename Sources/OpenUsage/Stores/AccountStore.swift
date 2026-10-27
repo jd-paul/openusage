@@ -23,16 +23,18 @@ final class AccountStore {
     init(defaults: UserDefaults = .standard, vault: any CredentialVault = KeychainCredentialVault()) {
         self.defaults = defaults
         credentialVault = vault
-        guard let data = defaults.data(forKey: Self.storageKey),
-              let decoded = try? JSONDecoder().decode([Account].self, from: data) else {
-            accounts = []
-            return
-        }
-        accounts = decoded.sorted { $0.addedAt < $1.addedAt }
+        accounts = Self.load(from: defaults)
         let stale = accounts.indices.filter { accounts[$0].label == Self.retiredDefaultLabels[accounts[$0].kind] }
         guard !stale.isEmpty else { return }
         for index in stale { accounts[index].label = accounts[index].kind.displayName }
         _ = persist()
+    }
+
+    /// The persisted accounts in the order they were added; empty when nothing is stored yet.
+    static func load(from defaults: UserDefaults) -> [Account] {
+        guard let data = defaults.data(forKey: storageKey),
+              let decoded = try? JSONDecoder().decode([Account].self, from: data) else { return [] }
+        return decoded.sorted { $0.addedAt < $1.addedAt }
     }
 
     @discardableResult

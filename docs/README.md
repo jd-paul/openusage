@@ -9,6 +9,7 @@ with the behaviour they describe. If the app and a page here disagree, that is a
 - [Accounts](accounts.md): adding, renaming, and removing accounts; how sign-in works
 - [Menu bar](menu-bar.md): starring metrics into the menu bar
 - [Settings](settings.md): every option and what it changes
+- [Command line](cli.md): the `openusage` command, its JSON output, and installing it
 - [Refreshing](refreshing.md): when data updates and what happens when a fetch fails
 - [Providers](providers.md): how each provider signs in and what it shows
 - [Updates](updates.md): automatic updates, manual checks, and the beta channel
