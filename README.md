@@ -51,12 +51,13 @@ what each one shows.
 
 - **Menu bar stars.** Star up to two metrics per provider. When more than one account of a provider is
   starred, each mark carries a two-character tag from the account's name.
-- **Dashboard.** One card per provider, one block per account, with provider-reported limits, plan
-  badges, reset times, and pace colours (blue, orange, red). Right-click a card, an account, or a
-  metric for its actions. Drag to reorder.
-- **Resets.** Claude and Codex accounts show a ↺ tag with the number of available rate-limit resets.
-  Hover it to see when each one expires, and spend one from there.
-- **Share.** Copy a branded PNG of any provider card to the clipboard.
+- **Dashboard.** A header and a card per provider, with the plan in the header and one row per metric:
+  label, bar, value, and reset, in pace colours (blue, orange, red). Right-click a header, a card, an
+  account, or a row for its actions. Drag to reorder.
+- **Resets.** Rest the pointer on a row to see the account's resets, soonest first. On a Claude or Codex
+  account's Limit Resets row, spend one from there.
+- **Share.** Copy a PNG of any provider's header and card to the clipboard from the camera button that
+  takes its logo's place while the pointer is on it.
 - **Notifications.** Optional alerts when a limit falls under 10% or your pace changes.
 - **Global shortcut.** Toggle the panel from anywhere.
 - **[Automatic updates](docs/updates.md).** Signed, notarized in-app updates, with an optional beta

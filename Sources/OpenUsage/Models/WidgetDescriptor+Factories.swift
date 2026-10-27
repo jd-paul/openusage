@@ -6,8 +6,8 @@ import Foundation
 /// never the template), so every factory seeds `used: 0`.
 extension WidgetDescriptor {
     /// Bounded 0–100% meter (session/weekly-style quotas). `sessionStartSignal` opts the tile into the
-    /// "Not started" fresh-window treatment (rolling 5-hour session pools) and names how that state is
-    /// detected for this provider — see `WidgetData.SessionStartSignal`.
+    /// fresh-window treatment (rolling 5-hour session pools: a full bar and no reset until something is
+    /// spent) and names how that state is detected for this provider — see `WidgetData.SessionStartSignal`.
     static func percent(
         id: String,
         provider: Provider,

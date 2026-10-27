@@ -1,44 +1,50 @@
 # Dashboard
 
-The panel that opens from the menu bar icon. It is 340 pt wide and has one card per provider.
+The panel that opens from the menu bar icon. It is 340 pt wide and shows one provider after another,
+each a header above a card.
 
-## Cards
+## Providers and accounts
 
-Each card shows the provider's mark and name, then one block per account. An account block shows the
-account's name with its plan as a tag on the right, then every metric that has data, in the order you
-set. When a provider has only one account, the card's header shows that account's name next to the
-mark, with its tags on the right, and the metrics follow straight below.
+The header names the provider, and the account too when it has one with a name of its own
+("Codex — Sunstory"), with the account's plan at the right end of the line and the provider's logo after
+it. The card holds every metric that has data, in the order you set, one row each. When a provider has
+several accounts, each is named inside the card above its rows, with its plan at the right.
 
 When you have no accounts, the dashboard shows **Add Account**, which opens the provider chooser.
 
-## Metrics
+## Rows
 
-A metric with a limit (session, weekly, a capped balance) shows a bar with a reading such as
-`52% left` or `48% used`, and a reset time such as `Resets in 3h 25m` or `Resets today at
-6:38 PM`. **Settings → Usage Display** chooses between used and left, and between countdowns and
-exact times. Rows with a reset date tick every 30 seconds, so countdowns stay live between refreshes.
+A row is the metric's label, a bar, its value, and its reset, in fixed columns, so every bar in the
+panel starts and ends at the same place. The bar fills with what is left (or what is used, under the
+Used setting); the value reads `52%`, `$12`, or `320`; the reset reads `1h 26m` or `6d 22h`, or
+`Wed 4 PM` under the exact-times setting, and `soon` once it is due. **Settings → Usage Display**
+chooses between used and left, and between countdowns and exact times. Rows with a reset tick every
+30 seconds, so countdowns stay live between refreshes.
 
 The bar's colour is a verdict on the whole window, from your current burn rate:
 
 - Blue while you are on course to finish with at least 10% to spare.
-- Orange when you are projected to land inside the last 10%. The row adds a `~3% spare` note.
-- Red when you are projected to run out before the reset, or to finish with nothing to spare. The row
-  adds a flame with the projected run-out time.
+- Orange when you are projected to land inside the last 10%.
+- Red when you are projected to run out before the reset, or to finish with nothing to spare.
 
-Bars without a reset window, and windows too young to project, colour by level instead: orange once 80%
-is used, red once 10% or less is left. Once a balance is spent, the bar stays red and reads
-`Limit reached`. The colours come from the system palette, so they follow light, dark, and
+The value takes the bar's colour once the bar is orange or red. Bars without a reset window, and
+windows too young to project, colour by level instead: orange once 80% is used, red once 10% or less is
+left. Once a balance is spent, the bar stays red. A session window with nothing spent in it yet shows a
+full bar and no reset. The colours come from the system palette, so they follow light, dark, and
 accessibility settings.
 
-A metric without a limit (a balance, a day's spend) shows as one line, such as `$12.40 left`. A metric
-the provider has not reported shows nothing; a row with no data is hidden.
+A metric without a limit (a balance, a day's spend, a status) shows its value where the bar would be,
+such as `$12.40 left`. A metric the provider has not reported is hidden.
 
-Claude and Codex accounts show a ↺ tag with the number of available rate-limit resets. It turns orange
-when the soonest one expires within 7 days and red within 48 hours. Hover or click the tag to see when
-each reset expires. To spend one, hover its row, choose **Use**, then **Reset**.
+## Resets
 
-A warning icon next to an account's name means its last refresh failed; hover it for the reason. An
-**Outdated** tag means the values are more than two refresh cycles old; hover it for their age.
+Rest the pointer on a row for a moment to see the account's resets, soonest first, with that row's own
+emphasized. On a Claude or Codex account's **Limit Resets** row, the popover lists the available
+rate-limit resets and when each expires. To spend one, choose **Use** on it, then **Reset**.
+
+A spinner after an account's name means it is refreshing. A warning icon means its last refresh failed,
+and a clock means its values are more than two refresh cycles old; the account's right-click menu
+starts with the reason.
 
 ## Right-click menus
 
@@ -54,7 +60,7 @@ On a card with one account, the header's menu combines the provider and account 
 
 ## Reordering
 
-Drag a card by its header, an account by its name, or a metric by its line. A new provider goes to the
+Drag a provider by its header, an account by its name inside the card, or a metric by its row. A new provider goes to the
 bottom of the dashboard and of the Accounts list, and a new account goes to the bottom of its
 provider's accounts. The app never sorts providers or accounts for you.
 
@@ -68,9 +74,11 @@ name selected. Return or a click elsewhere saves; Esc cancels.
 
 ## Share
 
-Copy a branded PNG of one provider's card to the clipboard: right-click the card and choose
-**Share Screenshot**. The image shows the card as you see it, follows your light or dark appearance,
-and carries a small OpenUsage mark at the bottom.
+Copy a PNG of one provider's header and card to the clipboard: while the pointer is on the provider,
+its logo becomes a camera button; click it, or right-click and choose **Share Screenshot**. The image
+shows the header and card at rest, follows your light or dark appearance, and carries a small OpenUsage
+mark at the bottom. An account named by its email reads as its provider alone, so the email never
+leaves the panel.
 
 ## Update banner
 

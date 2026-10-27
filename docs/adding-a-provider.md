@@ -49,5 +49,5 @@ an empty plan, an error body), and the login's response parsing. Run `swift test
 ## 6. Document
 
 Add the provider to the table and a section in `docs/providers.md`: sign-in method, what the card
-shows, where the plan badge comes from, and what its errors mean. Add it to the provider list in
+shows, where the plan comes from, and what its errors mean. Add it to the provider list in
 `README.md`.

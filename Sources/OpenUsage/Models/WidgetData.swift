@@ -42,8 +42,8 @@ struct WidgetData: Hashable {
     /// Rate Limit Resets → "2 resets"). Set by the descriptor, so renaming the tile can't silently drop
     /// the suffix — replaces matching on the tile's title. `nil` for tiles that show the bare value.
     var traySuffix: String?
-    /// Session-window meters (Claude/OpenCode rolling 5-hour pools, Antigravity's pools) that read
-    /// "Not started" while the window hasn't begun — the value names the signal that detects that state,
+    /// Session-window meters (Claude/OpenCode rolling 5-hour pools, Antigravity's pools) that show a full
+    /// bar and no reset while the window hasn't begun — the value names the signal that detects that state,
     /// because the providers report fresh windows differently (see `SessionStartSignal`). Set by those
     /// descriptors and carried through `WidgetDataStore.resolve`, so the treatment is a descriptor
     /// opt-in rather than a hardcoded widget-ID list in the model. `nil` for every other row.
@@ -270,7 +270,7 @@ extension WidgetData {
     func meterState(now: Date = Date()) -> MeterState {
         guard hasData, let limit, limit > 0 else { return hasData ? .level(.normal) : .noData }
         if roundedAtDisplayPrecision(limit - used) <= 0 { return .spent }
-        // A "Not started" session has nothing to pace yet — a calm bar with an empty reset column.
+        // A session window nothing has been spent in has nothing to pace yet — a calm bar with an empty reset column.
         if isFreshSessionWindow(now: now) { return absoluteLevelState(used: used, limit: limit) }
 
         if let ctx = paceContext,
@@ -310,9 +310,9 @@ extension WidgetData {
     /// (see `SessionStartSignal` for why each provider trusts its signal). Both signals read frozen
     /// snapshot fields, not a `resetsAt - now ≈ full period` window-timing test — that test is only
     /// valid the instant the snapshot is captured, then drifts every second until the next refresh,
-    /// which split the value from its note ("100% left" while the note fell back to "resets in 5h").
+    /// which split the value from its reset (a full bar beside a countdown that should be empty).
     /// `.zeroUsage` is additionally gated on `now < resetsAt`: once the reset has passed the snapshot
-    /// is stale, so we drop the "not started" claim and let the row fall back to the normal countdown.
+    /// is stale, so we drop the fresh-window claim and let the row fall back to the normal countdown.
     func isFreshSessionWindow(now: Date = Date()) -> Bool {
         guard let signal = sessionStartSignal, hasData, limit != nil, used <= 0 else { return false }
         switch signal {

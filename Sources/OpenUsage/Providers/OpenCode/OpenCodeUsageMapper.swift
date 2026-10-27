@@ -52,10 +52,9 @@ enum OpenCodeUsageMapper {
     /// One window. `dropsPlaceholderReset` is for the rolling session only: with no calls inside the
     /// window there is nothing to roll off, so the API answers `resetsAt = now + 5h` and re-derives it
     /// on every request rather than reporting a real instant. That placeholder means "if you started
-    /// now", so it is dropped to `nil` here and the Session row renders "Not started" off the missing
-    /// reset. Doing it at capture time is what makes it sound: the full-period comparison is exact only
-    /// at the instant the snapshot is taken, and drifts every second afterwards, so it must not be
-    /// re-run at render time.
+    /// now", so it is dropped to `nil` here and the Session row shows no reset. Doing it at capture time
+    /// is what makes it sound: the full-period comparison is exact only at the instant the snapshot is
+    /// taken, and drifts every second afterwards, so it must not be re-run at render time.
     ///
     /// A window with real usage anchors its reset to the oldest call, so it stays strictly inside the
     /// period and keeps its countdown — including the sub-1% case, where the whole-percent `percent`

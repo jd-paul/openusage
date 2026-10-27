@@ -20,7 +20,7 @@ a new app version never waits out the old interval.
 ## When a fetch fails
 
 A failed refresh never wipes your data. The last good values stay on screen and a warning icon appears
-next to the account's name; hover it (or open the account's right-click menu) for the reason. The
+next to the account's name; the account's right-click menu starts with the reason. The
 error clears on the next successful refresh.
 
 An account that failed is not tried again for one minute, so a burst of wakes cannot hammer a
@@ -29,8 +29,8 @@ provider that is down. A manual refresh ignores this wait.
 An account that stops responding is given up on after two minutes. Its spinner stops, the warning reads
 "Refresh timed out after 120s", and it is tried again on a later pass.
 
-Once an account's values are more than two refresh cycles old, an **Outdated** tag appears next to its
-name. Hover it for the age. A successful refresh clears it.
+Once an account's values are more than two refresh cycles old, a clock appears next to its name, and
+the account's right-click menu starts with their age. A successful refresh clears it.
 
 ## Expired sign-ins
 

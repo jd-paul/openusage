@@ -423,7 +423,7 @@ final class WidgetDataStore {
                 resetsAt: resetsAt,
                 periodDurationMs: periodDurationMs
             )
-            // Descriptor opt-in (session-window meters read "Not started" when unused); the fresh
+            // Descriptor opt-in (an unused session window shows a full bar and no reset); the fresh
             // `.progress` result doesn't start from the sample, so carry the signal explicitly.
             result.sessionStartSignal = descriptor.sample.sessionStartSignal
             return result

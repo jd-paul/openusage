@@ -12,8 +12,8 @@ enum Pace {
         case behind    // projected to blow past the limit before reset → red
     }
 
-    /// Classification plus the projected end-of-period usage (same unit as `used`/`limit`), mirroring the
-    /// original's `PaceResult`. `projectedUsage` decides how much cushion an on-track meter keeps.
+    /// Classification plus the projected end-of-period usage (same unit as `used`/`limit`).
+    /// `projectedUsage` decides how much cushion an on-track meter keeps.
     struct Result {
         let status: Status
         let projectedUsage: Double
@@ -26,8 +26,8 @@ enum Pace {
     }
 
     /// Full pace evaluation, or `nil` when there's no signal (window not started yet, already reset,
-    /// too early in the window for a stable projection, or nothing spent yet). Mirrors
-    /// `calculatePaceStatus`, minus its zero-usage "ahead": zero usage carries no burn rate to project.
+    /// too early in the window for a stable projection, or nothing spent yet: zero usage carries no burn
+    /// rate to project).
     static func evaluate(used: Double, limit: Double, resetsAt: Date, periodDuration: TimeInterval,
                          now: Date = Date()) -> Result? {
         guard limit > 0, periodDuration > 0, used > 0 else { return nil }
@@ -45,7 +45,7 @@ enum Pace {
     }
 
     /// Projected seconds until the quota is exhausted, but only when we're `behind` and the run-out lands
-    /// before the window resets (otherwise there's nothing to warn about). Mirrors `getRunsOutDurationText`.
+    /// before the window resets (otherwise there's nothing to warn about).
     static func secondsToRunOut(used: Double, limit: Double, resetsAt: Date, periodDuration: TimeInterval,
                                 now: Date = Date()) -> TimeInterval? {
         guard let result = evaluate(used: used, limit: limit, resetsAt: resetsAt,

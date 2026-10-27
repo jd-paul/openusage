@@ -1,6 +1,6 @@
 import Foundation
 
-/// How a metric's number is formatted. Mirrors OpenUsage's `format.kind`.
+/// How a metric's number is formatted.
 ///
 /// `String`-backed and `Codable` so it can ride on a `MetricValue` carried inside a cached
 /// `MetricLine` (see `MetricValue`).
