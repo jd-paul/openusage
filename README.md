@@ -52,10 +52,11 @@ what each one shows.
 - **Menu bar stars.** Star up to two metrics per provider. When more than one account of a provider is
   starred, each mark carries a two-character tag from the account's name.
 - **Dashboard.** A header and a card per provider, with the plan in the header and one row per metric:
-  label, bar, value, and reset. The bar is blue, orange once 80% is used, red once 90% is. Right-click a
-  header, a card, an account, or a row for its actions. Drag to reorder.
-- **Resets.** Rest the pointer on a row to see the account's resets, soonest first. On a Claude or Codex
-  account's Limit Resets row, spend one from there.
+  label, bar, value, and reset. The bar is blue, orange once 75% is used, red once 90% is; a flame before
+  the value means you are using the limit faster than it resets. Right-click a header, a card, an
+  account, or a row for its actions. Drag to reorder.
+- **Resets.** Claude and Codex accounts show a Limit Resets row with the number of available rate-limit
+  resets. Rest the pointer on the count to see when each expires, and spend one from there.
 - **Share.** Copy a PNG of any provider's header and card to the clipboard from the camera button that
   takes its logo's place while the pointer is on it.
 - **Notifications.** Optional alerts when a limit falls under 10% or your pace changes.

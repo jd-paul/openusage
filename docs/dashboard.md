@@ -24,20 +24,23 @@ Used setting); the value reads `52%`, `$12`, or `320`; the reset reads `1h 26m` 
 chooses between used and left, and between countdowns and exact times. Rows with a reset tick every
 30 seconds, so countdowns stay live between refreshes.
 
-The bar's colour follows how much is used, never the pace: blue, orange once 80% is used, red once 90%
+The bar's colour follows how much is used, never the pace: blue, orange once 75% is used, red once 90%
 is. The value takes the bar's colour once the bar is orange or red. Once a balance is spent, the bar
 stays red. A session window with nothing spent in it yet shows a full bar and no reset. The colours come
-from the system palette, so they follow light, dark, and accessibility settings. Your burn rate still
-drives the [notifications](settings.md) and the run-out mark in the resets popover.
+from the system palette, so they follow light, dark, and accessibility settings.
+
+Your burn rate shows as a flame before the value while you are using the limit faster than it resets:
+orange when you are on course to land within the last 10%, red when you are on course to run out before
+the reset. The same pace drives the [notifications](settings.md).
 
 A metric without a limit (a balance, a day's spend, a status) shows its value where the bar would be,
 such as `$12.40 left`. A metric the provider has not reported is hidden.
 
 ## Resets
 
-Rest the pointer on a row for a moment to see the account's resets, soonest first, with that row's own
-emphasized. On a Claude or Codex account's **Limit Resets** row, the popover lists the available
-rate-limit resets and when each expires. To spend one, choose **Use** on it, then **Reset**.
+Claude and Codex accounts show a **Limit Resets** row with the number of available rate-limit resets
+while they have any. Rest the pointer on the count for a moment to see when each reset expires; it is
+the one thing on a row that reacts to the pointer. To spend one, choose **Use** on it, then **Reset**.
 
 A spinner after an account's name means it is refreshing. A warning icon means its last refresh failed,
 and a clock means its values are more than two refresh cycles old; the account's right-click menu
