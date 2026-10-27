@@ -38,17 +38,19 @@ struct ClaudeLogin: ProviderLogin {
                 "code_verifier": pkce.verifier
             ], using: http)
             let token = try LoginHTTP.decode(OAuthTokenResponse.self, from: response)
-            var label = "Claude Account"
+            var info: ClaudeProfileResponse?
             if let profileURL = URL(string: "https://api.anthropic.com/api/oauth/profile"),
-               let profile = try? await LoginHTTP.get(profileURL, bearerToken: token.accessToken, using: http),
-               let info = try? LoginHTTP.decode(ClaudeProfileResponse.self, from: profile),
-               let email = info.account?.email ?? info.email {
-                label = email
+               let profile = try? await LoginHTTP.get(profileURL, bearerToken: token.accessToken, using: http) {
+                info = try? LoginHTTP.decode(ClaudeProfileResponse.self, from: profile)
             }
-            return (label, .oauth(OAuthTokens(
+            let identity = (info?.account?.uuid).map {
+                ClaudeAccountProfile.identity(accountUUID: $0, organizationUUID: info?.organization?.uuid)
+            }
+            return (info?.account?.email ?? info?.email ?? "Claude Account", .oauth(OAuthTokens(
                 accessToken: token.accessToken,
                 refreshToken: token.refreshToken,
-                expiresAt: token.expiry
+                expiresAt: token.expiry,
+                extras: identity.map { [OAuthTokens.identityKey: $0] } ?? [:]
             )))
         } catch {
             server.cancel()
@@ -154,12 +156,15 @@ struct CodexLogin: ProviderLogin {
         let accessClaims = token.accessToken.jwtPayload(as: CodexAccessClaims.self)
         let idClaims = token.idToken?.jwtPayload(as: CodexIDClaims.self)
         let accountID = accessClaims?.auth?.chatgptAccountID
-        let email = idClaims?.email ?? "Codex Account"
-        return (email, .oauth(OAuthTokens(
+        var extras: [String: String] = [:]
+        extras["chatgpt_account_id"] = accountID
+        // The workspace alone isn't one person: two people can share a ChatGPT workspace.
+        if let accountID, let email = idClaims?.email { extras[OAuthTokens.identityKey] = "\(accountID)/\(email)" }
+        return (idClaims?.email ?? "Codex Account", .oauth(OAuthTokens(
             accessToken: token.accessToken,
             refreshToken: token.refreshToken,
             expiresAt: token.expiry,
-            extras: accountID.map { ["chatgpt_account_id": $0] } ?? [:]
+            extras: extras
         )))
     }
 }
@@ -207,11 +212,12 @@ struct AntigravityLogin: ProviderLogin {
             let token = try LoginHTTP.decode(OAuthTokenResponse.self, from: response)
             let userInfoURL = URL(string: "https://www.googleapis.com/oauth2/v1/userinfo?alt=json")!
             let userInfo = try await LoginHTTP.get(userInfoURL, bearerToken: token.accessToken, using: http)
-            let label = (try? LoginHTTP.decode(GoogleUserInfo.self, from: userInfo).email) ?? "Google Account"
-            return (label, .oauth(OAuthTokens(
+            let user = try? LoginHTTP.decode(GoogleUserInfo.self, from: userInfo)
+            return (user?.email ?? "Google Account", .oauth(OAuthTokens(
                 accessToken: token.accessToken,
                 refreshToken: token.refreshToken,
-                expiresAt: token.expiry
+                expiresAt: token.expiry,
+                extras: (user?.id ?? user?.email).map { [OAuthTokens.identityKey: $0] } ?? [:]
             )))
         } catch {
             server.cancel()
@@ -235,12 +241,14 @@ private struct OAuthTokenResponse: Decodable {
 }
 
 private struct ClaudeProfileResponse: Decodable {
-    struct Account: Decodable { let email: String? }
+    struct Account: Decodable { let email: String?; let uuid: String? }
+    struct Organization: Decodable { let uuid: String? }
     let account: Account?
+    let organization: Organization?
     let email: String?
 }
 
-private struct GoogleUserInfo: Decodable { let email: String? }
+private struct GoogleUserInfo: Decodable { let id: String?; let email: String? }
 
 private struct CodexDeviceStart: Decodable {
     let deviceAuthID: String

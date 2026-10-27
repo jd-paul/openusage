@@ -99,6 +99,15 @@ final class AccountStore {
         try credentialVault.load(id)
     }
 
+    /// The `kind` account already signed in as the same provider account as `credential`, if any. An
+    /// account whose sign-in recorded no identity never matches.
+    func account(kind: ProviderKind, signedInAs credential: AccountCredential) -> Account? {
+        guard let identity = credential.identity else { return nil }
+        return accounts.first { account in
+            account.kind == kind && (try? credentialVault.load(account.id))??.identity == identity
+        }
+    }
+
     /// The account behind a dashboard card, by its `Account.cardID` (the card's `Provider.id`).
     func account(cardID: String) -> Account? {
         accounts.first { $0.cardID == cardID }

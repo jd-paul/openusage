@@ -151,10 +151,12 @@ final class AccountProviderRuntime: ProviderRuntime {
         if let resets = await claudeResetGrantsLine(accessToken: tokens.accessToken) {
             mapped.lines.append(resets)
         }
-        return (await claudeLivePlan(oauth, config: config) ?? mapped.plan, mapped.lines)
+        return (await claudeLivePlan(oauth, tokens: tokens, config: config) ?? mapped.plan, mapped.lines)
     }
 
-    private func claudeLivePlan(_ oauth: ClaudeOAuth, config: ClaudeOAuthConfig) async -> String? {
+    /// Also records the sign-in's identity on an account added before sign-ins recorded it, so a later
+    /// sign-in to the same Claude account is caught.
+    private func claudeLivePlan(_ oauth: ClaudeOAuth, tokens: OAuthTokens, config: ClaudeOAuthConfig) async -> String? {
         let cached = claudePlan
         if let cached, cached.accessToken == oauth.accessToken,
            cached.plan != nil || now().timeIntervalSince(cached.readAt) < RefreshSetting.secondaryReadInterval {
@@ -163,6 +165,11 @@ final class AccountProviderRuntime: ProviderRuntime {
         do {
             let response = try await ClaudeUsageClient(httpClient: http).fetchProfile(accessToken: oauth.accessToken, config: config)
             let profile = try ClaudeUsageClient.decodeProfile(response)
+            if tokens.extras[OAuthTokens.identityKey] == nil {
+                var identified = tokens
+                identified.extras[OAuthTokens.identityKey] = profile.identity
+                try? await replaceCredential(.oauth(identified))
+            }
             let plan = ClaudeUsageMapper.formatLivePlan(profile: profile, credentials: oauth)
             claudePlan = (oauth.accessToken, plan, now())
             return plan

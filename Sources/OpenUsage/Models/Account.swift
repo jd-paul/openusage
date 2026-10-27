@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum ProviderAuthMethod: Sendable, Equatable {
@@ -108,6 +109,9 @@ struct OAuthTokens: Codable, Sendable, Equatable {
         self.extras = extras
     }
 
+    /// The `extras` key for the provider account a sign-in belongs to (see `AccountCredential.identity`).
+    static let identityKey = "account_identity"
+
     /// How long before `expiresAt` a token is refreshed: Claude Code's own margin (its
     /// `isOAuthTokenExpired` treats a token as expired 5 minutes early), so a pass that lands just before
     /// expiry never sends a token that dies on the way and shows "sign-in expired" until the next pass.
@@ -124,4 +128,16 @@ struct OAuthTokens: Codable, Sendable, Equatable {
 enum AccountCredential: Codable, Sendable, Equatable {
     case oauth(OAuthTokens)
     case apiKey(String)
+
+    /// Who this credential signs in as, so a login that's already added is spotted: the provider account
+    /// a sign-in recorded in `OAuthTokens.identityKey` (Cursor's older sign-ins kept it as `userID`), or
+    /// a fingerprint of the API key. `nil` for a sign-in that recorded none.
+    var identity: String? {
+        switch self {
+        case .oauth(let tokens):
+            tokens.extras[OAuthTokens.identityKey] ?? tokens.extras["userID"]
+        case .apiKey(let key):
+            "key:" + SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
+        }
+    }
 }

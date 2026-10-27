@@ -134,6 +134,9 @@ final class AddAccountFlow {
     }
 
     private func save(_ result: (label: String, credential: AccountCredential), for kind: ProviderKind) {
+        if let existing = store.account(kind: kind, signedInAs: result.credential) {
+            return fail("This account is already added as \(existing.label).")
+        }
         let name = accountName.trimmed
         let account = store.add(kind: kind, label: name.isEmpty ? result.label : name, credential: result.credential)
         guard store.accounts.contains(where: { $0.id == account.id }) else {

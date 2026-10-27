@@ -21,7 +21,9 @@ If a sign-in fails, **Try Again** starts it over. The close button in a sign-in 
 goes back to the provider list; **Cancel** on the list closes the sheet.
 
 You can add several accounts for the same provider. A new account goes to the bottom of its
-provider's accounts and starts refreshing right away.
+provider's accounts and starts refreshing right away. Signing in to an account that's already added
+(the same provider account, or the same API key) adds no second copy; the sheet says "This account is
+already added as <name>." A Claude account in two organizations counts as two accounts.
 
 ## Rename an account
 

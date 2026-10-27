@@ -35,6 +35,14 @@ struct ClaudeAccountProfile: Decodable, Hashable, Sendable {
 
     var account: Account
     var organization: Organization?
+
+    /// The sign-in's identity for spotting a login added twice (`AccountCredential.identity`): the
+    /// account and the organization, since one person in two organizations has two sets of limits.
+    var identity: String { Self.identity(accountUUID: account.uuid, organizationUUID: organization?.uuid) }
+
+    static func identity(accountUUID: String, organizationUUID: String?) -> String {
+        [accountUUID, organizationUUID].compactMap { $0 }.joined(separator: "/")
+    }
 }
 
 struct ClaudeUsageClient: Sendable {

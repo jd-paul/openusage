@@ -46,7 +46,10 @@ struct CopilotLogin: ProviderLogin {
             "X-GitHub-Api-Version": "2022-11-28"
         ])
         let user = try LoginHTTP.decode(GitHubUser.self, from: profile)
-        return (user.login, .oauth(OAuthTokens(accessToken: token.accessToken)))
+        return (user.login, .oauth(OAuthTokens(
+            accessToken: token.accessToken,
+            extras: [OAuthTokens.identityKey: user.id.map { "github:\($0)" } ?? "github:\(user.login)"]
+        )))
     }
 }
 
@@ -87,7 +90,8 @@ struct GrokLogin: ProviderLogin {
         return (claims?.email ?? "Grok Account", .oauth(OAuthTokens(
             accessToken: token.accessToken,
             refreshToken: token.refreshToken,
-            expiresAt: token.expiry
+            expiresAt: token.expiry,
+            extras: (claims?.sub ?? claims?.email).map { [OAuthTokens.identityKey: $0] } ?? [:]
         )))
     }
 }
@@ -178,6 +182,7 @@ private struct GitHubDeviceToken: Sendable {
 }
 
 private struct GitHubUser: Decodable {
+    let id: Int?
     let login: String
 }
 
@@ -217,6 +222,7 @@ private struct CursorTokenResponse: Decodable, Sendable {
 }
 
 private struct GrokIDClaims: Decodable {
+    let sub: String?
     let email: String?
 }
 
