@@ -66,6 +66,8 @@ what each one shows.
   account's name when you have set one and leaves an email out.
 - **Notifications.** Optional alerts when a limit falls under 10% or your pace changes.
 - **Global shortcut.** Toggle the panel from anywhere.
+- **[Command line](docs/cli.md).** Install the `openusage` command from Settings; it prints the usage
+  the app last fetched as JSON, for scripts and agents.
 - **[Automatic updates](docs/updates.md).** Signed, notarized in-app updates, with an optional beta
   channel.
 
@@ -73,8 +75,8 @@ what each one shows.
 
 Behaviour docs live in [docs/](docs/README.md): the [dashboard](docs/dashboard.md),
 [accounts](docs/accounts.md), the [menu bar](docs/menu-bar.md), [settings](docs/settings.md),
-[refreshing](docs/refreshing.md), [providers](docs/providers.md), [updates](docs/updates.md), and
-[privacy](docs/privacy.md).
+the [command line](docs/cli.md), [refreshing](docs/refreshing.md), [providers](docs/providers.md),
+[updates](docs/updates.md), and [privacy](docs/privacy.md).
 
 For working on the code, see [architecture](docs/architecture.md),
 [adding a provider](docs/adding-a-provider.md), and [debugging](docs/debugging.md).

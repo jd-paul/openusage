@@ -8,6 +8,7 @@ struct SettingsScreen: View {
     @AppStorage(AppearanceSetting.key) private var appearance = AppearanceSetting.system
     @AppStorage(TimeFormatSetting.key) private var timeFormat = TimeFormatSetting.auto
     @State private var launchAtLogin = LaunchAtLoginSetting()
+    @State private var commandLineTool = CommandLineToolInstaller()
     @State private var scrollPosition = ScrollPosition(edge: .top)
 
     var body: some View {
@@ -37,6 +38,7 @@ struct SettingsScreen: View {
                 usageDisplaySection
                 notificationsSection
                 privacySection
+                commandLineSection
                 updatesSection
             }
             .padding(PanelMetrics.margin)
@@ -46,6 +48,7 @@ struct SettingsScreen: View {
             if screen == .settings {
                 scrollPosition.scrollTo(edge: .top)
                 launchAtLogin.refreshStatus()
+                commandLineTool.refreshStatus()
             }
         }
     }
@@ -91,6 +94,33 @@ struct SettingsScreen: View {
         }
     }
 
+    private var commandLineSection: some View {
+        section("Command Line") {
+            row("Terminal Helper") {
+                switch commandLineTool.status {
+                case .installed:
+                    Button("Uninstall") { commandLineTool.uninstall() }
+                case .notInstalled:
+                    Button("Install…") { commandLineTool.install() }
+                case .conflict:
+                    Text("Unavailable")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text("Adds a global `openusage` command that prints the usage the app last fetched.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if commandLineTool.status == .conflict {
+                inlineNotice("\(commandLineTool.destinationPath) already exists and wasn't installed by OpenUsage.")
+            } else if let errorMessage = commandLineTool.errorMessage {
+                inlineNotice(errorMessage)
+            }
+        }
+    }
+
     /// Visible whenever the updater is active (only the signed release build ships a feed; the dev
     /// build and a bare `swift run`, with no feed, hide this).
     @ViewBuilder
@@ -128,6 +158,15 @@ struct SettingsScreen: View {
                     if enabled { AppNotifications.shared.requestAuthorization() }
                 }
         }
+    }
+
+    private func inlineNotice(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(Theme.notice)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

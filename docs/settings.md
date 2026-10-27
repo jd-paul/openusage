@@ -43,6 +43,12 @@ Each notification names the trigger, the provider, and the metric, and fires onc
 |---|---|---|
 | Help Make OpenUsage Better | switch | Whether the app sends the optional daily provider-refresh summaries described in [Privacy](privacy.md). The anonymous daily active ping and crash reports do not depend on this switch. |
 
+## Command Line
+
+| Setting | Control | What it changes |
+|---|---|---|
+| Terminal Helper | Install…, Uninstall | Links `/usr/local/bin/openusage` to the `openusage` command inside the app, after the macOS administrator prompt, or removes that link. Reads **Unavailable** when something OpenUsage did not install already sits at that path. See [Command line](cli.md). |
+
 ## Updates
 
 This section appears in the released build only; the dev build has no update feed.
