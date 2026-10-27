@@ -38,13 +38,25 @@ final class PanelGeometryTests: XCTestCase {
         )
 
         XCTAssertEqual(maximum, 170)
-        XCTAssertEqual(PanelGeometry.clampedHeight(600, maximum: maximum), 170)
+        XCTAssertEqual(PanelGeometry.clampedHeight(600, minimum: 200, maximum: maximum), 170)
     }
 
-    func testHeightClampsToNormalMinimumAndDisplayMaximum() {
-        XCTAssertEqual(PanelGeometry.clampedHeight(50, maximum: 700), 200)
-        XCTAssertEqual(PanelGeometry.clampedHeight(900, maximum: 700), 700)
-        XCTAssertEqual(PanelGeometry.clampedHeight(520, maximum: 700), 520)
+    func testHeightClampsToTheScreensMinimumAndTheDisplayMaximum() {
+        XCTAssertEqual(PanelGeometry.clampedHeight(50, minimum: 200, maximum: 700), 200)
+        XCTAssertEqual(PanelGeometry.clampedHeight(900, minimum: 200, maximum: 700), 700)
+        XCTAssertEqual(PanelGeometry.clampedHeight(520, minimum: 200, maximum: 700), 520)
+    }
+
+    /// The dashboard hugs its content: a one-account card with one row makes a 146 pt popover, and the
+    /// dashboard's floor sits under it. Accounts and Settings keep their 200 pt floor.
+    func testTheDashboardsFloorSitsUnderAOneRowCard() {
+        let oneRowCard = 2 * PanelMetrics.margin + DashboardGrid.headerHeight + DashboardGrid.headerGap
+            + 2 * DashboardGrid.cardPadding + DashboardGrid.captionHeight + DashboardGrid.rowHeight
+        let footer: CGFloat = 52
+        XCTAssertLessThanOrEqual(PanelGeometry.minimumHeight(for: .dashboard), oneRowCard + footer)
+        XCTAssertEqual(PanelGeometry.clampedHeight(oneRowCard + footer, minimum: PanelGeometry.minimumHeight(for: .dashboard), maximum: 700), oneRowCard + footer)
+        XCTAssertEqual(PanelGeometry.minimumHeight(for: .accounts), 200)
+        XCTAssertEqual(PanelGeometry.minimumHeight(for: .settings), 200)
     }
 
     func testChangingHeightKeepsTopEdgeFixed() {
