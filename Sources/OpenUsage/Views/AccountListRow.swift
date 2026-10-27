@@ -18,8 +18,7 @@ struct AccountListRow<Handle: View>: View {
             // area (including the empty spacer) hit-test, where a plain Button's hit area would shrink
             // to its drawn content.
             HStack(spacing: 8) {
-                ProviderIcon(id: provider.icon)
-                    .frame(width: 18, height: 18)
+                ProviderIcon(id: provider.icon, side: 18)
                 Text(provider.displayName)
                     .foregroundStyle(.primary)
                     .layoutPriority(1)

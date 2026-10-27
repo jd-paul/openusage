@@ -35,8 +35,7 @@ struct DashboardProviderHeader: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            ProviderIcon(id: provider.icon, inset: 0.04)
-                .frame(width: DashboardGrid.iconSize, height: DashboardGrid.iconSize)
+            ProviderIcon(id: provider.icon, side: DashboardGrid.iconSize, inset: 0.04)
                 .padding(.trailing, DashboardGrid.columnGap)
             Text(provider.displayName)
                 .font(DashboardGrid.headerFont)

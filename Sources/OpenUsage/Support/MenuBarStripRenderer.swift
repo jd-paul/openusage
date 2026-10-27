@@ -146,8 +146,8 @@ private struct MenuBarTextStrip: View {
 
     /// Side length of the glyph box. Sized to fill the strip's height so the mark reads at the same
     /// scale as the dual-line metric block beside it (the single number is shorter), instead of
-    /// floating small in the middle. `ProviderIconShape` already normalizes every mark to its true
-    /// bounding box, so a near-zero `inset` here makes each provider fill this box uniformly.
+    /// floating small in the middle. `ProviderMarks` fits every mark to its artwork's own bounds,
+    /// so a near-zero `inset` here makes each provider fill this box uniformly.
     private static let glyphSide: CGFloat = 16
 
     /// How far an account badge reaches past the mark's bottom-trailing corner.
@@ -173,10 +173,10 @@ private struct MenuBarTextStrip: View {
 
     @ViewBuilder
     private func glyph(_ icon: String) -> some View {
-        if let mark = ProviderMarks.mark(for: icon) {
-            ProviderIconShape(mark: mark, inset: 0.04)
-                .fill(Color.black)
-                .frame(width: Self.glyphSide, height: Self.glyphSide)
+        if let image = ProviderMarks.image(for: icon, side: Self.glyphSide, inset: 0.04) {
+            Image(nsImage: image)
+                .renderingMode(.template)
+                .foregroundStyle(Color.black)
         } else {
             Circle().fill(Color.black).frame(width: Self.glyphSide - 1, height: Self.glyphSide - 1)
         }

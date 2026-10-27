@@ -52,8 +52,7 @@ private struct ProviderChoiceStep: View {
         SheetHeader(provider: nil, title: "Add Account", message: "Choose a provider to sign in to.")
         List(ProviderKind.allCases, id: \.self, selection: $flow.selection) { provider in
             HStack(spacing: 10) {
-                ProviderIcon(id: provider.rawValue, inset: 0.06)
-                    .frame(width: 20, height: 20)
+                ProviderIcon(id: provider.rawValue, side: 20, inset: 0.06)
                 Text(provider.displayName)
                 Spacer()
                 Image(systemName: "chevron.forward")
@@ -215,8 +214,7 @@ private struct SheetHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let provider {
-                ProviderIcon(id: provider.rawValue, inset: 0.04)
-                    .frame(width: 32, height: 32)
+                ProviderIcon(id: provider.rawValue, side: 32, inset: 0.04)
                     .padding(.bottom, 8)
             }
             Text(title)
