@@ -33,12 +33,9 @@ struct DashboardProviderSection<Account: View>: View {
 struct DashboardProviderHeader: View {
     let provider: Provider
 
-    @Environment(\.popoverPartyMode) private var partyMode
-
     var body: some View {
         HStack(spacing: 0) {
             ProviderIcon(id: provider.icon, inset: 0.04)
-                .partyPulse(partyMode)
                 .frame(width: DashboardGrid.iconSize, height: DashboardGrid.iconSize)
                 .padding(.trailing, DashboardGrid.columnGap)
             Text(provider.displayName)
