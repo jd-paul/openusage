@@ -1,7 +1,8 @@
 # Architecture
 
-OpenUsage is a SwiftPM package with two targets: `OpenUsage` (the library, where everything lives) and
-`OpenUsageApp` (a thin executable). Swift 6 with strict concurrency; SwiftUI content hosted in an
+OpenUsage is a SwiftPM package with three targets: `OpenUsage` (the library, where everything lives),
+`OpenUsageApp` (a thin executable), and `OpenUsageCLI` (the `openusage` command, shipped at
+`Contents/Helpers/openusage`). Swift 6 with strict concurrency; SwiftUI content hosted in an
 AppKit-owned status item and panel.
 
 ## Composition root
@@ -64,6 +65,16 @@ in what order; `WidgetDataStore` turns snapshots into `WidgetData` for the views
 `refresh(providerID:)` honours the on-disk `ProviderSnapshotCache`, a one-minute failure backoff,
 and a two-minute deadline per account, and reports each real outcome through `onRefreshOutcome`. Each
 fetched snapshot is written to the cache as it lands.
+
+## Command line
+
+`OpenUsageCLI` parses its arguments, finds the app bundle it ships inside (`AppBundleLocator`,
+`ContainingAppBundle`) to open that app's defaults domain, and hands the rest to `UsageReader` in the
+library: the stored accounts (`AccountStore.load`), their descriptors
+(`AccountProviderRuntime.widgetDescriptors(for:)`), and the snapshot cache, projected by
+`LimitsEnvelope` into the `openusage.limits.v1` JSON that `exportingLimit` declares resource by
+resource. The command never refreshes and never opens the Keychain. `CommandLineToolInstaller` is the
+Settings-side symlink installer.
 
 ## Views
 
