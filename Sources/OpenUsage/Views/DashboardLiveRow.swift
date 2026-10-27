@@ -49,7 +49,7 @@ struct DashboardLiveRow: View {
 
     /// The Limit Resets count as the popover's trigger and anchor. The chip lights while the pointer is
     /// on the figure or the popover is open, so the figure reads as the popover's source.
-    func resetsTrigger(_ figure: AnyView) -> some View {
+    private func resetsTrigger(_ figure: AnyView) -> some View {
         let lit = hover.overInline || hover.isPresented
         return figure
             .background {

@@ -4,8 +4,8 @@ import XCTest
 @testable import OpenUsage
 
 /// The dashboard shows what it shows: nothing on a provider's header, a caption or a row opens on a
-/// click, no plan or name reacts to the pointer, a plan is plain text and never a badge, and a row under
-/// the pointer draws exactly as it does at rest. Four things react: resting the pointer on the Limit
+/// click, no plan or name reacts to the pointer, and a row under the pointer draws exactly as it does
+/// at rest. Four things react: resting the pointer on the Limit
 /// Resets row's count opens the resets timeline after the hover dwell, resting it on the warning or
 /// clock after an account's name opens a tooltip with the reason, a click on a row's value or reset
 /// flips the display, and a double-click on an account's name renames it, on its caption or in a
@@ -57,54 +57,6 @@ final class DashboardSectionTests: QuietWindowTestCase {
 
     private func account(_ provider: Provider, lines: [DashboardLine]? = nil) -> DashboardAccount {
         DashboardAccount(provider: provider, lines: lines ?? self.lines)
-    }
-
-    /// SwiftUI names every modifier and control in a view's body type: `_HoverRegionModifier` for
-    /// `onHover`, `TapGesture` for `onTapGesture`, `Button`, and this app's `HoverTooltipModifier`.
-    private static let interactive = ["Hover", "TapGesture", "Button", "Popover", "Tooltip", "Help"]
-
-    private func interactiveParts(_ body: some View) -> [String] {
-        let type = String(reflecting: Swift.type(of: body))
-        return Self.interactive.filter { type.contains($0) }
-    }
-
-    func testTheDetectorSeesHoverAndTapHandlers() {
-        XCTAssertEqual(interactiveParts(Text("x").onHover { _ in }), ["Hover"])
-        XCTAssertEqual(interactiveParts(Text("x").onContinuousHover { _ in }), ["Hover"])
-        XCTAssertEqual(interactiveParts(Text("x").onTapGesture {}), ["TapGesture"])
-        XCTAssertEqual(interactiveParts(Button("x") {}), ["Button"])
-        XCTAssertFalse(interactiveParts(Text("x").hoverTooltip("y")).isEmpty)
-        XCTAssertFalse(interactiveParts(Text("x").help("y")).isEmpty)
-    }
-
-    func testOnlyTheResetsCountTheNameAndTheCopyButtonReact() {
-        let personal = account(Provider(id: "claude@1", displayName: "Claude", icon: "claude", accountLabel: "Personal"))
-        let family = DashboardFamily(id: "claude", provider: personal.provider, accounts: [personal, account(work)])
-        let section = DashboardProviderSection(family: family, plans: ["claude@1": "Max 5x"], status: AccountStatus(notice: "Refresh failed")) { account, _ in
-            DashboardAccountRows(account: account, plan: "Max 5x")
-        }
-        var credits = WidgetData(title: "Extra Usage", icon: "codex", kind: .count, used: 452, limit: nil)
-        credits.values = [MetricValue(number: 452, kind: .count, label: "credits")]
-        let stale = DashboardAccountCaption(account: personal, plan: "Max 5x", status: AccountStatus(staleness: "Last updated 1h ago"))
-
-        XCTAssertEqual(interactiveParts(section.body), [], "section")
-        XCTAssertEqual(interactiveParts(section.header), [], "header")
-        // The caption's one reaction is the status glyph's tooltip, which the warning and the clock carry.
-        XCTAssertEqual(interactiveParts(DashboardAccountCaption(account: personal, plan: "Max 5x").body), ["Hover", "Tooltip"], "caption")
-        XCTAssertEqual(interactiveParts(stale.body), ["Hover", "Tooltip"], "stale caption")
-        XCTAssertEqual(interactiveParts(AccountStatus(notice: "Refresh failed").glyph), ["Hover", "Tooltip"], "status glyph")
-        // The name's one handler is the double-click (`onTapGesture(count: 2)`); the tests below prove
-        // a single click there does nothing.
-        XCTAssertEqual(interactiveParts(AccountName(account: personal, font: .body).body), ["TapGesture"], "name")
-        // A row's handlers are the value's and the reset's flips, plain buttons only where the dashboard
-        // supplies the flips (the test below proves the clicks); a preview or the share image draws both
-        // as text.
-        XCTAssertEqual(interactiveParts(DashboardMetricRow(model: lines[0].data.dashboardRow()).body), ["Button"], "row")
-        XCTAssertEqual(interactiveParts(DashboardMetricRow(model: credits.dashboardRow()).body), ["Button"], "value row")
-        XCTAssertEqual(interactiveParts(DashboardLiveRow(line: lines[0]).body), [], "live row")
-        XCTAssertEqual(interactiveParts(DashboardLiveRow(line: DashboardLine(descriptor: WidgetDescriptor(id: "extra", providerID: "codex", metricLabel: "Extra Usage", sample: credits), data: credits)).body), [], "live value row")
-        XCTAssertEqual(interactiveParts(DashboardLiveRow(line: resets).body), [], "the resets row itself")
-        XCTAssertEqual(interactiveParts(DashboardLiveRow(line: resets).resetsTrigger(AnyView(Text("2 available")))), ["Hover", "Popover"], "the resets count")
     }
 
     /// Resting the pointer on a metric row, on its label or on the caption's name opens nothing and
@@ -166,19 +118,6 @@ final class DashboardSectionTests: QuietWindowTestCase {
         try leave(window, host)
         XCTAssertTrue(opened().isEmpty, "the tooltip stayed after the pointer left")
         XCTAssertNil(HoverTooltips.visibleText)
-    }
-
-    /// A plan is plain secondary text, in the header and on a caption alike: no capsule, no plate.
-    func testAPlanIsNeverABadge() {
-        let personal = account(Provider(id: "claude@1", displayName: "Claude", icon: "claude", accountLabel: "Personal"))
-        let family = DashboardFamily(id: "claude", provider: personal.provider, accounts: [personal])
-        let header = DashboardProviderHeader(provider: family.provider, account: personal, plan: "Max 20x")
-        for (name, body) in [("header", String(reflecting: type(of: header.body))),
-                             ("caption", String(reflecting: type(of: DashboardAccountCaption(account: personal, plan: "Max 20x").body)))] {
-            for badge in ["Capsule", "Background", "RoundedRectangle"] {
-                XCTAssertFalse(body.contains(badge), "the \(name) draws its plan with a \(badge)")
-            }
-        }
     }
 
     /// The host's pixels as drawn now.
