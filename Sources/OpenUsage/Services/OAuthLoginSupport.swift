@@ -140,7 +140,10 @@ func authorizationCode(
     case .pasted(let value):
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         let parsed: (code: String?, state: String?)
-        if let url = URL(string: trimmed), let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+        // Only a whole callback URL is read for its query: `URL(string:)` also accepts a bare code or
+        // a `code#state` pair as a relative URL, which has no query at all.
+        if let url = URL(string: trimmed), url.scheme != nil, url.host != nil,
+           let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
             parsed = (
                 components.queryItems?.first(where: { $0.name == "code" })?.value,
                 components.queryItems?.first(where: { $0.name == "state" })?.value
