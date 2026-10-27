@@ -107,6 +107,18 @@ struct OAuthTokens: Codable, Sendable, Equatable {
         self.expiresAt = expiresAt
         self.extras = extras
     }
+
+    /// How long before `expiresAt` a token is refreshed: Claude Code's own margin (its
+    /// `isOAuthTokenExpired` treats a token as expired 5 minutes early), so a pass that lands just before
+    /// expiry never sends a token that dies on the way and shows "sign-in expired" until the next pass.
+    static let refreshMargin: TimeInterval = 5 * 60
+
+    /// Whether to refresh before use: there is a refresh token and the provider's expiry is within
+    /// `refreshMargin` of `now`. `expiresAt` is always the provider's own expiry, never shortened.
+    func needsRefresh(at now: Date) -> Bool {
+        guard refreshToken != nil, let expiresAt else { return false }
+        return expiresAt <= now.addingTimeInterval(Self.refreshMargin)
+    }
 }
 
 enum AccountCredential: Codable, Sendable, Equatable {

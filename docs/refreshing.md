@@ -42,6 +42,7 @@ the account's right-click menu starts with their age. A successful refresh clear
 
 ## Expired sign-ins
 
-OAuth accounts renew their own sign-in with the provider's refresh token. Cursor renews its sign-in
-before the expiry it stored at sign-in. When a provider rejects the renewal, the account shows a
+OAuth accounts renew their own sign-in with the provider's refresh token, 5 minutes before the
+provider's expiry (the margin Claude Code uses), so a refresh never sends a token that is about to
+expire. Cursor renews its sign-in in the last 7 days of its 60-day token. When a provider rejects the renewal, the account shows a
 warning with the reason. Remove the account and add it again to sign in afresh.

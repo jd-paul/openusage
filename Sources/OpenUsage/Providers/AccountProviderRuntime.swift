@@ -113,10 +113,11 @@ final class AccountProviderRuntime: ProviderRuntime {
         clientID: ClaudeLogin.clientID
     )
 
-    /// The account's Claude tokens, refreshed and saved back to the vault first when they've expired.
+    /// The account's Claude tokens, refreshed and saved back to the vault first when they expire within
+    /// `OAuthTokens.refreshMargin`.
     func claudeTokens(_ credential: AccountCredential) async throws -> OAuthTokens {
         guard case .oauth(var tokens) = credential else { throw LoginError.invalidResponse }
-        if tokens.expiresAt.map({ $0 <= now() }) == true, let refreshToken = tokens.refreshToken {
+        if tokens.needsRefresh(at: now()), let refreshToken = tokens.refreshToken {
             let response = try await ClaudeUsageClient(httpClient: http).refreshToken(refreshToken, config: Self.claudeConfig)
             guard (200..<300).contains(response.statusCode) else { throw ProviderError.failed(response) }
             let refreshed = try JSONDecoder().decode(ClaudeRefreshResponse.self, from: response.body)
@@ -158,10 +159,11 @@ final class AccountProviderRuntime: ProviderRuntime {
         }
     }
 
-    /// The account's Codex tokens, refreshed and saved back to the vault first when they've expired.
+    /// The account's Codex tokens, refreshed and saved back to the vault first when they expire within
+    /// `OAuthTokens.refreshMargin`.
     func codexTokens(_ credential: AccountCredential) async throws -> OAuthTokens {
         guard case .oauth(var tokens) = credential else { throw LoginError.invalidResponse }
-        if tokens.expiresAt.map({ $0 <= now() }) == true, let refreshToken = tokens.refreshToken {
+        if tokens.needsRefresh(at: now()), let refreshToken = tokens.refreshToken {
             let refreshed = try await CodexUsageClient(http: http).refreshToken(refreshToken)
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
@@ -191,14 +193,14 @@ final class AccountProviderRuntime: ProviderRuntime {
     private func refreshGrok(_ credential: AccountCredential) async throws -> (String?, [MetricLine]) {
         guard case .oauth(var tokens) = credential else { throw LoginError.invalidResponse }
         let client = GrokUsageClient(httpClient: http)
-        if tokens.expiresAt.map({ $0 <= Date() }) == true, let refreshToken = tokens.refreshToken {
+        if tokens.needsRefresh(at: now()), let refreshToken = tokens.refreshToken {
             let response = try await client.refreshToken(refreshToken, clientID: GrokLogin.clientID)
             guard (200..<300).contains(response.statusCode), let refreshed = client.decodeRefreshResponse(response) else {
                 throw ProviderError.failed(response)
             }
             tokens.accessToken = refreshed.accessToken
             if let refresh = refreshed.refreshToken { tokens.refreshToken = refresh }
-            tokens.expiresAt = refreshed.expiresIn.map { Date().addingTimeInterval(max(0, $0 - 300)) }
+            tokens.expiresAt = refreshed.expiresIn.map { now().addingTimeInterval($0) }
             try await replaceCredential(.oauth(tokens))
         }
         let usage = try await client.fetchCreditsConfig(accessToken: tokens.accessToken)
@@ -229,11 +231,11 @@ final class AccountProviderRuntime: ProviderRuntime {
     private func refreshAntigravity(_ credential: AccountCredential) async throws -> (String?, [MetricLine]) {
         guard case .oauth(var tokens) = credential else { throw LoginError.invalidResponse }
         let client = AntigravityUsageClient(http: http)
-        if tokens.expiresAt.map({ $0 <= Date() }) == true, let refreshToken = tokens.refreshToken {
+        if tokens.needsRefresh(at: now()), let refreshToken = tokens.refreshToken {
             switch await client.refreshGoogleToken(refreshToken) {
             case .refreshed(let accessToken, let expiresIn):
                 tokens.accessToken = accessToken
-                tokens.expiresAt = Date().addingTimeInterval(max(0, expiresIn - 300))
+                tokens.expiresAt = now().addingTimeInterval(expiresIn)
                 try await replaceCredential(.oauth(tokens))
             case .authFailed: throw ProviderError.signInExpired(.antigravity)
             case .unavailable: throw ProviderError.unavailable(AntigravityUsageClient.unavailableMessage)

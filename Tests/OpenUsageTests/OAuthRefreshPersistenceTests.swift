@@ -93,7 +93,7 @@ final class OAuthRefreshPersistenceTests: XCTestCase {
         }
         XCTAssertEqual(saved.accessToken, "new-access")
         XCTAssertEqual(saved.refreshToken, "google-refresh")
-        XCTAssertEqual(try XCTUnwrap(saved.expiresAt).timeIntervalSinceNow, 3300, accuracy: 5)
+        XCTAssertEqual(try XCTUnwrap(saved.expiresAt).timeIntervalSinceNow, 3600, accuracy: 5, "the provider's own expiry; the refresh margin applies when it is read")
     }
 
     func testAntigravityRefusedRefreshTokenReadsAsExpiredSignIn() async throws {

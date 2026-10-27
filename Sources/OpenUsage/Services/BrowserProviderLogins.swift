@@ -231,7 +231,7 @@ private struct OAuthTokenResponse: Decodable {
         case expiresIn = "expires_in"
         case idToken = "id_token"
     }
-    var expiry: Date? { expiresIn.map { Date().addingTimeInterval(max(0, $0 - 300)) } }
+    var expiry: Date? { expiresIn.map { Date().addingTimeInterval($0) } }
 }
 
 private struct ClaudeProfileResponse: Decodable {
