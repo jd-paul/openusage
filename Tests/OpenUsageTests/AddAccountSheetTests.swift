@@ -115,8 +115,26 @@ final class AddAccountSheetTests: QuietWindowTestCase {
                 XCTAssertGreaterThan(ink.count(x: size.width - 40..<size.width - 10, y: 10..<40), 20, "\(label): no close button in the top-right corner")
                 let status = try XCTUnwrap(ink.bounds(y: size.height - 40..<size.height - 18), "\(label): nothing under the buttons")
                 XCTAssertEqual(status.midX, size.width / 2, accuracy: 3, "\(label): the status line isn't centred")
+                // The sheet hangs from a window that is never key, as the live panel isn't once the
+                // browser is up: the primary has to be accent-filled all the same, and only it.
+                let buttons = (size.height - 80)..<(size.height - 44)
+                XCTAssertGreaterThan(accent(rep, size: size, x: size.width / 2..<size.width - 20, y: buttons), 400, "\(label): the primary button isn't accent-filled")
+                XCTAssertEqual(accent(rep, size: size, x: 20..<size.width / 2, y: buttons), 0, "\(label): the secondary button is accent-filled")
             }
         }
+    }
+
+    /// Pixels in the region filled with the accent colour: clearly blue, well away from any grey.
+    private func accent(_ rep: NSBitmapImageRep, size: CGSize, x: Range<CGFloat>, y: Range<CGFloat>) -> Int {
+        let scale = CGFloat(rep.pixelsWide) / size.width
+        var count = 0
+        for row in Int(y.lowerBound * scale)..<Int(y.upperBound * scale) {
+            for column in Int(x.lowerBound * scale)..<Int(x.upperBound * scale) {
+                guard let color = rep.colorAt(x: column, y: row) else { continue }
+                if color.blueComponent > 0.6, color.blueComponent > color.redComponent + 0.3 { count += 1 }
+            }
+        }
+        return count
     }
 
     private func press(keyCode: UInt16, character: String, in sheet: NSWindow) {

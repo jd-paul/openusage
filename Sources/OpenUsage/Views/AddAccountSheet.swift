@@ -28,6 +28,10 @@ struct AddAccountSheet: View {
             }
         }
         .frame(width: 300)
+        // The browser the sign-in opens takes the keyboard, and AppKit then draws the sheet's controls
+        // inactive: a grey default button. The sheet belongs to a menu-bar panel, where that state
+        // means nothing, so its controls always draw active and the primary button keeps its accent.
+        .environment(\.appearsActive, true)
         // The popover panel takes keys without activating the app, but this sheet is an ordinary
         // window: without activation its fields never receive typing. A process that may not be
         // activated (the test suite) has nothing to gain and would take the keyboard from its owner.
@@ -248,7 +252,8 @@ private struct SheetAction {
     let action: () -> Void
 }
 
-/// Two buttons, each half the sheet's width; the primary one is the default and Return presses it.
+/// Two buttons, each half the sheet's width; the primary one is prominent and the default, so Return
+/// presses it.
 private struct SheetButtons: View {
     let secondary: SheetAction
     let primary: SheetAction
@@ -256,7 +261,9 @@ private struct SheetButtons: View {
     var body: some View {
         HStack {
             button(secondary, shortcut: secondary.shortcut)
+                .buttonStyle(.bordered)
             button(primary, shortcut: primary.shortcut ?? .defaultAction)
+                .buttonStyle(.borderedProminent)
         }
         .padding([.horizontal, .top], 20)
     }
