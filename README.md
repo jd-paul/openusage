@@ -52,8 +52,11 @@ what each one shows.
 - **Menu bar stars.** Star up to two metrics per provider. When more than one account of a provider is
   starred, each mark carries a two-character tag from the account's name.
 - **Dashboard.** A header and a card per provider, with the plan in the header and one row per metric:
-  label, bar, value, and reset. The bar is blue, orange once 75% is used, red once 90% is; a flame before
-  the value means you are using the limit faster than it resets. Right-click a header, a card, an
+  label, bar, value, and reset. With a reset window the bar's colour is where your pace lands at the
+  reset: blue on course, orange inside the last 10%, red with a flame before the value when you would
+  run out first; without one, blue, orange once 75% is used, red once 90% is. Click a value to flip
+  every row between used and left, a reset between countdown and exact time. A warning or clock after
+  an account's name explains itself when you rest the pointer on it. Right-click a header, a card, an
   account, or a row for its actions. Drag to reorder.
 - **Resets.** Claude and Codex accounts show a Limit Resets row with the number of available rate-limit
   resets. Rest the pointer on the count to see when each expires, and spend one from there.

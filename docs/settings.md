@@ -21,8 +21,8 @@ survives relaunch.
 
 | Setting | Control | What it changes |
 |---|---|---|
-| Show Usage As | Used, Left | Whether every bounded reading says `48% used` or `52% left`, on the dashboard and in the menu bar. |
-| Reset Times | Countdown, Exact time | Whether reset labels read `Resets in 3h 25m` or `Resets today at 6:38 PM`. |
+| Show Usage As | Used, Left | Whether every bounded reading says `48% used` or `52% left`, on the dashboard and in the menu bar. A click on any bar row's value in the dashboard flips it too. |
+| Reset Times | Countdown, Exact time | Whether reset labels read `Resets in 3h 25m` or `Resets today at 6:38 PM`. A click on any reset in the dashboard flips it too. |
 
 ## Notifications
 
