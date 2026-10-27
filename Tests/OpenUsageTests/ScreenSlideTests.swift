@@ -96,6 +96,8 @@ final class ScreenSlideTests: QuietWindowTestCase {
 
     /// The popover as `StatusItemController` hosts it, with one Claude account of two rows, on its
     /// dashboard, the panel following SwiftUI's height from its top edge as the controller's bridge does.
+    /// Motion is on whatever the Mac's Reduce Motion setting (the CI runner image turns it on), since
+    /// the slide is what these tests watch.
     private func hostPopover() async throws -> Hosted {
         let suite = "OpenUsageTests.ScreenSlide.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -113,7 +115,7 @@ final class ScreenSlideTests: QuietWindowTestCase {
         let layout = container.layout
         let hosting = NSHostingController(rootView: AnyView(
             DashboardView()
-                .reduceAnimationsWhenRequested()
+                .environment(\.reduceAnimations, false)
                 .environment(container)
                 .environment(layout)
                 .environment(container.dataStore)
