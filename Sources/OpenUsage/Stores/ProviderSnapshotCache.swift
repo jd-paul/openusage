@@ -4,6 +4,9 @@ import os
 struct ProviderSnapshotCache {
     private struct Payload: Codable {
         var snapshots: [String: ProviderSnapshot]
+        /// The app version that saved the blob. Snapshots from another version are shown at launch but
+        /// never count as fresh, since that version may have read different metrics (#697).
+        var appVersion: String?
     }
 
     /// In-memory mirror of the persisted blob. Reads (`snapshot`, `loadSnapshots`, and the read inside
@@ -14,19 +17,18 @@ struct ProviderSnapshotCache {
     /// safe to share.
     private let memo = OSAllocatedUnfairLock<Payload?>(initialState: nil)
 
-    /// Provider IDs whose snapshot was written by `store` *during this cache instance's lifetime* (i.e.
-    /// this running session). The freshness gate (`snapshot(providerID:)`) trusts a snapshot only when
-    /// its provider is in here — so a snapshot loaded from disk on launch is shown (via `loadSnapshots`)
-    /// but never counts as fresh, forcing one refresh on the first post-launch pass. Lock-backed for the
-    /// same reason as `memo`: the value-type cache shares it across copies and stays safe.
-    private let sessionWrites = OSAllocatedUnfairLock<Set<String>>(initialState: [])
+    /// Provider IDs whose snapshot may count as fresh: every one written by `store` this session, and at
+    /// launch every one this same app version saved. So a relaunch inside the refresh interval costs no
+    /// requests, while an update refetches on its first pass instead of showing what the old version read
+    /// (#697). Lock-backed for the same reason as `memo`: the value-type cache shares it across copies
+    /// and stays safe.
+    private let trusted = OSAllocatedUnfairLock<Set<String>>(initialState: [])
 
     private let userDefaults: UserDefaults
     private let storageKey: String
-    /// A snapshot written this session stays fresh for exactly one refresh interval, then expires so the
-    /// periodic loop refetches on schedule. A snapshot loaded from a *previous* session (off disk) is never
-    /// fresh regardless of its `refreshedAt` — see `sessionWrites`. Tests inject a fixed TTL for a
-    /// deterministic freshness window.
+    private let appVersion: String
+    /// A trusted snapshot stays fresh for exactly one refresh interval after it was fetched, then expires
+    /// so the periodic loop refetches on schedule. Tests inject a fixed TTL for a deterministic window.
     private let ttl: TimeInterval
     private let now: () -> Date
     private let encoder: JSONEncoder
@@ -35,11 +37,13 @@ struct ProviderSnapshotCache {
     init(
         userDefaults: UserDefaults = .standard,
         storageKey: String = "openusage.providerSnapshots.v11",
+        appVersion: String = AppInfo.version,
         ttl: TimeInterval = RefreshSetting.interval,
         now: @escaping () -> Date = Date.init
     ) {
         self.userDefaults = userDefaults
         self.storageKey = storageKey
+        self.appVersion = appVersion
         self.ttl = ttl
         self.now = now
         let encoder = JSONEncoder()
@@ -65,14 +69,12 @@ struct ProviderSnapshotCache {
     func snapshot(providerID: String) -> ProviderSnapshot? {
         let snapshot = loadPayload().snapshots[providerID]
         guard let snapshot else { return nil }
-        // Freshness has two requirements, and disk age alone is not enough: the snapshot must have been
-        // written *this session* AND still be within TTL. A snapshot served from a previous session's
-        // persisted blob is shown for instant paint but never gates a refresh, so every launch refetches
-        // promptly instead of waiting out the previous session's remaining interval.
-        let writtenThisSession = sessionWrites.withLock { $0.contains(providerID) }
+        // Fresh means trusted (written this session, or saved by this app version) and fetched less than
+        // one TTL ago. A clock that went backwards never makes a snapshot fresh.
+        let isTrusted = trusted.withLock { $0.contains(providerID) }
         let age = now().timeIntervalSince(snapshot.refreshedAt)
-        let fresh = writtenThisSession && age < ttl
-        let reason = !writtenThisSession ? "stale (not written this session)"
+        let fresh = isTrusted && (0..<ttl).contains(age)
+        let reason = !isTrusted ? "stale (saved by another app version)"
             : fresh ? "fresh" : "stale"
         AppLog.debug(.cache, "\(providerID) staleness \(Int(age))s vs ttl \(Int(ttl))s -> \(reason)")
         return fresh ? snapshot : nil
@@ -85,11 +87,10 @@ struct ProviderSnapshotCache {
             return
         }
         AppLog.debug(.cache, "write \(snapshot.providerID)")
-        // Mark this provider as written *this session* so its snapshot now satisfies the freshness gate
-        // (a launch-loaded snapshot never does — see `sessionWrites`).
-        sessionWrites.withLock { _ = $0.insert(snapshot.providerID) }
         var payload = loadPayload()
+        trusted.withLock { _ = $0.insert(snapshot.providerID) }
         payload.snapshots[snapshot.providerID] = snapshot
+        payload.appVersion = appVersion
         save(payload)
     }
 
@@ -98,7 +99,7 @@ struct ProviderSnapshotCache {
         guard !providerIDs.isEmpty else { return }
         var payload = loadPayload()
         payload.snapshots = payload.snapshots.filter { !providerIDs.contains($0.key) }
-        sessionWrites.withLock { $0.subtract(providerIDs) }
+        trusted.withLock { $0.subtract(providerIDs) }
         save(payload)
     }
 
@@ -108,6 +109,9 @@ struct ProviderSnapshotCache {
         // lock keeps `self` out of the `@Sendable` closure; cache access is MainActor-serialized in
         // production, so the worst a race could do is decode twice into the same value — harmless.)
         let loaded = decodeStoredPayload()
+        if loaded.appVersion == appVersion {
+            trusted.withLock { $0.formUnion(loaded.snapshots.keys) }
+        }
         memo.withLock { $0 = loaded }
         return loaded
     }

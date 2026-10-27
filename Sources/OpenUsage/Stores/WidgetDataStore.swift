@@ -59,6 +59,8 @@ final class WidgetDataStore {
     /// cached, so this is what keeps a broken account from being asked on every pass. Observed, because
     /// the account's clock glyph names the time a provider-set wait ends.
     private(set) var backoffs: [String: RefreshBackoff] = [:]
+    /// When each account's last real fetch started, so a manual refresh skips one fetched moments ago.
+    @ObservationIgnored private var lastFetchAt: [String: Date] = [:]
 
     /// Owns the quota pace-notification subsystem (dedup state, fire/deliver decision, trace). This store
     /// gathers each pass's visible bounded metrics and delegates.
@@ -138,6 +140,7 @@ final class WidgetDataStore {
         snapshots = next
         providerErrors = providerErrors.filter { ids.contains($0.key) }
         backoffs = backoffs.filter { ids.contains($0.key) }
+        lastFetchAt = lastFetchAt.filter { ids.contains($0.key) }
     }
 
     /// Refresh every account, concurrently — one slow provider never delays the rest.
@@ -146,7 +149,28 @@ final class WidgetDataStore {
     /// `force` bypasses the snapshot cache and the client's own failure backoff (the manual "refresh now"
     /// path), never a wait the provider set; the periodic loop honors all three.
     func refreshAll(force: Bool = false) async {
-        let providerIDs = registry.providers.map(\.id)
+        await refreshPass(registry.providers.map(\.id), force: force)
+    }
+
+    /// ⌘R, the footer, and the Refresh menu items: every account (or just `providerIDs`) that wasn't
+    /// fetched in the last `RefreshSetting.manualRefreshMinimum`, skipping the cache and the client's own
+    /// failure backoff but never a wait the provider set. Mashing ⌘R asks each provider once.
+    func refreshManually(providerIDs: [String]? = nil) async {
+        let due = (providerIDs ?? registry.providers.map(\.id)).filter { id in
+            lastFetchAt[id].map { now().timeIntervalSince($0) >= RefreshSetting.manualRefreshMinimum } ?? true
+        }
+        guard !due.isEmpty else {
+            AppLog.debug(.refresh, "manual refresh skipped; every account was fetched in the last \(Int(RefreshSetting.manualRefreshMinimum))s")
+            return
+        }
+        if providerIDs == nil {
+            await refreshPass(due, force: true)
+        } else {
+            await refresh(providerIDs: due, force: true)
+        }
+    }
+
+    private func refreshPass(_ providerIDs: [String], force: Bool) async {
         let start = monotonicNow()
         AppLog.info(.refresh, "batch start (\(providerIDs.count) providers, force=\(force))")
         let outcomes = await refresh(providerIDs: providerIDs, force: force)
@@ -253,6 +277,7 @@ final class WidgetDataStore {
             return .skipped
         }
         let start = monotonicNow()
+        lastFetchAt[providerID] = now()
         // A provider that never returns would otherwise hold the in-flight entry — and the spinner —
         // forever. Past the deadline, stop waiting and treat it as any other failed refresh.
         let work = Task { [providerRefreshTimeout] in

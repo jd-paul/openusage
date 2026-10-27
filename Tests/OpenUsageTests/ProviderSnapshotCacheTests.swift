@@ -48,30 +48,45 @@ final class ProviderSnapshotCacheTests: XCTestCase {
         XCTAssertEqual(reloaded.loadSnapshots(providerIDs: ["alpha", "beta"]).count, 2)
     }
 
-    /// A snapshot persisted by a *previous* session and reloaded on launch must not
-    /// satisfy the refresh gate, even when its `refreshedAt` is still well within TTL — otherwise the app
-    /// would wait out the previous session's remaining interval before refetching. It must still *display*
-    /// (instant paint), so `loadSnapshots` returns it.
-    func testRelaunchLoadedSnapshotIsStaleEvenWithinTTL() {
+    /// A snapshot another app version saved is shown at launch (`loadSnapshots`) but never satisfies the
+    /// refresh gate, even within TTL, so an update refetches instead of showing what the old version read
+    /// (#697). Once this session writes any snapshot, the old ones still don't count as fresh.
+    func testSnapshotFromAnotherAppVersionIsStaleEvenWithinTTL() {
         let (defaults, suite) = makeDefaults()
         defer { defaults.removePersistentDomain(forName: suite) }
         let now = Date()
-        // Session 1 writes a snapshot 1s ago — comfortably inside the 9_999s TTL.
-        let session1 = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", ttl: 9_999, now: { now })
-        session1.store(snapshot("alpha", used: 42, now: now.addingTimeInterval(-1)))
+        let old = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", appVersion: "1.0.0", ttl: 9_999, now: { now })
+        old.store(snapshot("alpha", used: 42, now: now.addingTimeInterval(-1)))
+        old.store(snapshot("beta", used: 7, now: now.addingTimeInterval(-1)))
 
-        // Session 2 (fresh instance = relaunch) reloads it from disk.
-        let relaunched = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", ttl: 9_999, now: { now })
+        let updated = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", appVersion: "1.0.1", ttl: 9_999, now: { now })
         XCTAssertEqual(
-            relaunched.loadSnapshots(providerIDs: ["alpha"])["alpha"]?.lines.first,
+            updated.loadSnapshots(providerIDs: ["alpha"])["alpha"]?.lines.first,
             .progress(label: "Session", used: 42, limit: 100, format: .percent)
         )
-        XCTAssertNil(relaunched.snapshot(providerID: "alpha"))
+        XCTAssertNil(updated.snapshot(providerID: "alpha"))
+        updated.store(snapshot("alpha", used: 43, now: now))
+        XCTAssertNotNil(updated.snapshot(providerID: "alpha"))
+        XCTAssertNil(updated.snapshot(providerID: "beta"))
+    }
+
+    /// The same app version relaunched inside TTL trusts what it saved, and a snapshot from the future (a
+    /// clock that moved back) is never fresh.
+    func testSameVersionRelaunchTrustsItsSnapshotsWithinTTL() {
+        let (defaults, suite) = makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let now = Date()
+        let first = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", appVersion: "1.0.0", ttl: 300, now: { now })
+        first.store(snapshot("alpha", used: 42, now: now.addingTimeInterval(-299)))
+        first.store(snapshot("beta", used: 7, now: now.addingTimeInterval(60)))
+
+        let relaunched = ProviderSnapshotCache(userDefaults: defaults, storageKey: "k", appVersion: "1.0.0", ttl: 300, now: { now })
+        XCTAssertNotNil(relaunched.snapshot(providerID: "alpha"))
+        XCTAssertNil(relaunched.snapshot(providerID: "beta"))
     }
 
     /// A snapshot written this session still expires once it ages past TTL, so the periodic loop resumes
-    /// refetching on the normal cadence (the session-write flag widens freshness on launch, it doesn't
-    /// pin a snapshot fresh forever).
+    /// refetching on the normal cadence.
     func testSnapshotWrittenThisSessionExpiresAfterTTL() {
         let (defaults, suite) = makeDefaults()
         defer { defaults.removePersistentDomain(forName: suite) }

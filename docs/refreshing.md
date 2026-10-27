@@ -8,6 +8,8 @@
   together are grouped so a burst shows as one update and is saved once.
 - A new account refreshes as soon as you add it.
 - The footer shows **Next update in …**. Click it, or press **⌘R**, to refresh now; this skips the cache.
+  An account fetched in the last 30 seconds is left alone, so pressing ⌘R repeatedly asks each provider
+  once.
 - While an account is fetching, a spinner shows next to its name and in the footer.
 
 ## Caching
@@ -19,9 +21,10 @@ grants. Claude's plan is read once per sign-in token, and again an hour later wh
 plan upgrade can take up to an hour to show.
 
 The last snapshot of every account is saved on disk and shown at launch, so you see your last-known
-values before the first fetch finishes. A value counts as fresh for one interval after it was fetched
-in the current session. A value from an earlier session is shown but refreshed on the first pass, so
-a new app version never waits out the old interval.
+values before the first fetch finishes. A value counts as fresh for one interval (5 minutes) after it
+was fetched, across a relaunch too: relaunching within 5 minutes of a refresh asks no provider until
+the next pass. Values saved by a different app version are shown but refreshed on the first pass, so
+an update never shows what the old version read.
 
 ## When a fetch fails
 

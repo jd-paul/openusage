@@ -18,4 +18,7 @@ enum RefreshSetting {
     /// How long a read that rarely changes (a plan name, Codex's reset-credit list) is reused before it
     /// is asked again (see `SecondaryRead`).
     static let secondaryReadInterval: TimeInterval = 60 * 60
+
+    /// A manual refresh (⌘R) skips an account fetched less than this long ago.
+    static let manualRefreshMinimum: TimeInterval = 30
 }
