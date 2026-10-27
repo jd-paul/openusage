@@ -7,7 +7,7 @@ final class AddAccountFlowTests: XCTestCase {
     func testFailedSignInCanBeRetriedAndAddsTheAccount() async throws {
         let store = makeStore()
         var attempts = 0
-        let flow = AddAccountFlow(store: store) { _ in
+        let flow = AddAccountFlow(store: store, openURL: { _ in }) { _ in
             attempts += 1
             return attempts == 1
                 ? StubLogin { _ in throw LoginError.invalidCode }
@@ -28,7 +28,7 @@ final class AddAccountFlowTests: XCTestCase {
     func testPastedCodeReachesTheWaitingSignIn() async throws {
         let store = makeStore()
         let url = try XCTUnwrap(URL(string: "https://example.com/authorize"))
-        let flow = AddAccountFlow(store: store) { _ in
+        let flow = AddAccountFlow(store: store, openURL: { _ in }) { _ in
             StubLogin(prompt: .browser(url, acceptsPastedCode: true)) { input in
                 var iterator = input.makeAsyncIterator()
                 let code = await iterator.next() ?? ""
@@ -66,7 +66,7 @@ final class AddAccountFlowTests: XCTestCase {
         let store = makeStore()
         let url = try XCTUnwrap(URL(string: "https://example.com/authorize"))
         var started: [ProviderKind] = []
-        let flow = AddAccountFlow(store: store) { kind in
+        let flow = AddAccountFlow(store: store, openURL: { _ in }) { kind in
             started.append(kind)
             return StubLogin(prompt: .browser(url, acceptsPastedCode: false)) { _ in
                 try await Task.sleep(for: .seconds(30))
@@ -92,7 +92,7 @@ final class AddAccountFlowTests: XCTestCase {
     func testCancelStopsTheSignInWithoutAddingAnAccount() async throws {
         let store = makeStore()
         let url = try XCTUnwrap(URL(string: "https://example.com/device"))
-        let flow = AddAccountFlow(store: store) { _ in
+        let flow = AddAccountFlow(store: store, openURL: { _ in }) { _ in
             StubLogin(prompt: .deviceCode(userCode: "ABCD-EFGH", verificationURL: url)) { _ in
                 try await Task.sleep(for: .seconds(30))
                 return ("late", .oauth(OAuthTokens(accessToken: "access")))
@@ -112,7 +112,7 @@ final class AddAccountFlowTests: XCTestCase {
         let store = makeStore()
         let url = try XCTUnwrap(URL(string: "https://example.com/authorize"))
         let cancelled = CancellationFlag()
-        let flow = AddAccountFlow(store: store) { _ in
+        let flow = AddAccountFlow(store: store, openURL: { _ in }) { _ in
             StubLogin(prompt: .browser(url, acceptsPastedCode: true)) { _ in
                 do {
                     try await Task.sleep(for: .seconds(30))
@@ -142,6 +142,51 @@ final class AddAccountFlowTests: XCTestCase {
         let loginWasCancelled = await cancelled.isSet
         XCTAssertTrue(loginWasCancelled, "back() left the sign-in running")
         XCTAssertTrue(store.accounts.isEmpty)
+    }
+
+    func testTheBrowserOpensOnceEachTimeASignInAttemptAsksForIt() async throws {
+        let store = makeStore()
+        let url = try XCTUnwrap(URL(string: "https://example.com/authorize"))
+        var opened: [URL] = []
+        var attempts = 0
+        let flow = AddAccountFlow(store: store, openURL: { opened.append($0) }) { _ in
+            attempts += 1
+            switch attempts {
+            case 1: return StubLogin(prompt: .browser(url, acceptsPastedCode: false)) { _ in throw LoginError.invalidCode }
+            case 2: return StubLogin { _ in throw LoginError.invalidCode }
+            default: return StubLogin(prompt: .browser(url, acceptsPastedCode: false)) { _ in ("rob", .oauth(OAuthTokens(accessToken: "access"))) }
+            }
+        }
+        flow.choose(.claude)
+        try await waitUntil { flow.errorMessage != nil }
+        XCTAssertEqual(opened, [url], "the browser opens when the sign-in asks for it")
+
+        flow.signIn()
+        try await waitUntil { attempts == 2 && flow.errorMessage != nil }
+        XCTAssertEqual(opened, [url], "Try Again opened the browser before the new attempt asked for it")
+
+        flow.signIn()
+        try await waitUntil { flow.isFinished }
+        XCTAssertEqual(opened, [url, url], "the new attempt's prompt opens the browser again")
+    }
+
+    func testTheDeviceCodePageOpensOnlyOnRequest() async throws {
+        let store = makeStore()
+        let url = try XCTUnwrap(URL(string: "https://example.com/device"))
+        var opened: [URL] = []
+        let flow = AddAccountFlow(store: store, openURL: { opened.append($0) }) { _ in
+            StubLogin(prompt: .deviceCode(userCode: "ABCD-EFGH", verificationURL: url)) { _ in
+                try await Task.sleep(for: .seconds(30))
+                return ("late", .oauth(OAuthTokens(accessToken: "access")))
+            }
+        }
+        flow.choose(.copilot)
+        try await waitUntil { flow.prompt != nil }
+        XCTAssertTrue(opened.isEmpty, "a device code has to be read before its page opens")
+
+        flow.openBrowser()
+        XCTAssertEqual(opened, [url])
+        flow.cancel()
     }
 
     private func makeStore(vault: InMemoryCredentialVault = InMemoryCredentialVault()) -> AccountStore {

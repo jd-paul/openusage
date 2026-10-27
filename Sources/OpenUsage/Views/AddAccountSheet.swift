@@ -83,31 +83,33 @@ private struct ProviderChoiceStep: View {
     }
 }
 
+/// The browser and device-code steps share one layout: the header, the code the user needs (a
+/// box to read from, or a field to paste into), two equal buttons to copy and to open the browser,
+/// and the sign-in's state centred under them. The browser sign-in already opened its page when
+/// the step appeared, so the status line is true from the start.
 private struct BrowserSignInStep: View {
     @Bindable var flow: AddAccountFlow
     let provider: ProviderKind
     let cancel: () -> Void
-    @Environment(\.openURL) private var openURL
 
     var body: some View {
-        SheetHeader(provider: provider, title: "Sign In to \(provider.displayName)", message: message)
-        Group {
-            if let errorMessage = flow.errorMessage {
-                ErrorText(errorMessage)
-            } else {
-                if case .deviceCode(let userCode, _) = flow.prompt {
-                    DeviceCodeBox(code: userCode)
-                        .padding(.bottom, 12)
-                }
-                status
+        VStack(alignment: .leading, spacing: 0) {
+            SheetHeader(provider: provider, title: "Sign In to \(provider.displayName)", message: message)
+            if case .deviceCode(let userCode, _) = flow.prompt {
+                DeviceCodeBox(code: userCode)
+                    .padding(.horizontal, 20)
             }
-        }
-        .padding(.horizontal, 20)
-        if flow.errorMessage == nil, case .browser(_, acceptsPastedCode: true) = flow.prompt {
-            pastedCodeForm
+            if flow.errorMessage == nil, case .browser(_, acceptsPastedCode: true) = flow.prompt {
+                pastedCodeForm
+            }
+            SheetButtons(secondary: secondaryAction, primary: primaryAction)
+            status
                 .padding(.top, 12)
+                .padding([.horizontal, .bottom], 20)
         }
-        SheetButtons(cancel: cancel, primary: primaryAction)
+        .overlay(alignment: .topTrailing) {
+            CloseButton(action: cancel)
+        }
     }
 
     private var message: String {
@@ -119,19 +121,19 @@ private struct BrowserSignInStep: View {
 
     private var status: some View {
         HStack(spacing: 8) {
-            if flow.isWorking {
-                ProgressView()
-                    .controlSize(.small)
-            }
-            Text(statusText)
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 8)
-            if case .browser(let url, _) = flow.prompt {
-                Button("Copy Link") { copy(url.absoluteString) }
-                    .buttonStyle(.link)
+            if let errorMessage = flow.errorMessage {
+                ErrorText(errorMessage, alignment: .center)
+            } else {
+                if flow.isWorking {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                Text(statusText)
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.callout)
+        .frame(maxWidth: .infinity)
     }
 
     private var statusText: String {
@@ -154,6 +156,14 @@ private struct BrowserSignInStep: View {
         .inlineGroupedForm()
     }
 
+    private var secondaryAction: SheetAction {
+        switch flow.prompt {
+        case .browser(let url, _): SheetAction(title: "Copy Link") { copy(url.absoluteString) }
+        case .deviceCode(let userCode, _): SheetAction(title: "Copy Code") { copy(userCode) }
+        case nil: SheetAction(title: "Copy Link", isDisabled: true) {}
+        }
+    }
+
     private var primaryAction: SheetAction {
         if flow.errorMessage != nil {
             return SheetAction(title: "Try Again") { flow.signIn() }
@@ -161,15 +171,7 @@ private struct BrowserSignInStep: View {
         if flow.hasPastedCode {
             return SheetAction(title: "Continue", isDisabled: !flow.canSubmitCode) { flow.submitCode() }
         }
-        return SheetAction(title: "Open Browser", isDisabled: flow.prompt == nil) { open() }
-    }
-
-    private func open() {
-        switch flow.prompt {
-        case .browser(let url, _): openURL(url)
-        case .deviceCode(_, let url): openURL(url)
-        case nil: break
-        }
+        return SheetAction(title: "Open Browser", isDisabled: flow.prompt == nil) { flow.openBrowser() }
     }
 }
 
@@ -199,7 +201,11 @@ private struct APIKeyStep: View {
             }
         }
         .inlineGroupedForm()
-        SheetButtons(cancel: cancel, primary: SheetAction(title: "Add Account", isDisabled: !flow.canAddKey) { flow.addKey() })
+        SheetButtons(
+            secondary: SheetAction(title: "Cancel", shortcut: .cancelAction, action: cancel),
+            primary: SheetAction(title: "Add Account", isDisabled: !flow.canAddKey) { flow.addKey() }
+        )
+        .padding(.bottom, 20)
     }
 }
 
@@ -235,32 +241,52 @@ private struct SheetHeader: View {
     }
 }
 
-/// The step's default button: Return presses it.
 private struct SheetAction {
     let title: String
     var isDisabled = false
+    var shortcut: KeyboardShortcut?
     let action: () -> Void
 }
 
-/// Cancel and the step's default button, each half the sheet's width. Escape cancels and Return
-/// presses the default button. On a provider's step, Cancel goes back to the provider list.
+/// Two buttons, each half the sheet's width; the primary one is the default and Return presses it.
 private struct SheetButtons: View {
-    let cancel: () -> Void
+    let secondary: SheetAction
     let primary: SheetAction
 
     var body: some View {
         HStack {
-            Button(action: cancel) {
-                Text("Cancel").frame(maxWidth: .infinity)
-            }
-            .keyboardShortcut(.cancelAction)
-            Button(action: primary.action) {
-                Text(primary.title).frame(maxWidth: .infinity)
-            }
-            .keyboardShortcut(.defaultAction)
-            .disabled(primary.isDisabled)
+            button(secondary, shortcut: secondary.shortcut)
+            button(primary, shortcut: primary.shortcut ?? .defaultAction)
         }
-        .padding(20)
+        .padding([.horizontal, .top], 20)
+    }
+
+    private func button(_ action: SheetAction, shortcut: KeyboardShortcut?) -> some View {
+        Button(action: action.action) {
+            Text(action.title).frame(maxWidth: .infinity)
+        }
+        .keyboardShortcut(shortcut)
+        .disabled(action.isDisabled)
+    }
+}
+
+/// The close button where a macOS panel keeps one, in the top-right corner: SF Symbols'
+/// xmark.circle.fill drawn hierarchically, the glyph system search fields and banners clear and
+/// close with, since SwiftUI's own `Button(role: .close)` needs macOS 26. Escape presses it.
+private struct CloseButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark.circle.fill")
+                .symbolRenderingMode(.hierarchical)
+                .font(.system(size: 17))
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(.cancelAction)
+        .accessibilityLabel("Cancel")
+        .padding(14)
     }
 }
 
@@ -268,35 +294,31 @@ private struct DeviceCodeBox: View {
     let code: String
 
     var body: some View {
-        HStack {
-            Text(code)
-                .font(.system(.title2, design: .monospaced).weight(.semibold))
-                .textSelection(.enabled)
-            Spacer()
-            Button("Copy Code", systemImage: "doc.on.doc") { copy(code) }
-                .labelStyle(.iconOnly)
-                .buttonStyle(.borderless)
-                .help("Copy Code")
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Theme.cardFill, in: .rect(cornerRadius: 10))
+        Text(code)
+            .font(.system(.title2, design: .monospaced).weight(.semibold))
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Theme.cardFill, in: .rect(cornerRadius: 10))
     }
 }
 
 private struct ErrorText: View {
     let message: String
+    var alignment: Alignment = .leading
 
-    init(_ message: String) {
+    init(_ message: String, alignment: Alignment = .leading) {
         self.message = message
+        self.alignment = alignment
     }
 
     var body: some View {
         Label(message, systemImage: "exclamationmark.triangle.fill")
             .font(.callout)
             .foregroundStyle(.red)
+            .multilineTextAlignment(alignment == .center ? .center : .leading)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: alignment)
     }
 }
 

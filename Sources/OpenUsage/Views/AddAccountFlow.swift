@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -20,12 +21,18 @@ final class AddAccountFlow {
     private(set) var isFinished = false
 
     private let store: AccountStore
+    private let openURL: (URL) -> Void
     private let login: (ProviderKind) -> any ProviderLogin
     private var task: Task<Void, Never>?
     private var codeInput: AsyncStream<String>.Continuation?
 
-    init(store: AccountStore, login: @escaping (ProviderKind) -> any ProviderLogin = ProviderLoginCatalog.login(for:)) {
+    init(
+        store: AccountStore,
+        openURL: @escaping (URL) -> Void = { _ = NSWorkspace.shared.open($0) },
+        login: @escaping (ProviderKind) -> any ProviderLogin = ProviderLoginCatalog.login(for:)
+    ) {
         self.store = store
+        self.openURL = openURL
         self.login = login
     }
 
@@ -49,6 +56,16 @@ final class AddAccountFlow {
         codeInput = continuation
         pastedCode = ""
         run(provider, input: input)
+    }
+
+    /// Opens the page the sign-in is waiting on: the browser sign-in again, or the device-code
+    /// verification page, which only opens on request because the user has to read the code first.
+    func openBrowser() {
+        switch prompt {
+        case .browser(let url, _): openURL(url)
+        case .deviceCode(_, let url): openURL(url)
+        case nil: break
+        }
     }
 
     /// Hands a code the user pasted from the browser to the waiting sign-in.
@@ -108,9 +125,12 @@ final class AddAccountFlow {
         }
     }
 
+    /// A browser sign-in opens its page as soon as it asks for it, once per attempt, so the sheet
+    /// waits for a browser that is actually open.
     private func show(_ prompt: LoginPrompt) {
         guard !Task.isCancelled else { return }
         self.prompt = prompt
+        if case .browser(let url, _) = prompt { openURL(url) }
     }
 
     private func save(_ result: (label: String, credential: AccountCredential), for kind: ProviderKind) {

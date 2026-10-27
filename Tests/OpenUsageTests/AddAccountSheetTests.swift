@@ -5,7 +5,7 @@ import XCTest
 @testable import OpenUsage
 
 /// Cancel, and Escape with it, steps back from a provider's sign-in to the provider list; only on
-/// the list does it close the sheet.
+/// the list does it close the sheet. Return presses Open Browser.
 @MainActor
 final class AddAccountSheetTests: QuietWindowTestCase {
     func testCancelOnAProviderStepReturnsToTheListAndCancelOnTheListCloses() async throws {
@@ -13,8 +13,9 @@ final class AddAccountSheetTests: QuietWindowTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
         let url = try XCTUnwrap(URL(string: "https://example.com/authorize"))
-        let flow = AddAccountFlow(store: AccountStore(defaults: defaults, vault: InMemoryCredentialVault())) { _ in
-            SlowBrowserLogin(url: url)
+        var opened: [URL] = []
+        let flow = AddAccountFlow(store: AccountStore(defaults: defaults, vault: InMemoryCredentialVault()), openURL: { opened.append($0) }) { _ in
+            SlowLogin(prompt: .browser(url, acceptsPastedCode: false))
         }
         let presentation = SheetPresentation()
         let host = NSHostingView(rootView: SheetHost(presentation: presentation, flow: flow))
@@ -26,6 +27,11 @@ final class AddAccountSheetTests: QuietWindowTestCase {
 
         flow.choose(.codex)
         try await waitUntil { flow.prompt != nil }
+        XCTAssertEqual(opened, [url], "the browser didn't open on its own")
+        try await Task.sleep(for: .milliseconds(300))
+        press(keyCode: 36, character: "\r", in: sheet)
+        try await waitUntil { opened.count == 2 }
+        XCTAssertEqual(opened, [url, url], "Return didn't press Open Browser")
 
         pressEscape(in: sheet)
         try await waitUntil { flow.provider == nil }
@@ -46,8 +52,8 @@ final class AddAccountSheetTests: QuietWindowTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
         let url = try XCTUnwrap(URL(string: "https://example.com/authorize"))
-        let flow = AddAccountFlow(store: AccountStore(defaults: defaults, vault: InMemoryCredentialVault())) { _ in
-            SlowBrowserLogin(url: url)
+        let flow = AddAccountFlow(store: AccountStore(defaults: defaults, vault: InMemoryCredentialVault()), openURL: { _ in }) { _ in
+            SlowLogin(prompt: .browser(url, acceptsPastedCode: false))
         }
         let presentation = SheetPresentation()
         let host = NSHostingView(rootView: SheetHost(presentation: presentation, flow: flow))
@@ -66,6 +72,51 @@ final class AddAccountSheetTests: QuietWindowTestCase {
         press(keyCode: 36, character: "\r", in: sheet)
         try await waitUntil { flow.provider == .codex }
         XCTAssertEqual(flow.provider, .codex)
+    }
+
+    /// Both sign-in steps, light and dark: the close button sits in the top-right corner and the
+    /// sign-in's status is centred under the two buttons. OPENUSAGE_RENDER_DIR, when set, receives
+    /// each render as a PNG.
+    func testSignInStepsPutTheCloseButtonTopRightAndTheStatusCentredUnderTheButtons() async throws {
+        let suite = "OpenUsageTests.AddAccountSheet.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+        let store = AccountStore(defaults: defaults, vault: InMemoryCredentialVault())
+        let url = try XCTUnwrap(URL(string: "https://example.com/authorize"))
+        let steps: [(name: String, provider: ProviderKind, prompt: LoginPrompt)] = [
+            ("browser", .claude, .browser(url, acceptsPastedCode: true)),
+            ("device-code", .copilot, .deviceCode(userCode: "ABCD-1234", verificationURL: url)),
+        ]
+        let renderDirectory = ProcessInfo.processInfo.environment["OPENUSAGE_RENDER_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+        for step in steps {
+            for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                let flow = AddAccountFlow(store: store, openURL: { _ in }) { _ in SlowLogin(prompt: step.prompt) }
+                addTeardownBlock { flow.cancel() }
+                flow.choose(step.provider)
+                try await waitUntil { flow.prompt != nil }
+                let host = NSHostingView(rootView: AddAccountSheet(flow: flow).background(Color(nsColor: .windowBackgroundColor)))
+                host.frame = NSRect(origin: .zero, size: host.fittingSize)
+                let window = QuietWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: appearance)
+                window.contentView = host
+                QuietTestProcess.show(window, in: self)
+                try await Task.sleep(for: .milliseconds(300))
+                host.layoutSubtreeIfNeeded()
+                let rep = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                host.cacheDisplay(in: host.bounds, to: rep)
+                if let renderDirectory {
+                    try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+                        .write(to: renderDirectory.appendingPathComponent("signin-\(step.name)-\(scheme).png"))
+                }
+                let label = "\(step.name) \(scheme)"
+                let size = host.bounds.size
+                XCTAssertEqual(size.width, 300, label)
+                let ink = Ink(rep, size: size)
+                XCTAssertGreaterThan(ink.count(x: size.width - 40..<size.width - 10, y: 10..<40), 20, "\(label): no close button in the top-right corner")
+                let status = try XCTUnwrap(ink.bounds(y: size.height - 40..<size.height - 18), "\(label): nothing under the buttons")
+                XCTAssertEqual(status.midX, size.width / 2, accuracy: 3, "\(label): the status line isn't centred")
+            }
+        }
     }
 
     private func press(keyCode: UInt16, character: String, in sheet: NSWindow) {
@@ -122,12 +173,63 @@ private struct SheetHost: View {
     }
 }
 
-private struct SlowBrowserLogin: ProviderLogin {
-    let url: URL
+private struct SlowLogin: ProviderLogin {
+    let prompt: LoginPrompt
 
     func login(prompt show: @Sendable (LoginPrompt) async -> Void, pastedCode: AsyncStream<String>) async throws -> (label: String, credential: AccountCredential) {
-        await show(.browser(url, acceptsPastedCode: false))
+        await show(prompt)
         try await Task.sleep(for: .seconds(30))
         return ("late", .oauth(OAuthTokens(accessToken: "access")))
+    }
+}
+
+/// Which pixels of a render differ from its background (the top-left pixel), in points from the
+/// top-left corner.
+private struct Ink {
+    private let inked: [Bool]
+    private let width: Int
+    private let height: Int
+    private let scale: CGFloat
+
+    init(_ rep: NSBitmapImageRep, size: CGSize) {
+        width = rep.pixelsWide
+        height = rep.pixelsHigh
+        scale = CGFloat(rep.pixelsWide) / size.width
+        let data = rep.bitmapData!
+        let bytesPerPixel = rep.bitsPerPixel / 8
+        let background = (0..<bytesPerPixel).map { data[$0] }
+        var inked = [Bool](repeating: false, count: width * height)
+        for y in 0..<height {
+            for x in 0..<width {
+                let offset = y * rep.bytesPerRow + x * bytesPerPixel
+                inked[y * width + x] = (0..<bytesPerPixel).contains { abs(Int(data[offset + $0]) - Int(background[$0])) > 24 }
+            }
+        }
+        self.inked = inked
+    }
+
+    func count(x: Range<CGFloat>, y: Range<CGFloat>) -> Int {
+        var count = 0
+        for row in pixels(y, limit: height) {
+            for column in pixels(x, limit: width) where inked[row * width + column] { count += 1 }
+        }
+        return count
+    }
+
+    /// The box around the inked pixels of the rows in `y`, or nil when there are none.
+    func bounds(y: Range<CGFloat>) -> CGRect? {
+        var minX = width, maxX = -1, minY = height, maxY = -1
+        for row in pixels(y, limit: height) {
+            for column in 0..<width where inked[row * width + column] {
+                minX = min(minX, column); maxX = max(maxX, column)
+                minY = min(minY, row); maxY = max(maxY, row)
+            }
+        }
+        guard maxX >= minX else { return nil }
+        return CGRect(x: CGFloat(minX) / scale, y: CGFloat(minY) / scale, width: CGFloat(maxX - minX + 1) / scale, height: CGFloat(maxY - minY + 1) / scale)
+    }
+
+    private func pixels(_ points: Range<CGFloat>, limit: Int) -> Range<Int> {
+        max(0, Int(points.lowerBound * scale))..<min(limit, Int(points.upperBound * scale))
     }
 }
