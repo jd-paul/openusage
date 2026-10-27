@@ -9,8 +9,9 @@ import XCTest
 /// Resets row's count opens the resets timeline after the hover dwell, resting it on the warning or
 /// clock after an account's name opens a tooltip with the reason, a click on a row's value or reset
 /// flips the display, and a double-click on an account's name renames it, on its caption or in a
-/// one-account provider's header. Dragging still reorders: the header drags the provider, a caption
-/// drags its account, and a row drags itself.
+/// one-account provider's header. The header's logo is a picture and nothing else.
+/// Dragging still reorders: the header drags the provider, a caption drags its account, and a row
+/// drags itself.
 @MainActor
 final class DashboardSectionTests: QuietWindowTestCase {
     private final class Log {
@@ -34,8 +35,10 @@ final class DashboardSectionTests: QuietWindowTestCase {
     /// The first row's centre line, under the caption.
     private static let firstRowY = DashboardGrid.headerHeight + DashboardGrid.headerGap + DashboardGrid.cardPadding
         + DashboardGrid.captionHeight + DashboardGrid.rowHeight / 2
-    /// A point on a name that starts 12 pt in.
+    /// A point on a caption's name, which starts 12 pt in.
     private static let nameX = DashboardGrid.cardPadding + DashboardGrid.inset + 10
+    /// A point on the header's name, which starts 8 pt after the logo.
+    private static let headerNameX = DashboardGrid.cardPadding + DashboardGrid.inset + DashboardGrid.iconSize + DashboardGrid.columnGap + 10
 
     private let lines: [DashboardLine] = ["Session", "Weekly", "Fable"].map { title in
         var data = WidgetData(title: title, icon: "claude", kind: .percent, used: 30, limit: 100)
@@ -91,7 +94,7 @@ final class DashboardSectionTests: QuietWindowTestCase {
 
     /// The warning after the name of an account whose refresh failed explains itself: resting the pointer
     /// on it opens a tooltip with the notice after the hover dwell, which goes once the pointer leaves.
-    /// The name beside it opens nothing.
+    /// The name and the logo before it open nothing.
     func testHoveringTheWarningShowsTheNoticeAndHoveringTheNameShowsNothing() throws {
         let notice = "Refresh failed: the token has expired."
         let (renaming, provider) = storedAccount(label: "Work")
@@ -103,9 +106,13 @@ final class DashboardSectionTests: QuietWindowTestCase {
         let shown = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
         func opened() -> [NSWindow] { NSApp.windows.filter { $0.isVisible && !shown.contains(ObjectIdentifier($0)) } }
         let headerMid = DashboardGrid.headerHeight / 2
-        let nameEnd = DashboardGrid.cardPadding + DashboardGrid.inset + ("Work" as NSString).size(withAttributes: [.font: DashboardGrid.headerNSFont]).width
+        let nameEnd = Self.headerNameX - 10 + ("Work" as NSString).size(withAttributes: [.font: DashboardGrid.headerNSFont]).width
 
-        try hover(CGPoint(x: Self.nameX, y: headerMid), window, host)
+        try hover(CGPoint(x: DashboardGrid.cardPadding + DashboardGrid.inset + DashboardGrid.iconSize / 2, y: headerMid), window, host)
+        XCTAssertTrue(opened().isEmpty, "hovering the logo opens something")
+        XCTAssertNil(HoverTooltips.visibleText)
+
+        try hover(CGPoint(x: Self.headerNameX, y: headerMid), window, host)
         XCTAssertTrue(opened().isEmpty, "hovering the name opens something")
         XCTAssertNil(HoverTooltips.visibleText)
 
@@ -238,7 +245,7 @@ final class DashboardSectionTests: QuietWindowTestCase {
         )
 
         let headerMid = DashboardGrid.headerHeight / 2
-        let name = CGPoint(x: Self.nameX, y: headerMid)
+        let name = CGPoint(x: Self.headerNameX, y: headerMid)
         click(name, window, host)
         RunLoop.main.run(until: Date().addingTimeInterval(0.6))
         XCTAssertNil(renaming.edit, "a single click on the name starts a rename")
