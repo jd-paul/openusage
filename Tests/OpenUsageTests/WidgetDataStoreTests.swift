@@ -64,6 +64,33 @@ final class WidgetDataStoreTests: XCTestCase {
         await refreshTask.value
     }
 
+    /// A provider's Refresh covers its accounts side by side, as Refresh All does: both start before
+    /// either finishes, so one slow account never holds the other behind its deadline.
+    func testRefreshingSeveralAccountsStartsThemAllBeforeAnyFinishes() async {
+        let providers = ["first", "second"].map { Provider(id: $0, displayName: $0, icon: "codex") }
+        let runtimes = providers.map {
+            SuspendedProviderRuntime(provider: $0, snapshot: ProviderSnapshot(providerID: $0.id, displayName: $0.displayName, lines: []))
+        }
+        let defaults = makeUserDefaults("refresh-several-accounts")
+        let store = WidgetDataStore(
+            registry: WidgetRegistry(providers: providers, descriptors: []),
+            providers: runtimes,
+            cache: ProviderSnapshotCache(userDefaults: defaults, storageKey: "snapshots"),
+            defaults: defaults
+        )
+
+        let refreshTask = Task { await store.refresh(providerIDs: providers.map(\.id), force: true) }
+        for _ in 0..<1_000 where runtimes.contains(where: { !$0.didStart }) { await Task.yield() }
+
+        XCTAssertTrue(runtimes.allSatisfy(\.didStart), "both accounts are in flight before either completes")
+        XCTAssertEqual(store.refreshingProviderIDs, ["first", "second"])
+
+        for runtime in runtimes { runtime.complete() }
+        let outcomes = await refreshTask.value
+        XCTAssertEqual(outcomes, [.refreshed, .refreshed])
+        XCTAssertTrue(store.refreshingProviderIDs.isEmpty)
+    }
+
     func testResolvesProgressSnapshotIntoWidgetData() async {
         let provider = Provider(id: "test", displayName: "Test", icon: "codex")
         let descriptor = WidgetDescriptor(

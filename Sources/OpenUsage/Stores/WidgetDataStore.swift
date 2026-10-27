@@ -153,19 +153,10 @@ final class WidgetDataStore {
     /// `force` bypasses the snapshot cache (the manual "refresh now" path); the periodic loop keeps
     /// honoring it.
     func refreshAll(force: Bool = false) async {
-        // `Task {}` from MainActor context inherits the isolation (a task-group child can't capture
-        // the non-Sendable store), so: fire one task per provider, then await them all.
         let providerIDs = registry.providers.map(\.id)
         let start = monotonicNow()
         AppLog.info(.refresh, "batch start (\(providerIDs.count) providers, force=\(force))")
-        let tasks = providerIDs.map { providerID in
-            Task { await self.refresh(providerID: providerID, force: force) }
-        }
-        var outcomes: [RefreshOutcome] = []
-        outcomes.reserveCapacity(tasks.count)
-        for task in tasks {
-            outcomes.append(await task.value)
-        }
+        let outcomes = await refresh(providerIDs: providerIDs, force: force)
         // Stamp the end of the pass so the footer countdown targets the next scheduled refresh
         // (this time + one refresh interval), mirroring the periodic loop that sleeps one interval
         // after each pass.
@@ -178,6 +169,22 @@ final class WidgetDataStore {
         let cached = outcomes.count { $0 == .cacheHit }
         let backedOff = outcomes.count { $0 == .backedOff }
         AppLog.info(.refresh, "batch end (\(durationMs)ms, \(refreshed) ok / \(failed) failed / \(cached) cached / \(backedOff) backed off)")
+    }
+
+    /// Refreshes these accounts side by side, so a slow one never holds the others behind its deadline.
+    /// `Task {}` from MainActor context inherits the isolation (a task-group child can't capture the
+    /// non-Sendable store), so: fire one task per account, then await them all.
+    @discardableResult
+    func refresh(providerIDs: [String], force: Bool) async -> [RefreshOutcome] {
+        let tasks = providerIDs.map { providerID in
+            Task { await self.refresh(providerID: providerID, force: force) }
+        }
+        var outcomes: [RefreshOutcome] = []
+        outcomes.reserveCapacity(tasks.count)
+        for task in tasks {
+            outcomes.append(await task.value)
+        }
+        return outcomes
     }
 
     /// The user's own Refresh. It's the only refresh that lets a login they denied ask again.
