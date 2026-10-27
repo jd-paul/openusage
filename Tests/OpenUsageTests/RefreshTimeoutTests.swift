@@ -72,10 +72,12 @@ final class RefreshTimeoutTests: XCTestCase {
         runtime: ProviderRuntime,
         timeout: TimeInterval
     ) -> WidgetDataStore {
-        WidgetDataStore(
+        let defaults = makeUserDefaults("refresh-timeout")
+        return WidgetDataStore(
             registry: WidgetRegistry(providers: [provider], descriptors: [descriptor]),
             providers: [runtime],
-            defaults: makeUserDefaults("refresh-timeout"),
+            cache: ProviderSnapshotCache(userDefaults: defaults),
+            defaults: defaults,
             providerRefreshTimeout: timeout
         )
     }

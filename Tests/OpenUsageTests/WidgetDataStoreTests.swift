@@ -116,9 +116,12 @@ final class WidgetDataStoreTests: XCTestCase {
             )
         )
         let registry = WidgetRegistry(providers: [provider], descriptors: [descriptor])
-        // Hermetic: pin the meter style via an isolated suite so a persisted `.used` in `.standard`
-        // can't flip the expected "remaining" output.
-        let store = WidgetDataStore(registry: registry, providers: [runtime], defaults: makeUserDefaults("resolve-progress"))
+        // Hermetic: pin the meter style and the snapshot cache via an isolated suite, so neither a persisted
+        // `.used` nor a snapshot another test left in `.standard` can stand in for this refresh.
+        let defaults = makeUserDefaults("resolve-progress")
+        let store = WidgetDataStore(
+            registry: registry, providers: [runtime], cache: ProviderSnapshotCache(userDefaults: defaults), defaults: defaults
+        )
 
         await store.refreshAll()
         let data = store.data(for: descriptor)

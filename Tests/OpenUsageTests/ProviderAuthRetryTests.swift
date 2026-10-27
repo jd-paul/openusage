@@ -24,8 +24,14 @@ final class ProviderAuthRetryTests: XCTestCase {
         }
     }
 
+    func testTooManyRequestsThrowsRateLimited() {
+        XCTAssertThrowsError(try requireSuccess(status: 429)) { error in
+            XCTAssertEqual(error as? ProviderError, .rateLimited(retryAfter: nil))
+        }
+    }
+
     func testOtherNon2xxThrowRequestFailedWithStatus() {
-        for status in [400, 404, 429, 500, 503] {
+        for status in [400, 404, 500, 503] {
             XCTAssertThrowsError(try requireSuccess(status: status)) { error in
                 XCTAssertEqual(error as? ProviderError, .requestFailed(status))
             }

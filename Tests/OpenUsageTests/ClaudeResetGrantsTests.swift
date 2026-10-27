@@ -66,7 +66,7 @@ final class ClaudeResetGrantsTests: XCTestCase {
             XCTAssertEqual(error as? ProviderError, .signInExpired(.claude))
         }
         XCTAssertThrowsError(try resetsLine("", status: 429)) { error in
-            XCTAssertEqual(error as? ProviderError, .requestFailed(429))
+            XCTAssertEqual(error as? ProviderError, .rateLimited(retryAfter: nil))
         }
         XCTAssertThrowsError(try resetsLine("not json")) { error in
             XCTAssertEqual(error as? ProviderError, .invalidResponse)
