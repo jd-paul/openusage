@@ -51,9 +51,9 @@ what each one shows.
 
 - **Menu bar stars.** Star up to two metrics per provider. When more than one account of a provider is
   starred, each mark carries a two-character tag from the account's name.
-- **Dashboard.** A header and a card per provider. The header starts with the provider's logo and
-  names a sole account, with its plan at the right end; several accounts are named inside the card
-  above their rows. One row per metric: label, bar, value, and reset. With a reset window the bar's colour is where your pace lands at the
+- **Dashboard.** A header and a card per provider. The header shows the provider's logo and name, and
+  inside the card every account, even when it is the only one, has a caption with its name and plan
+  above its rows. One row per metric: label, bar, value, and reset. With a reset window the bar's colour is where your pace lands at the
   reset: blue on course, orange inside the last 10%, red with a flame before the value when you would
   run out first; without one, blue, orange once 75% is used, red once 90% is. Click a value to flip
   every row between used and left, a reset between countdown and exact time. A warning or clock after
