@@ -34,7 +34,7 @@ final class QuotaNotificationEvaluator {
         for metric in metrics {
             let key = metric.key
             let data = metric.data
-            let state = data.paceState(now: now)
+            let state = data.meterState(now: now)
             let previous = notificationState[key] ?? NotificationState()
             let result = PaceNotificationLogic.transitions(
                 state: state,

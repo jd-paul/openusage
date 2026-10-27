@@ -2,7 +2,7 @@ import Foundation
 
 /// Burn-rate pacing for a bounded metric. Given how much of a quota is spent and how far through the
 /// reset window we are, it projects usage at the current rate to the end of the window.
-/// This drives the notifications and the row's flame; never the bar's colour.
+/// Its verdict colours the bar, lights the flame and drives the notifications.
 ///
 /// Pure logic (no SwiftUI) so it stays unit-testable; `WidgetData` turns it into the meter state.
 enum Pace {
