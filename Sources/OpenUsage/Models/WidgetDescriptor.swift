@@ -7,8 +7,6 @@ struct WidgetDescriptor: Identifiable, Hashable {
     let providerID: String
     let metricLabel: String
     let sample: WidgetData
-    /// Whether this widget can be pinned to the menu-bar strip.
-    var pinnable: Bool = true
 
     /// The metric's single display name.
     var title: String { sample.title }

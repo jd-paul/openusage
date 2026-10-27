@@ -91,14 +91,12 @@ final class DashboardMenusTests: XCTestCase {
 
     func testTheMetricMenuStarsAndHides() {
         let data = WidgetData(title: "Weekly", icon: "claude", kind: .percent, used: 10, limit: 100)
-        var descriptor = WidgetDescriptor(id: "claude@1.weekly", providerID: "claude@1", metricLabel: "Weekly", sample: data)
+        let descriptor = WidgetDescriptor(id: "claude@1.weekly", providerID: "claude@1", metricLabel: "Weekly", sample: data)
 
         XCTAssertEqual(DashboardMenus.metric(descriptor, isStarred: false), [[
             DashboardMenuItem(title: "Star for Menu Bar", command: .toggleStar("claude@1.weekly")),
             DashboardMenuItem(title: "Hide", command: .hide("claude@1.weekly")),
         ]])
         XCTAssertEqual(DashboardMenus.metric(descriptor, isStarred: true)[0][0].title, "Unstar")
-        descriptor.pinnable = false
-        XCTAssertEqual(commands(DashboardMenus.metric(descriptor, isStarred: false)), [[.hide("claude@1.weekly")]])
     }
 }

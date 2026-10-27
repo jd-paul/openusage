@@ -82,12 +82,10 @@ enum DashboardMenus {
     }
 
     static func metric(_ descriptor: WidgetDescriptor, isStarred: Bool) -> Sections {
-        var items: [DashboardMenuItem] = []
-        if descriptor.pinnable {
-            items.append(DashboardMenuItem(title: isStarred ? "Unstar" : "Star for Menu Bar", command: .toggleStar(descriptor.id)))
-        }
-        items.append(DashboardMenuItem(title: "Hide", command: .hide(descriptor.id)))
-        return [items]
+        [[
+            DashboardMenuItem(title: isStarred ? "Unstar" : "Star for Menu Bar", command: .toggleStar(descriptor.id)),
+            DashboardMenuItem(title: "Hide", command: .hide(descriptor.id)),
+        ]]
     }
 }
 

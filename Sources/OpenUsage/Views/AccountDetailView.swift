@@ -119,26 +119,24 @@ private struct StarButton: View {
     @State private var shakeTrigger = 0
 
     var body: some View {
-        if metric.pinnable {
-            let pinned = layout.isPinned(metric.id)
-            Button {
-                if layout.canPin(metric.id) {
-                    layout.togglePin(metric.id)
-                    layout.presentCustomizationNotice(pinned ? "Removed from menu bar" : "Starred for menu bar")
-                } else {
-                    shakeTrigger += 1
-                    layout.presentCustomizationNotice(layout.pinDenialReason(metric.id) ?? "Up to 2 stars per provider", tone: .notice)
-                }
-            } label: {
-                Image(systemName: pinned ? "star.fill" : "star")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 18, height: 18)
-                    .contentShape(Rectangle())
+        let pinned = layout.isPinned(metric.id)
+        Button {
+            if layout.canPin(metric.id) {
+                layout.togglePin(metric.id)
+                layout.presentCustomizationNotice(pinned ? "Removed from menu bar" : "Starred for menu bar")
+            } else {
+                shakeTrigger += 1
+                layout.presentCustomizationNotice(layout.pinDenialReason(metric.id) ?? "Up to 2 stars per provider", tone: .notice)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(pinned ? Color.accentColor : Color.secondary)
-            .denyShake(trigger: shakeTrigger)
-            .animation(Motion.spring, value: pinned)
+        } label: {
+            Image(systemName: pinned ? "star.fill" : "star")
+                .font(.system(size: 11, weight: .semibold))
+                .frame(width: 18, height: 18)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(pinned ? Color.accentColor : Color.secondary)
+        .denyShake(trigger: shakeTrigger)
+        .animation(Motion.spring, value: pinned)
     }
 }

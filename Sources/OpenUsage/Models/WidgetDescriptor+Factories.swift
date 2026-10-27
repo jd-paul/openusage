@@ -101,15 +101,8 @@ extension WidgetDescriptor {
         id: String,
         provider: Provider,
         metricLabel: String,
-        sample: WidgetData,
-        pinnable: Bool = true
+        sample: WidgetData
     ) -> WidgetDescriptor {
-        WidgetDescriptor(
-            id: id,
-            providerID: provider.id,
-            metricLabel: metricLabel,
-            sample: sample,
-            pinnable: pinnable
-        )
+        WidgetDescriptor(id: id, providerID: provider.id, metricLabel: metricLabel, sample: sample)
     }
 }
