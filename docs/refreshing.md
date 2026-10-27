@@ -12,6 +12,12 @@
 
 ## Caching
 
+Usage is read on every refresh. Reads that rarely change are read at most once an hour and reused in
+between: the plan name (Cursor, Grok, Ollama, Z.ai, and Antigravity's Cloud Code project), Codex's list
+of reset credits with their expiry times (the count still updates every refresh), and Claude's reset
+grants. Claude's plan is read once per sign-in token, and again an hour later when that read failed. A
+plan upgrade can take up to an hour to show.
+
 The last snapshot of every account is saved on disk and shown at launch, so you see your last-known
 values before the first fetch finishes. A value counts as fresh for one interval after it was fetched
 in the current session. A value from an earlier session is shown but refreshed on the first pass, so

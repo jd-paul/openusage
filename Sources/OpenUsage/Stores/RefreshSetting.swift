@@ -14,4 +14,8 @@ enum RefreshSetting {
     static let failureBackoffBase = interval
     /// The longest wait between attempts on an account that keeps failing.
     static let failureBackoffCap: TimeInterval = 60 * 60
+
+    /// How long a read that rarely changes (a plan name, Codex's reset-credit list) is reused before it
+    /// is asked again (see `SecondaryRead`).
+    static let secondaryReadInterval: TimeInterval = 60 * 60
 }

@@ -2,19 +2,23 @@ import Foundation
 
 extension AccountProviderRuntime {
     /// The account's reset credits with each credit's expiry, read with the same sign-in right after a
-    /// successful usage read. Best-effort: a failure only costs the expiries, and the row falls back to
-    /// the count in the usage body.
+    /// successful usage read, at most once an hour (`codexResetCreditsRead`): the count comes from the
+    /// usage body every pass, so only the expiries can be up to an hour old. Best-effort: a failure keeps
+    /// the last list, and with none the row falls back to the count in the usage body.
     func codexResetCredits(after usage: HTTPResponse, accessToken: String, accountID: String?) async -> HTTPResponse? {
         guard (200..<300).contains(usage.statusCode) else { return nil }
+        guard codexResetCreditsRead.isDue(at: now()) else { return codexResetCreditsRead.value }
         do {
-            return try await CodexUsageClient(http: http).fetchResetCredits(accessToken: accessToken, accountID: accountID)
+            let response = try await CodexUsageClient(http: http).fetchResetCredits(accessToken: accessToken, accountID: accountID)
+            codexResetCreditsRead.record((200..<300).contains(response.statusCode) ? response : nil, at: now())
         } catch {
             AppLog.warn(
                 LogTag.plugin("codex"),
-                "\(account.cardID) reset-credit fetch failed; using the usage-body count: \(error.localizedDescription)"
+                "\(account.cardID) reset-credit fetch failed; retrying in an hour: \(error.localizedDescription)"
             )
-            return nil
+            codexResetCreditsRead.record(nil, at: now())
         }
+        return codexResetCreditsRead.value
     }
 
     /// Claims the credit expiring at `expiry` with the account's own sign-in: one credit per call, always by
@@ -76,6 +80,8 @@ extension AccountProviderRuntime {
             return .failed(ResetClaimFailure(error))
         }
         let outcome = CodexUsageMapper.resetClaimOutcome(from: response)
+        // Whatever the answer, the claim may have spent a credit, so the refresh after it reads the list.
+        codexResetCreditsRead.forget()
         if outcome == .success {
             AppLog.info(tag, "\(cardID) reset claim: claimed (HTTP \(response.statusCode))")
         } else {

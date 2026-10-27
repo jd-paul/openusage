@@ -8,8 +8,17 @@ final class AccountProviderRuntime: ProviderRuntime {
     let http: any HTTPClient
     let now: () -> Date
     /// Claude's plan from `/api/oauth/profile`, looked up once per access token. The in-app login never
-    /// receives a plan, so the profile is the only source of it.
-    private var claudePlan: (accessToken: String, plan: String)?
+    /// receives a plan, so the profile is the only source of it. A lookup that found no plan is asked
+    /// again an hour later, not on every pass.
+    private var claudePlan: (accessToken: String, plan: String?, readAt: Date)?
+    /// The plan name (Grok `/settings`, Cursor `GetPlanInfo`), read hourly rather than every pass.
+    var planRead = SecondaryRead<String>()
+    /// The body the plan comes from (Ollama `/api/me`, the Z.ai subscription, Antigravity
+    /// `loadCodeAssist`), read hourly rather than every pass.
+    var planBodyRead = SecondaryRead<Data>()
+    /// Codex's reset-credit list, for each credit's expiry, read hourly; the count comes from the usage
+    /// body every pass.
+    var codexResetCreditsRead = SecondaryRead<HTTPResponse>()
     /// Claude's reset-grants state, carried across refreshes (see `AccountProviderRuntime+ClaudeResets`).
     var claudeResetGrants = ClaudeResetGrantsState()
     /// The Codex credit each claim's idempotency key was matched to (see `AccountProviderRuntime+CodexResets`).
@@ -146,16 +155,21 @@ final class AccountProviderRuntime: ProviderRuntime {
     }
 
     private func claudeLivePlan(_ oauth: ClaudeOAuth, config: ClaudeOAuthConfig) async -> String? {
-        if let claudePlan, claudePlan.accessToken == oauth.accessToken { return claudePlan.plan }
+        let cached = claudePlan
+        if let cached, cached.accessToken == oauth.accessToken,
+           cached.plan != nil || now().timeIntervalSince(cached.readAt) < RefreshSetting.secondaryReadInterval {
+            return cached.plan
+        }
         do {
             let response = try await ClaudeUsageClient(httpClient: http).fetchProfile(accessToken: oauth.accessToken, config: config)
             let profile = try ClaudeUsageClient.decodeProfile(response)
-            guard let plan = ClaudeUsageMapper.formatLivePlan(profile: profile, credentials: oauth) else { return nil }
-            claudePlan = (oauth.accessToken, plan)
+            let plan = ClaudeUsageMapper.formatLivePlan(profile: profile, credentials: oauth)
+            claudePlan = (oauth.accessToken, plan, now())
             return plan
         } catch {
-            AppLog.warn(LogTag.plugin("claude"), "plan lookup failed: \(error.localizedDescription)")
-            return nil
+            AppLog.warn(LogTag.plugin("claude"), "plan lookup failed; retrying in an hour: \(error.localizedDescription)")
+            claudePlan = (oauth.accessToken, cached?.plan, now())
+            return cached?.plan
         }
     }
 
@@ -205,8 +219,11 @@ final class AccountProviderRuntime: ProviderRuntime {
         }
         let usage = try await client.fetchCreditsConfig(accessToken: tokens.accessToken)
         let mapped = try GrokUsageMapper.mapCreditsConfig(usage)
-        let settings = try? await client.fetchSettings(accessToken: tokens.accessToken)
-        return (settings.flatMap(GrokUsageMapper.planName(from:)), mapped.lines)
+        if planRead.isDue(at: now()) {
+            let settings = try? await client.fetchSettings(accessToken: tokens.accessToken)
+            planRead.record(settings.flatMap(GrokUsageMapper.planName(from:)), at: now())
+        }
+        return (planRead.value, mapped.lines)
     }
 
     private func refreshCursor(_ credential: AccountCredential) async throws -> (String?, [MetricLine]) {
@@ -241,7 +258,11 @@ final class AccountProviderRuntime: ProviderRuntime {
             case .unavailable: throw ProviderError.unavailable(AntigravityUsageClient.unavailableMessage)
             }
         }
-        let codeAssist: Data? = if case .ok(let data) = await client.loadCodeAssist(token: tokens.accessToken) { data } else { nil }
+        if planBodyRead.isDue(at: now()) {
+            let fresh: Data? = if case .ok(let data) = await client.loadCodeAssist(token: tokens.accessToken) { data } else { nil }
+            planBodyRead.record(fresh, at: now())
+        }
+        let codeAssist = planBodyRead.value
         let project = codeAssist.flatMap(AntigravityUsageMapper.parseProject)
         let response = await client.cloudCodeAllHosts(
             path: AntigravityUsageClient.quotaSummaryPath,
@@ -264,8 +285,10 @@ final class AccountProviderRuntime: ProviderRuntime {
         let client = OllamaUsageClient(http: http)
         let balance = try await client.fetchBalance(apiKey: key)
         try ProviderAuthRetry.requireSuccess(balance, kind: .ollama)
-        let account = successBody(try? await client.fetchAccount(apiKey: key))
-        let mapped = try OllamaUsageMapper.map(balanceBody: balance.body, accountBody: account)
+        if planBodyRead.isDue(at: now()) {
+            planBodyRead.record(successBody(try? await client.fetchAccount(apiKey: key)), at: now())
+        }
+        let mapped = try OllamaUsageMapper.map(balanceBody: balance.body, accountBody: planBodyRead.value)
         return (mapped.plan, mapped.lines)
     }
 
@@ -334,8 +357,10 @@ final class AccountProviderRuntime: ProviderRuntime {
         let client = ZAIUsageClient(http: http)
         let quota = try await client.fetchQuota(apiKey: key)
         try ProviderAuthRetry.requireSuccess(quota, kind: .zai)
-        let subscription = successBody(try? await client.fetchSubscription(apiKey: key))
-        let mapped = try ZAIUsageMapper.map(quotaBody: quota.body, subscriptionBody: subscription)
+        if planBodyRead.isDue(at: now()) {
+            planBodyRead.record(successBody(try? await client.fetchSubscription(apiKey: key)), at: now())
+        }
+        let mapped = try ZAIUsageMapper.map(quotaBody: quota.body, subscriptionBody: planBodyRead.value)
         return (mapped.plan, mapped.lines)
     }
 
